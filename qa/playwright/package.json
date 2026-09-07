@@ -1,0 +1,14 @@
+{
+  "name": "metapharsic-pharmacy-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright E2E test skeleton for the Metapharsic pharmacy Laravel app",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui"
+  },
+  "devDependencies": {
+    "@playwright/test": "latest",
+    "axe-playwright": "latest"
+  }
+}
