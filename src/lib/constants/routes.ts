@@ -1,0 +1,154 @@
+// ─────────────────────────────────────────────────────────────
+// Constants — App Routes
+// ─────────────────────────────────────────────────────────────
+
+export const ROUTES = {
+  // Auth
+  LOGIN: '/login',
+  LOGOUT: '/logout',
+  RESET_PASSWORD: '/reset-password',
+  REGISTER: '/register',
+
+  // Dashboard
+  DASHBOARD: '/',
+
+  // POS
+  POS: '/pos',
+  POS2: '/pos2',
+  INVOICES: '/invoices',
+
+  // Products
+  PRODUCTS: '/products',
+  PRODUCTS_NEW: '/products/new',
+  PRODUCT: (id: string) => `/products/${id}`,
+  PRODUCT_EDIT: (id: string) => `/products/${id}/edit`,
+  CATEGORIES: '/products/categories',
+  HSN_CODES: '/products/hsn-codes',
+
+  // Inventory
+  INVENTORY: '/inventory',
+  INVENTORY_ADJUSTMENTS: '/inventory/adjustments',
+  INVENTORY_MOVEMENTS: '/inventory/movements',
+  INVENTORY_AUDIT: '/inventory/audit',
+
+  // Batches
+  BATCHES: '/batches',
+  BATCHES_EXPIRING: '/batches/expiring',
+  BATCH: (id: string) => `/batches/${id}`,
+
+  // Purchases
+  PURCHASES: '/purchases',
+  PURCHASES_NEW: '/purchases/new',
+  PURCHASES_AGENCY: '/purchases/agency',
+  PURCHASES_SCAN: '/purchases/scan',
+  PURCHASE: (id: string) => `/purchases/${id}`,
+  PURCHASE_RECEIVE: (id: string) => `/purchases/${id}/receive`,
+  PURCHASE_RETURNS: '/purchases/returns',
+  PURCHASE_RETURNS_NEW: '/purchases/returns/new',
+  PURCHASE_RETURN: (id: string) => `/purchases/returns/${id}`,
+
+  // Sales
+  SALES: '/sales',
+  SALE: (id: string) => `/sales/${id}`,
+  DOCTORS: '/doctors',
+
+  // Returns
+  SALE_RETURNS: '/returns/sales',
+  SALE_RETURNS_NEW: '/returns/sales/new',
+  SALE_RETURN: (id: string) => `/returns/sales/${id}`,
+
+  // Prescriptions
+  PRESCRIPTIONS: '/prescriptions',
+  PRESCRIPTIONS_PENDING: '/prescriptions/pending',
+  PRESCRIPTION: (id: string) => `/prescriptions/${id}`,
+
+  // Customers
+  CUSTOMERS: '/customers',
+  CUSTOMERS_NEW: '/customers/new',
+  CUSTOMER: (id: string) => `/customers/${id}`,
+  CUSTOMER_LEDGER: (id: string) => `/customers/${id}/ledger`,
+
+  // Suppliers
+  SUPPLIERS: '/suppliers',
+  SUPPLIERS_NEW: '/suppliers/new',
+  SUPPLIER: (id: string) => `/suppliers/${id}`,
+
+  // Finance
+  FINANCE: '/finance',
+  RECEIPT_VOUCHERS: '/finance/vouchers/receipt',
+  RECEIVABLES: '/finance/receivables',
+  PAYABLES: '/finance/payables',
+  TALLY: '/finance/tally',
+
+  // GST
+  GST: '/gst',
+  GST_REPORTS: '/gst/reports',
+
+  // Expiry
+  EXPIRY: '/expiry',
+  EXPIRY_EXPIRING: '/expiry/expiring',
+  EXPIRY_EXPIRED: '/expiry/expired',
+
+  // Reports
+  REPORTS: '/reports',
+  REPORTS_SALES: '/reports/sales',
+  REPORTS_INVENTORY: '/reports/inventory',
+  REPORTS_COMPLIANCE: '/reports/compliance',
+
+  // Users & Roles
+  USERS: '/users',
+  USERS_NEW: '/users/new',
+  ROLES: '/roles',
+
+  // Audit
+  AUDIT: '/audit',
+
+  // Settings
+  SETTINGS: '/settings',
+  SETTINGS_ORGANIZATION: '/settings/organization',
+  SETTINGS_BRANCHES: '/settings/branches',
+  SETTINGS_GENERAL: '/settings/general',
+  SETTINGS_POS: '/settings/pos',
+  SETTINGS_SHORTCUTS: '/settings/shortcuts',
+  SETTINGS_BACKUP: '/settings/backup',
+} as const
+
+// Routes that don't require authentication
+export const PUBLIC_ROUTES = [ROUTES.LOGIN, ROUTES.REGISTER, ROUTES.RESET_PASSWORD, '/api/auth']
+
+// API base routes
+export const API = {
+  AUTH: {
+    LOGIN: '/api/auth/login',
+    LOGOUT: '/api/auth/logout',
+    SESSION: '/api/auth/session',
+    RESET_PASSWORD: '/api/reset-password',
+  },
+  USERS: '/api/users',
+  ROLES: '/api/roles',
+  PERMISSIONS: '/api/permissions',
+  PRODUCTS: '/api/products',
+  INVENTORY: '/api/inventory',
+  BATCHES: '/api/batches',
+  SALES: '/api/sales',
+  PURCHASES: '/api/purchases',
+  CUSTOMERS: '/api/customers',
+  SUPPLIERS: '/api/suppliers',
+  RETURNS: '/api/returns',
+  PRESCRIPTIONS: '/api/prescriptions',
+  POS_PRODUCTS: '/api/pos/products',
+  POS_CONFIG: '/api/pos/config',
+  POS_HELD_BILLS: '/api/pos/held-bills',
+  HELD_BILL: (id: string) => `/api/pos/held-bills/${id}`,
+  ORGANIZATION: '/api/organization',
+  BRANCHES: '/api/branches',
+  SETTINGS: '/api/settings',
+  REPORTS: '/api/reports',
+  GST: '/api/gst',
+  EXPIRY: '/api/expiry',
+  EXPIRY_EXPIRING: '/api/expiry/expiring',
+  EXPIRY_EXPIRED: '/api/expiry/expired',
+  AUDIT: '/api/audit',
+  NOTIFICATIONS: '/api/notifications',
+  FILES: '/api/files',
+} as const

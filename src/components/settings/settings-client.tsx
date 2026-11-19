@@ -1,0 +1,374 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { Building2, FileText, Bell, Save, ShieldCheck, Lock, Loader2 } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { useToast } from '@/lib/hooks/use-toast'
+import { PeriodLockCard } from './period-lock-card'
+
+export function SettingsClient() {
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const toast = useToast()
+
+  // Form states initialized empty (100% database-driven, zero hardcoded dummy values)
+  const [name, setName] = useState('')
+  const [legalName, setLegalName] = useState('')
+  const [gstin, setGstin] = useState('')
+  const [dlNumber, setDlNumber] = useState('')
+  const [pan, setPan] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [address, setAddress] = useState('')
+  const [city, setCity] = useState('')
+  const [state, setState] = useState('')
+  const [pincode, setPincode] = useState('')
+
+  // POS & Billing settings
+  const [invoicePrefix, setInvoicePrefix] = useState('')
+  const [receiptFooter, setReceiptFooter] = useState('')
+  const [lowStockThreshold, setLowStockThreshold] = useState('')
+  const [expiryAlertDays, setExpiryAlertDays] = useState('')
+
+  useEffect(() => {
+    fetch('/api/organization')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success && d.data) {
+          const org = d.data
+          setName(org.name || '')
+          setLegalName(org.legalName || '')
+          setGstin(org.gstin || '')
+          setDlNumber(org.dlNumber || '')
+          setPan(org.pan || (org.gstin && org.gstin.length >= 12 ? org.gstin.substring(2, 12).toUpperCase() : ''))
+          setEmail(org.email || '')
+          setPhone(org.phone || '')
+          setAddress(org.address || '')
+          setCity(org.city || '')
+          setState(org.state || '')
+          setPincode(org.pincode || '')
+
+          if (org.settingsMap) {
+            setInvoicePrefix(org.settingsMap.invoicePrefix || 'PC-HO-')
+            setReceiptFooter(org.settingsMap.receiptFooter || '')
+            setLowStockThreshold(org.settingsMap.lowStockThreshold || '10')
+            setExpiryAlertDays(org.settingsMap.expiryAlertDays || '90')
+          }
+        }
+      })
+      .catch(() => {
+        toast.error('Failed to load dispensary configuration from database')
+      })
+      .finally(() => setLoading(false))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSaving(true)
+    try {
+      const res = await fetch('/api/organization', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          legalName,
+          gstin,
+          dlNumber,
+          pan,
+          email,
+          phone,
+          address,
+          city,
+          state,
+          pincode,
+          settings: {
+            invoicePrefix,
+            receiptFooter,
+            lowStockThreshold,
+            expiryAlertDays,
+          },
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast.success('Dispensary settings saved successfully to database')
+      } else {
+        toast.error(data.error?.message || 'Failed to save settings')
+      }
+    } catch {
+      toast.error('Network error saving settings')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <p className="text-xs text-muted-foreground">Loading configuration from database…</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <form onSubmit={handleSave} className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Dispensary Master Configuration</h2>
+          <p className="text-xs text-muted-foreground">
+            Configure statutory regulatory licenses, receipt customization, and inventory alert rules
+          </p>
+        </div>
+        <Button type="submit" disabled={saving || loading} className="gap-2">
+          <Save className="h-4 w-4" />
+          {saving ? 'Saving Changes...' : 'Save Settings'}
+        </Button>
+      </div>
+
+      <Tabs defaultValue="profile" className="space-y-4">
+        <TabsList className="bg-muted/60 p-1">
+          <TabsTrigger value="profile" className="gap-1.5 text-xs">
+            <Building2 className="h-3.5 w-3.5" />
+            Dispensary Profile &amp; Licenses
+          </TabsTrigger>
+          <TabsTrigger value="billing" className="gap-1.5 text-xs">
+            <FileText className="h-3.5 w-3.5" />
+            Billing &amp; Invoice Rules
+          </TabsTrigger>
+          <TabsTrigger value="inventory" className="gap-1.5 text-xs">
+            <Bell className="h-3.5 w-3.5" />
+            Inventory &amp; Alert Horizons
+          </TabsTrigger>
+          <TabsTrigger value="governance" className="gap-1.5 text-xs">
+            <Lock className="h-3.5 w-3.5" />
+            Period Lock &amp; Audit
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Tab 1: Profile & Regulatory */}
+        <TabsContent value="profile" className="space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                Statutory &amp; License Details
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Essential pharmacy registration information required on tax invoices and drug registers
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="orgName">Dispensary Display Name *</Label>
+                  <Input
+                    id="orgName"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="legalName">Registered Entity Legal Name</Label>
+                  <Input
+                    id="legalName"
+                    value={legalName}
+                    onChange={(e) => setLegalName(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="dlNumber">Drug License No (DL Form 20/21)</Label>
+                  <Input
+                    id="dlNumber"
+                    value={dlNumber}
+                    onChange={(e) => setDlNumber(e.target.value)}
+                    placeholder="e.g. DL-KA-12345"
+                    className="font-mono text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="gstin">GSTIN (15 Digits)</Label>
+                  <Input
+                    id="gstin"
+                    value={gstin}
+                    onChange={(e) => setGstin(e.target.value)}
+                    placeholder="29ABCDE1234F1Z5"
+                    className="font-mono text-xs uppercase"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="pan">Permanent Account Number (PAN)</Label>
+                  <Input
+                    id="pan"
+                    value={pan}
+                    onChange={(e) => setPan(e.target.value)}
+                    placeholder="ABCDE1234F"
+                    className="font-mono text-xs uppercase"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-border/60">
+                <div className="space-y-1.5">
+                  <Label htmlFor="email">Official Contact Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="phone">Contact Telephone</Label>
+                  <Input
+                    id="phone"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="address">Physical Pharmacy Street Address</Label>
+                <Input
+                  id="address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="city">City / District</Label>
+                  <Input
+                    id="city"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="state">State</Label>
+                  <Input
+                    id="state"
+                    value={state}
+                    onChange={(e) => setState(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="pincode">Postal Code (PIN)</Label>
+                  <Input
+                    id="pincode"
+                    value={pincode}
+                    onChange={(e) => setPincode(e.target.value)}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab 2: Billing & POS Rules */}
+        <TabsContent value="billing" className="space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Billing &amp; Invoice Configuration</CardTitle>
+              <CardDescription className="text-xs">
+                Formatting options for dispensed receipts, invoice numbering sequence, and tax displays
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="invPrefix">Invoice Sequence Prefix</Label>
+                  <Input
+                    id="invPrefix"
+                    value={invoicePrefix}
+                    onChange={(e) => setInvoicePrefix(e.target.value)}
+                    placeholder="e.g. PC-HO-"
+                    className="font-mono text-xs"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Invoices will increment as {invoicePrefix || 'PC-'}0001, {invoicePrefix || 'PC-'}0002...
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="currency">Base Currency</Label>
+                  <Input id="currency" value="INR (₹) - Indian Rupee" disabled className="bg-muted/40 text-xs" />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="receiptFooter">Receipt / Bill Printout Footer Note</Label>
+                <Input
+                  id="receiptFooter"
+                  value={receiptFooter}
+                  onChange={(e) => setReceiptFooter(e.target.value)}
+                  placeholder="Thank you message or return policy disclaimer"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab 3: Inventory Alerts */}
+        <TabsContent value="inventory" className="space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Clinical &amp; Stock Alert Horizons</CardTitle>
+              <CardDescription className="text-xs">
+                Automated threshold calculations for reorder warnings and FEFO priority dispensing
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="lowStock">Default Reorder Quantity Level</Label>
+                  <Input
+                    id="lowStock"
+                    type="number"
+                    min="1"
+                    value={lowStockThreshold}
+                    onChange={(e) => setLowStockThreshold(e.target.value)}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Items falling below this quantity trigger the reorder warning indicator.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="expiryDays">Near-Expiry Warning Window (Days)</Label>
+                  <Input
+                    id="expiryDays"
+                    type="number"
+                    min="15"
+                    max="365"
+                    value={expiryAlertDays}
+                    onChange={(e) => setExpiryAlertDays(e.target.value)}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Batches expiring within this number of days will be flagged for priority liquidation.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab 4: Financial Governance & Period Lock (Tally / Marg ERP Parity) */}
+        <TabsContent value="governance" className="space-y-4">
+          <PeriodLockCard />
+        </TabsContent>
+      </Tabs>
+    </form>
+  )
+}

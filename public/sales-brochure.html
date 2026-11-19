@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Metapharsic Rx — Enterprise Pharmacy Management Software</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #044e3f;
+      --primary-dark: #022c22;
+      --primary-light: #0d9488;
+      --accent: #f59e0b;
+      --accent-dark: #b45309;
+      --surface: #ffffff;
+      --surface-subtle: #f8fafc;
+      --surface-card: #f1f5f9;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --danger: #dc2626;
+      --success: #16a34a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--text-main);
+      background-color: #cbd5e1;
+      display: flex;
+      justify-content: center;
+      padding: 24px 12px;
+      line-height: 1.35;
+    }
+
+    /* Standard A4 Aspect Ratio Canvas (210mm x 297mm) */
+    .sheet {
+      width: 210mm;
+      min-height: 297mm;
+      background: #ffffff;
+      padding: 11mm 12mm;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Print Setup */
+    @media print {
+      body {
+        background: transparent;
+        padding: 0;
+      }
+      .sheet {
+        width: 100%;
+        min-height: auto;
+        height: 100vh;
+        box-shadow: none;
+        padding: 8mm 9mm;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+
+    /* Floating Print Button for Screen View */
+    .print-cta-bar {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--primary-dark);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 9999px;
+      box-shadow: 0 8px 24px rgba(2, 44, 34, 0.35);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      z-index: 100;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: transform 0.15s ease;
+    }
+    .print-cta-bar:hover {
+      transform: translateY(-2px);
+      background: #065f46;
+    }
+
+    /* Header Section */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: -0.5px;
+      box-shadow: 0 4px 10px rgba(4, 78, 63, 0.25);
+    }
+
+    .brand-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--primary-dark);
+      line-height: 1.1;
+    }
+
+    .brand-tagline {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--primary-light);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    .header-badges {
+      display: flex;
+      gap: 6px;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      color: var(--primary);
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.2px;
+    }
+
+    .badge-pill.warning {
+      background: #fffbeb;
+      border-color: #fde68a;
+      color: var(--accent-dark);
+    }
+
+    /* Hero Value Proposition */
+    .hero-banner {
+      background: linear-gradient(135deg, #022c22 0%, #064e3b 70%, #0d9488 100%);
+      color: #ffffff;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 9px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-pre {
+      font-size: 10px;
+      font-weight: 700;
+      color: #5eead4;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 3px;
+    }
+
+    .hero-headline {
+      font-size: 17px;
+      font-weight: 800;
+      line-height: 1.25;
+      letter-spacing: -0.3px;
+      margin-bottom: 5px;
+    }
+
+    .hero-sub {
+      font-size: 11px;
+      color: #ccfbf1;
+      max-width: 95%;
+      line-height: 1.4;
+    }
+
+    /* Pain Point vs Solution Strip */
+    .pain-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 9px;
+    }
+
+    .pain-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--primary-light);
+      padding: 6px 8px;
+      border-radius: 4px;
+    }
+
+    .pain-card.alert {
+      border-left-color: var(--danger);
+      background: #fff5f5;
+    }
+
+    .pain-title {
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .pain-desc {
+      font-size: 9px;
+      color: var(--text-muted);
+      line-height: 1.3;
+    }
+
+    /* Core 6 Feature Pillars Grid */
+    .section-title-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 3px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--primary-dark);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+      margin-bottom: 9px;
+    }
+
+    .feature-card {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 9px;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 112px;
+    }
+
+    .feature-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      margin-bottom: 4px;
+    }
+
+    .feat-icon-box {
+      width: 24px;
+      height: 24px;
+      min-width: 24px;
+      background: #e6f4ea;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+    }
+
+    .feat-title {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--text-main);
+      line-height: 1.2;
+    }
+
+    .feat-bullets {
+      list-style: none;
+      font-size: 9.3px;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 2.5px;
+    }
+
+    .feat-bullets li {
+      position: relative;
+      padding-left: 10px;
+      line-height: 1.3;
+    }
+
+    .feat-bullets li::before {
+      content: "•";
+      position: absolute;
+      left: 1px;
+      color: var(--primary-light);
+      font-weight: 800;
+      font-size: 11px;
+      top: -1px;
+    }
+
+    .feat-bullets strong {
+      color: var(--text-main);
+      font-weight: 700;
+    }
+
+    .feat-highlight-tag {
+      margin-top: 5px;
+      background: #f1f5f9;
+      border-radius: 3px;
+      padding: 2.5px 5px;
+      font-size: 8.5px;
+      font-weight: 700;
+      color: var(--primary-dark);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* ROI & Financial Breakdown Banner */
+    .roi-strip {
+      background: #f8fafc;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-bottom: 9px;
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .roi-left-title {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--primary-dark);
+      margin-bottom: 3px;
+    }
+
+    .roi-left-text {
+      font-size: 9.3px;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+
+    .roi-stats-group {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+
+    .roi-stat-box {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 5px 6px;
+      text-align: center;
+    }
+
+    .roi-stat-num {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--success);
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1.1;
+    }
+
+    .roi-stat-lbl {
+      font-size: 8px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    /* Hardware, Multi-Store & Compatibility Strip */
+    .specs-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 9px;
+    }
+
+    .spec-item {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      padding: 6px 7px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .spec-icon {
+      width: 20px;
+      height: 20px;
+      min-width: 20px;
+      border-radius: 4px;
+      background: #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary-dark);
+    }
+
+    .spec-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1.1;
+    }
+
+    .spec-sub {
+      font-size: 8px;
+      color: var(--text-muted);
+    }
+
+    /* Comparison Table: Traditional Software vs Metapharsic */
+    .compare-wrap {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 9px;
+    }
+
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.2px;
+    }
+
+    .compare-table th {
+      background: var(--surface-card);
+      font-weight: 800;
+      text-align: left;
+      padding: 4px 8px;
+      color: var(--text-main);
+      border-bottom: 1px solid var(--border);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .compare-table th:last-child {
+      background: #ecfdf5;
+      color: var(--primary-dark);
+    }
+
+    .compare-table td {
+      padding: 4px 8px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-muted);
+      line-height: 1.25;
+    }
+
+    .compare-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .compare-table td:last-child {
+      background: #f0fdf4;
+      color: var(--primary-dark);
+      font-weight: 700;
+    }
+
+    /* Footer & Action Conversion Block */
+    .cta-footer {
+      background: linear-gradient(135deg, #022c22 0%, #064e3b 100%);
+      color: #ffffff;
+      border-radius: 7px;
+      padding: 9px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .cta-copy {
+      max-width: 60%;
+    }
+
+    .cta-title {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      margin-bottom: 2px;
+    }
+
+    .cta-sub {
+      font-size: 9.5px;
+      color: #ccfbf1;
+      line-height: 1.3;
+    }
+
+    .cta-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: flex-end;
+    }
+
+    .cta-contact-pill {
+      background: #ffffff;
+      color: var(--primary-dark);
+      font-weight: 800;
+      font-size: 10.5px;
+      padding: 5px 11px;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    .cta-url-text {
+      font-size: 9px;
+      color: #a7f3d0;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* SVG Utilities */
+    svg {
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen-only Quick Print CTA Button -->
+  <div class="print-cta-bar no-print" onclick="window.print()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="6 9 6 2 18 2 18 9"></polyline>
+      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+      <rect x="6" y="14" width="12" height="8"></rect>
+    </svg>
+    Print / Save as PDF (1 Page)
+  </div>
+
+  <div class="sheet">
+    
+    <!-- 1. Header Section -->
+    <div>
+      <div class="header">
+        <div class="brand-group">
+          <div class="brand-icon">℞</div>
+          <div>
+            <div class="brand-title">Metapharsic Lifesciences</div>
+            <div class="brand-tagline">Clinical Pharmacy & Dispensary Operating System</div>
+          </div>
+        </div>
+        <div class="header-badges">
+          <div class="badge-pill">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Form 20/21 Audit Ready
+          </div>
+          <div class="badge-pill warning">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Schedule H & H1 Governed
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Hero Proposition -->
+      <div class="hero-banner">
+        <div class="hero-pre">For Retail Chemists, Medical Stores & Hospital Dispensaries</div>
+        <div class="hero-headline">Stop Expiry Losses. Automate Drug Compliance. Bill Counter Customers in 3 Seconds.</div>
+        <div class="hero-sub">
+          A dedicated pharmacy operating system built specifically for chemist retail workflows: barcode dispensing, FEFO batch rotation, loose tablet billing, WhatsApp digital invoices, and zero-headache Drug Inspector audits.
+        </div>
+      </div>
+
+      <!-- 3. Key Chemist Pain Points Solved -->
+      <div class="pain-strip">
+        <div class="pain-card alert">
+          <div class="pain-title">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Expiry Losses Eliminated
+          </div>
+          <div class="pain-desc">90/60/30-day alerts notify you to return unsold near-expiry stock to stockists for 100% credit notes before deadline.</div>
+        </div>
+        <div class="pain-card">
+          <div class="pain-title">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
+            Inspector Audit Shield
+          </div>
+          <div class="pain-desc">Schedule H & H1 narcotic registers auto-populate with doctor license and customer details. 1-click inspection export.</div>
+        </div>
+        <div class="pain-card">
+          <div class="pain-title">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10M6 10h10"/></svg>
+            Generic & Salt Finder
+          </div>
+          <div class="pain-desc">Prescribed brand out of stock? Instantly look up identical composition salt substitutes with higher chemist margin.</div>
+        </div>
+        <div class="pain-card">
+          <div class="pain-title">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            Chronic Refill WhatsApp
+          </div>
+          <div class="pain-desc">Auto-remind BP, Diabetes & Cardiac patients every 25 days on WhatsApp. Lock in repeat monthly counter sales.</div>
+        </div>
+      </div>
+
+      <!-- 4. Core 6 Feature Pillars -->
+      <div class="section-title-wrap">
+        <div class="section-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+          Complete Features Built for Every Chemist Counter
+        </div>
+        <span style="font-size: 8.5px; font-weight: 700; color: var(--primary-light);">PLUG & PLAY • FAST • SECURE</span>
+      </div>
+
+      <div class="features-grid">
+        <!-- Feature 1 -->
+        <div class="feature-card">
+          <div>
+            <div class="feature-head">
+              <div class="feat-icon-box">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 5v14M8 5v14M12 5v14M17 5v14M21 5v14"/></svg>
+              </div>
+              <div class="feat-title">High-Speed POS & Loose Strip Billing</div>
+            </div>
+            <ul class="feat-bullets">
+              <li><strong>Sub-second barcode scan:</strong> Instant batch, MRP, expiry & tax population.</li>
+              <li><strong>Strip / Tab auto conversion:</strong> Cut 4 tablets from a 10-tab strip without stock mismatch.</li>
+              <li><strong>Multi-tender checkout:</strong> Cash, UPI QR code, Card, and Customer Udhar Ledger.</li>
+            </ul>
+          </div>
+          <div class="feat-highlight-tag">Thermal 80mm & A4/A5 Laser Support</div>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="feature-card">
+          <div>
+            <div class="feature-head">
+              <div class="feat-icon-box">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </div>
+              <div class="feat-title">Smart FEFO Inventory & Expiry Defense</div>
+            </div>
+            <ul class="feat-bullets">
+              <li><strong>Auto FEFO allocation:</strong> Always bills the earliest expiring batch first.</li>
+              <li><strong>Near-expiry quarantine:</strong> Isolate stock 60 days before expiry to claim distributor credit notes.</li>
+              <li><strong>Fast reorder engine:</strong> Flags fast-moving medicines before your shelves run empty.</li>
+            </ul>
+          </div>
+          <div class="feat-highlight-tag">Save ₹15,000 to ₹50,000 / Month</div>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="feature-card">
+          <div>
+            <div class="feature-head">
+              <div class="feat-icon-box">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <div class="feat-title">Schedule H & H1 Regulatory Vault</div>
+            </div>
+            <ul class="feat-bullets">
+              <li><strong>Prescription gatekeeping:</strong> Mandatory doctor reg no. & patient logging on H1 narcotics.</li>
+              <li><strong>Zero manual paperwork:</strong> Ready-to-print inspection logbook formatted to CDSCO rules.</li>
+              <li><strong>Digital prescription archive:</strong> Attach camera photo or scan to bill records.</li>
+            </ul>
+          </div>
+          <div class="feat-highlight-tag">100% FDA Inspection Safe</div>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="feature-card">
+          <div>
+            <div class="feature-head">
+              <div class="feat-icon-box">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+              </div>
+              <div class="feat-title">WhatsApp CRM & Auto Chronic Refills</div>
+            </div>
+            <ul class="feat-bullets">
+              <li><strong>Paperless WhatsApp bill:</strong> Sends professional PDF invoice directly to patient phone.</li>
+              <li><strong>Chronic patient reminder:</strong> Automated WhatsApp reminder every 25 days for BP & Sugar.</li>
+              <li><strong>Customer mobile database:</strong> Build your own loyal patient list without manual entry.</li>
+            </ul>
+          </div>
+          <div class="feat-highlight-tag">+22% Recurring Counter Revenue</div>
+        </div>
+
+        <!-- Feature 5 -->
+        <div class="feature-card">
+          <div>
+            <div class="feature-head">
+              <div class="feat-icon-box">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="18" height="18" x="3" y="3" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+              </div>
+              <div class="feat-title">GSTR-1, 3B & Stockist Ledger Sync</div>
+            </div>
+            <ul class="feat-bullets">
+              <li><strong>HSN & GST accurate:</strong> Automatic 0%, 5%, 12%, 18% tax calculation on every sale.</li>
+              <li><strong>Stockist purchase inwards:</strong> Enter distributor challan in minutes with PTR & PTS rates.</li>
+              <li><strong>1-Click Excel / Tally Prime export:</strong> Hand over clean GST files to your CA effortlessly.</li>
+            </ul>
+          </div>
+          <div class="feat-highlight-tag">Zero Penalty GST Filing</div>
+        </div>
+
+        <!-- Feature 6 -->
+        <div class="feature-card">
+          <div>
+            <div class="feature-head">
+              <div class="feat-icon-box">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              </div>
+              <div class="feat-title">Owner Security, Anti-Theft & Backups</div>
+            </div>
+            <ul class="feat-bullets">
+              <li><strong>Staff permission locks:</strong> Restrict bill cancellation, price edits, and cash discount bypass.</li>
+              <li><strong>Cash drawer reconciliation:</strong> Day-end physical cash vs system total matching.</li>
+              <li><strong>Daily automated cloud backup:</strong> Excel & database backup dispatched automatically to your email.</li>
+            </ul>
+          </div>
+          <div class="feat-highlight-tag">Live Shop Monitoring on Mobile</div>
+        </div>
+      </div>
+
+      <!-- 5. Chemist Financial Impact & ROI Ledger -->
+      <div class="roi-strip">
+        <div>
+          <div class="roi-left-title">Real Chemist Return-on-Investment (ROI)</div>
+          <div class="roi-left-text">
+            Most medical stores lose <strong>2% to 4% of total turnover</strong> every single month to expired medicines and forgotten distributor returns. Metapharsic pays for itself within the first 14 days of counter deployment.
+          </div>
+        </div>
+        <div class="roi-stats-group">
+          <div class="roi-stat-box">
+            <div class="roi-stat-num">₹28,500+</div>
+            <div class="roi-stat-lbl">Avg. Monthly Expiry Saved</div>
+          </div>
+          <div class="roi-stat-box">
+            <div class="roi-stat-num">&lt; 3 Sec</div>
+            <div class="roi-stat-lbl">Average Counter Billing</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Comparison: Old Software vs Metapharsic -->
+      <div class="compare-wrap">
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th style="width: 25%;">Workflow</th>
+              <th style="width: 37%;">Old Legacy Retail Software</th>
+              <th style="width: 38%;">Metapharsic Rx Pharmacy OS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Expiry Tracking</strong></td>
+              <td>Manual physical shelf checking; missed return deadlines.</td>
+              <td>Automated FEFO & 90-day alert for 100% stockist credit notes.</td>
+            </tr>
+            <tr>
+              <td><strong>Drug Inspector Audits</strong></td>
+              <td>Handwritten registers with risk of license cancellation.</td>
+              <td>1-Click digital Schedule H & H1 register ready for inspection.</td>
+            </tr>
+            <tr>
+              <td><strong>Customer Refills</strong></td>
+              <td>Customers drift to competitors or online apps.</td>
+              <td>Automated WhatsApp refill reminders guarantee repeat sales.</td>
+            </tr>
+            <tr>
+              <td><strong>Owner Control</strong></td>
+              <td>Data trapped on a single local computer with crash risk.</td>
+              <td>Live mobile monitoring + multi-threaded automated cloud backup.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 7. Hardware & Deployment Compatibility -->
+      <div class="specs-strip">
+        <div class="spec-item">
+          <div class="spec-icon">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </div>
+          <div>
+            <div class="spec-label">Any PC or Laptop</div>
+            <div class="spec-sub">Windows 10/11, macOS, POS terminals</div>
+          </div>
+        </div>
+        <div class="spec-item">
+          <div class="spec-icon">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+          </div>
+          <div>
+            <div class="spec-label">All Printers Supported</div>
+            <div class="spec-sub">2" & 3" Thermal (80mm) + A4/A5 Laser</div>
+          </div>
+        </div>
+        <div class="spec-item">
+          <div class="spec-icon">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 5v14M8 5v14M12 5v14M17 5v14M21 5v14"/></svg>
+          </div>
+          <div>
+            <div class="spec-label">Barcode Scanners</div>
+            <div class="spec-sub">USB & Wireless 1D/2D QR Scanners</div>
+          </div>
+        </div>
+        <div class="spec-item">
+          <div class="spec-icon">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </div>
+          <div>
+            <div class="spec-label">Free Data Migration</div>
+            <div class="spec-sub">Import from your existing software in 1 hr</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8. Commercial Call to Action Footer -->
+    <div class="cta-footer">
+      <div class="cta-copy">
+        <div class="cta-title">Upgrade Your Pharmacy Counter Today — Zero Risk</div>
+        <div class="cta-sub">
+          Book a 15-minute live in-store demo. We migrate your complete inventory, customer ledger, and supplier data with zero shop downtime.
+        </div>
+      </div>
+      <div class="cta-actions">
+        <a href="https://pharmacy.metapharsic.cloud" class="cta-contact-pill" target="_blank">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Book Free Live Demo
+        </a>
+        <div class="cta-url-text">https://pharmacy.metapharsic.cloud</div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>
