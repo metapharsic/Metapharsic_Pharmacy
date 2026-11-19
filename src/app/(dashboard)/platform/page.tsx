@@ -37,6 +37,7 @@ import {
   Cpu,
   Globe,
   KeyRound,
+  Cloud,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -72,6 +73,7 @@ import { SubscriptionLicensingPanel } from '@/components/platform/subscription-l
 import { SidebarAssignmentPanel } from '@/components/platform/sidebar-assignment-panel'
 import { GeoPoliticalZonePanel } from '@/components/platform/geo-political-zone-panel'
 import { IAMPolicyPanel } from '@/components/platform/iam-policy-panel'
+import { SovereignCloudPilotPanel } from '@/components/platform/sovereign-cloud-pilot-panel'
 import { cn } from '@/lib/utils/cn'
 import { maskEmail, maskPhone } from '@/lib/utils/masking'
 
@@ -135,15 +137,15 @@ export default function PlatformSuperAdminPage() {
     }
   }, [session, status, isSuperAdmin, router])
 
-  // Tab State: Monitoring, IAM, GeoZones, Sidebar Delegation, Users, Subscriptions, Financials, Shops, Catalog
+  // Tab State: Monitoring, IAM, GeoZones, Cloud, Sidebar Delegation, Users, Subscriptions, Financials, Shops, Catalog
   const searchParams = useSearchParams()
   const tabFromUrl = searchParams?.get('tab') as any
-  const [activeTab, setActiveTab] = useState<'monitoring' | 'iam' | 'geozones' | 'sidebar' | 'users' | 'subscriptions' | 'financials' | 'shops' | 'catalog'>('monitoring')
+  const [activeTab, setActiveTab] = useState<'monitoring' | 'iam' | 'geozones' | 'cloud' | 'sidebar' | 'users' | 'subscriptions' | 'financials' | 'shops' | 'catalog'>('monitoring')
 
   useEffect(() => {
     if (
       tabFromUrl &&
-      ['monitoring', 'iam', 'geozones', 'sidebar', 'users', 'subscriptions', 'financials', 'shops', 'catalog'].includes(
+      ['monitoring', 'iam', 'geozones', 'cloud', 'sidebar', 'users', 'subscriptions', 'financials', 'shops', 'catalog'].includes(
         tabFromUrl
       )
     ) {
@@ -650,6 +652,20 @@ export default function PlatformSuperAdminPage() {
 
         <button
           type="button"
+          onClick={() => setActiveTab('cloud')}
+          className={cn(
+            'pb-2.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap',
+            activeTab === 'cloud'
+              ? 'border-primary text-primary font-bold'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <Cloud className="h-4 w-4 text-sky-600" />
+          <span>Sovereign Cloud &amp; ZATCA Sandbox Pilot (6 Nodes)</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveTab('sidebar')}
           className={cn(
             'pb-2.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap',
@@ -741,6 +757,9 @@ export default function PlatformSuperAdminPage() {
 
       {/* ─── TAB: GEO-POLITICAL ZONES & AREA LOGINS ─── */}
       {activeTab === 'geozones' && <GeoPoliticalZonePanel />}
+
+      {/* ─── TAB: SOVEREIGN CLOUD & ZATCA PILOT ─── */}
+      {activeTab === 'cloud' && <SovereignCloudPilotPanel />}
 
       {/* ─── TAB: SIDEBAR & MODULE ACCESS DELEGATION ─── */}
       {activeTab === 'sidebar' && <SidebarAssignmentPanel />}
