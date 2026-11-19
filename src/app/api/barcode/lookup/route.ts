@@ -6,6 +6,7 @@ import { PERMISSIONS } from '@/lib/constants/permissions'
 import prisma from '@/lib/db/prisma'
 import { resolveBranchScope } from '@/lib/inventory/branch-access'
 import type { PosCartLine } from '@/lib/stores/pos-cart-store'
+import { parseGs1DataMatrix } from '@/lib/serialization/gs1-parser'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -50,15 +51,23 @@ export async function GET(req: NextRequest) {
 
     const branchScope = await resolveBranchScope(user, reqBranchId || undefined)
 
+    // Parse potential GS1 2D DataMatrix (SFDA Tatmeen / NHRA Munsha'at / GS1)
+    const gs1 = parseGs1DataMatrix(rawBarcode)
+    const searchKeys = [rawBarcode]
+    if (gs1.isGs1) {
+      if (gs1.gtin) searchKeys.push(gs1.gtin)
+      if (gs1.gtin13) searchKeys.push(gs1.gtin13)
+    }
+
     // 1. Find product matching exact barcode, additional barcodes, SKU, or ID (tenant-scoped)
     let product = await prisma.product.findFirst({
       where: {
         isActive: true,
         ...(orgId ? { organizationId: orgId } : {}),
         OR: [
-          { barcode: { equals: rawBarcode, mode: 'insensitive' } },
-          { barcodes: { some: { barcode: { equals: rawBarcode, mode: 'insensitive' } } } },
-          { sku: { equals: rawBarcode, mode: 'insensitive' } },
+          ...searchKeys.map((k) => ({ barcode: { equals: k, mode: 'insensitive' as const } })),
+          ...searchKeys.map((k) => ({ barcodes: { some: { barcode: { equals: k, mode: 'insensitive' as const } } } })),
+          ...searchKeys.map((k) => ({ sku: { equals: k, mode: 'insensitive' as const } })),
           { id: rawBarcode },
         ],
       },
@@ -76,9 +85,9 @@ export async function GET(req: NextRequest) {
           isActive: true,
           ...(orgId ? { organizationId: orgId } : {}),
           OR: [
-            { barcode: { contains: rawBarcode, mode: 'insensitive' } },
-            { barcodes: { some: { barcode: { contains: rawBarcode, mode: 'insensitive' } } } },
-            { sku: { contains: rawBarcode, mode: 'insensitive' } },
+            ...searchKeys.map((k) => ({ barcode: { contains: k, mode: 'insensitive' as const } })),
+            ...searchKeys.map((k) => ({ barcodes: { some: { barcode: { contains: k, mode: 'insensitive' as const } } } })),
+            ...searchKeys.map((k) => ({ sku: { contains: k, mode: 'insensitive' as const } })),
             { name: { contains: rawBarcode, mode: 'insensitive' } },
           ],
         },
@@ -169,9 +178,16 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    // 3. Recommended FEFO batch
-    const activeBatches = batches.filter((b) => b.availableQuantity > 0)
-    const fefoBatch = activeBatches[0] || null
+    // 3. Recommended FEFO batch or Exact GS1 Matched Batch
+    let selectedBatch = null
+    if (gs1.isGs1 && gs1.batchNumber) {
+      selectedBatch = batches.find((b) => b.batchNumber.toLowerCase() === gs1.batchNumber?.toLowerCase()) || null
+    }
+    if (!selectedBatch) {
+      const activeBatches = batches.filter((b) => b.availableQuantity > 0)
+      selectedBatch = activeBatches[0] || null
+    }
+    const fefoBatch = selectedBatch
 
     const availableQuantity = inventory?.availableQuantity ?? 0
 
@@ -198,13 +214,16 @@ export async function GET(req: NextRequest) {
       categoryName: product.categories[0]?.category.name || null,
       composition: product.composition,
       batchId: fefoBatch?.id,
-      batchNumber: fefoBatch?.batchNumber,
-      expiryDate: fefoBatch?.expiryDate ? new Date(fefoBatch.expiryDate).toISOString() : undefined,
+      batchNumber: fefoBatch?.batchNumber || gs1.batchNumber,
+      expiryDate: fefoBatch?.expiryDate
+        ? new Date(fefoBatch.expiryDate).toISOString()
+        : gs1.expiryDateString,
     }
 
     return NextResponse.json({
       success: true,
       data: {
+        gs1Data: gs1.isGs1 ? gs1 : undefined,
         product: {
           id: product.id,
           name: product.name,

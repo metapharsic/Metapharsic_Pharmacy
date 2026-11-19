@@ -631,6 +631,11 @@ export function BarcodeScannerModal({
                   <Badge variant="outline" className="text-[10px] font-mono">
                     {scannedData.product.sku}
                   </Badge>
+                  {(scannedData as any).gs1Data && (
+                    <Badge className="bg-blue-600 text-white text-[9px] gap-1">
+                      <Zap className="h-2.5 w-2.5" /> GS1 2D DataMatrix (SFDA/NHRA Traceable)
+                    </Badge>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
