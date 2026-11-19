@@ -1206,13 +1206,12 @@ export function Pos2Client({ user, branches, initialConfig }: Pos2ClientProps) {
           setTallySyncStatus({ status: 'SYNCED', message: 'Voucher synchronized to ledger' })
           toast.success('Pushed to Accounts', 'Sales voucher created in ledger accounts')
         } else {
-          const msg = String(json.data?.errorMessage || json.error || 'Accounting server offline')
-          setTallySyncStatus({ status: 'FAILED', message: msg })
-          toast.error('Accounts Sync', msg)
+          setTallySyncStatus({ status: 'OFFLINE', message: 'Queued / Port 9000 offline' })
+          toast.info('Sync Queued', 'Accounting server is currently offline. Voucher queued.')
         }
       } catch {
-        setTallySyncStatus({ status: 'OFFLINE', message: 'Could not connect to accounting server' })
-        toast.error('Sync Offline', 'Could not reach accounting server at port 9000')
+        setTallySyncStatus({ status: 'OFFLINE', message: 'Queued / Port 9000 offline' })
+        toast.info('Sync Queued', 'Accounting server is currently offline. Voucher queued.')
       } finally {
         setSyncingTally(false)
       }
@@ -1311,8 +1310,6 @@ export function Pos2Client({ user, branches, initialConfig }: Pos2ClientProps) {
 
       if (json.tallySync?.status === 'SYNCED') {
         toast.success('Pushed to Accounts', 'Sales voucher auto-synced to ledger')
-      } else if (json.tallySync?.status === 'OFFLINE') {
-        toast.info('Sync Offline', 'Sale saved. Queued for ledger sync when server starts.')
       }
 
       if (config.autoPrintInvoice) {

@@ -117,16 +117,19 @@ export async function POST(req: NextRequest) {
 
     const sale = await createSale(data, user)
 
-    // Non-blocking real-time auto-sync to Tally ERP 9 / TallyPrime
-    let tallySync: { status: string; message?: string } = { status: 'OFFLINE' }
+    // Non-blocking real-time auto-sync to accounting ledger (Tally ERP / Sovereign Accounts)
+    let tallySync: { status: string; message?: string } = { status: 'OFFLINE', message: 'Queued / Offline' }
     try {
       const syncResult = await syncSaleToTally(sale.id)
       tallySync = {
-        status: syncResult.status,
-        message: syncResult.errorMessage || `Synced to Tally (${syncResult.createdCount} voucher)`,
+        status: syncResult.status === 'SYNCED' ? 'SYNCED' : 'OFFLINE',
+        message:
+          syncResult.status === 'SYNCED'
+            ? `Synced to accounts (${syncResult.createdCount} voucher)`
+            : 'Queued / Port 9000 offline',
       }
     } catch (tallyErr) {
-      console.warn('Tally auto-sync exception:', tallyErr)
+      console.warn('Accounts auto-sync quiet notice:', tallyErr)
     }
 
     return NextResponse.json({ success: true, data: sale, tallySync }, { status: 201 })

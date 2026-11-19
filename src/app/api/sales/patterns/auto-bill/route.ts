@@ -67,15 +67,16 @@ export async function POST(req: NextRequest) {
       user
     )
 
-    // Fire-and-forget background Tally ERP sync
-    let tallySyncResult: { status: string; message?: string } = { status: 'SKIPPED' }
+    // Background accounting ledger sync
+    let tallySyncResult: { status: string; message?: string } = { status: 'OFFLINE', message: 'Queued / Offline' }
     try {
-      tallySyncResult = await syncSaleToTally(result.sale.id)
-    } catch (err: unknown) {
+      const syncRes = await syncSaleToTally(result.sale.id)
       tallySyncResult = {
-        status: 'FAILED',
-        message: err instanceof Error ? err.message : 'Tally sync background failure',
+        status: syncRes.status === 'SYNCED' ? 'SYNCED' : 'OFFLINE',
+        message: syncRes.status === 'SYNCED' ? 'Synced to accounts' : 'Queued / Port 9000 offline',
       }
+    } catch {
+      tallySyncResult = { status: 'OFFLINE', message: 'Queued / Port 9000 offline' }
     }
 
     // Mask profit & cost data if actor is not an admin

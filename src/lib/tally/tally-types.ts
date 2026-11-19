@@ -25,8 +25,8 @@ export interface TallyConfig {
 export const DEFAULT_TALLY_CONFIG: TallyConfig = {
   serverUrl: 'http://localhost:9000',
   companyName: 'PharmaCare Pharmacy',
-  autoSyncSales: true,
-  autoSyncPurchases: true,
+  autoSyncSales: false,
+  autoSyncPurchases: false,
   cashLedger: 'Cash',
   bankLedger: 'Bank Account',
   salesLedger: 'Sales - Medicines',

@@ -1,4 +1,4 @@
-﻿import type { Metadata } from 'next'
+import type { Metadata } from 'next'
 
 import type { ExpiredBatchRow } from '@/components/expiry/expiry-table'
 import { ExpiryView } from '@/components/expiry/expiry-view'

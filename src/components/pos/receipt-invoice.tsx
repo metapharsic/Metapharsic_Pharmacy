@@ -139,6 +139,8 @@ export interface ReceiptData {
       email?: string | null
       gstin?: string | null
       dlNumber?: string | null
+      country?: string | null
+      currency?: string | null
     } | null
   } | null
 
@@ -241,23 +243,36 @@ export function ReceiptInvoice({
   const receiptRef = useRef<HTMLDivElement>(null)
   const [printVariant, setPrintVariant] = useState<'slip' | 'full'>(initialVariant)
 
+  // Resolve sovereign territory from sale organization or i18n
+  const saleOrgCountry = sale.branch?.organization?.country?.toLowerCase() || ''
+  const saleOrgCurrency = sale.branch?.organization?.currency?.toUpperCase() || ''
+  let saleTerritory: TerritoryCode | null = null
+  if (saleOrgCurrency === 'OMR' || saleOrgCountry.includes('oman')) saleTerritory = 'OM'
+  else if (saleOrgCurrency === 'SAR' || saleOrgCountry.includes('saudi')) saleTerritory = 'SA'
+  else if (saleOrgCurrency === 'BHD' || saleOrgCountry.includes('bahrain')) saleTerritory = 'BH'
+  else if (saleOrgCurrency === 'QAR' || saleOrgCountry.includes('qatar')) saleTerritory = 'QA'
+  else if (saleOrgCurrency === 'MVR' || saleOrgCountry.includes('maldives')) saleTerritory = 'MV'
+  else if (saleOrgCurrency === 'INR' || saleOrgCountry.includes('india')) saleTerritory = 'IN'
+
   // Use i18n context safely
-  let activeTerritory: TerritoryCode = 'SA'
+  let activeTerritory: TerritoryCode = saleTerritory || 'SA'
   let activeLocale: 'en' | 'ar' = 'en'
   try {
     const i18n = useI18n()
-    activeTerritory = overrideTerritory || i18n.territory || 'SA'
+    activeTerritory = overrideTerritory || saleTerritory || i18n.territory || 'SA'
     activeLocale = i18n.locale || 'en'
   } catch {
-    activeTerritory = overrideTerritory || 'SA'
+    activeTerritory = overrideTerritory || saleTerritory || 'SA'
   }
 
   const [selectedTerritory, setSelectedTerritory] = useState<TerritoryCode>(activeTerritory)
   useEffect(() => {
     if (overrideTerritory) {
       setSelectedTerritory(overrideTerritory)
+    } else if (saleTerritory) {
+      setSelectedTerritory(saleTerritory)
     }
-  }, [overrideTerritory])
+  }, [overrideTerritory, saleTerritory])
 
   const territoryDef = useMemo(() => getTerritory(selectedTerritory), [selectedTerritory])
   const currencyCode = territoryDef.currency.code

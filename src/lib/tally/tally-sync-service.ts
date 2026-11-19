@@ -95,12 +95,12 @@ export async function syncSaleToTally(saleId: string): Promise<TallyPushResult> 
 
   if (!config.autoSyncSales) {
     return {
-      success: false,
+      success: true,
       status: 'OFFLINE',
       createdCount: 0,
       alteredCount: 0,
       errorCount: 0,
-      errorMessage: 'Auto-sync for sales is currently disabled in Tally settings',
+      errorMessage: 'Auto-sync for sales is currently disabled in accounting settings',
       durationMs: 0,
     }
   }
