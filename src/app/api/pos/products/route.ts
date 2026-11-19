@@ -15,7 +15,7 @@ export const revalidate = 0
 export async function GET(req: NextRequest) {
   try {
     const user = await requireAuth()
-    let organizationId = user.organizationId || undefined
+    let organizationId = user.isSuperAdmin ? undefined : (user.organizationId || '__NO_ACCESS__')
 
     try {
       const { getTenantContext } = await import('@/lib/auth/tenant-context')
@@ -47,11 +47,7 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const args: [string | undefined, string, number, string?] = [query.search, scope, query.limit]
-    if (organizationId) {
-      args.push(organizationId)
-    }
-    const products = await searchPosProducts(...args)
+    const products = await searchPosProducts(query.search, scope, query.limit, organizationId)
 
     return NextResponse.json({ success: true, data: products })
   } catch (err) {

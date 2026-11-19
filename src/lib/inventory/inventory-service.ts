@@ -204,6 +204,7 @@ export async function getInventory(
     status?: string
     sortBy?: 'product' | 'totalQuantity' | 'availableQuantity' | 'updatedAt'
     sortOrder?: 'asc' | 'desc'
+    organizationId?: string
   } = {}
 ): Promise<InventoryListResult> {
   const {
@@ -216,29 +217,39 @@ export async function getInventory(
     status,
     sortBy = 'product',
     sortOrder = 'asc',
+    organizationId,
   } = params
 
   const where: Prisma.InventoryWhereInput = {}
   if (branchId) where.branchId = branchId
   if (productId) where.productId = productId
-  if (search || categoryId) {
-    const productWhere: Prisma.ProductWhereInput = {}
-    if (search) {
-      productWhere.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { nameAr: { contains: search, mode: 'insensitive' } },
-        { genericName: { contains: search, mode: 'insensitive' } },
-        { genericNameAr: { contains: search, mode: 'insensitive' } },
-        { sku: { contains: search, mode: 'insensitive' } },
-        { barcode: { contains: search, mode: 'insensitive' } },
-        { barcodes: { some: { barcode: { contains: search, mode: 'insensitive' } } } },
-      ]
+
+  // Strict multi-tenant isolation
+  if (organizationId) {
+    where.branch = { organizationId }
+  }
+
+  const productWhere: Prisma.ProductWhereInput = {}
+  if (organizationId) {
+    productWhere.organizationId = organizationId
+  }
+  if (search) {
+    productWhere.OR = [
+      { name: { contains: search, mode: 'insensitive' } },
+      { nameAr: { contains: search, mode: 'insensitive' } },
+      { genericName: { contains: search, mode: 'insensitive' } },
+      { genericNameAr: { contains: search, mode: 'insensitive' } },
+      { sku: { contains: search, mode: 'insensitive' } },
+      { barcode: { contains: search, mode: 'insensitive' } },
+      { barcodes: { some: { barcode: { contains: search, mode: 'insensitive' } } } },
+    ]
+  }
+  if (categoryId) {
+    productWhere.categories = {
+      some: { categoryId },
     }
-    if (categoryId) {
-      productWhere.categories = {
-        some: { categoryId },
-      }
-    }
+  }
+  if (Object.keys(productWhere).length > 0) {
     where.product = productWhere
   }
 
@@ -332,7 +343,11 @@ export async function getInventory(
 
 // ─── Read: Summary & Valuation ────────────────────────────────
 
-export async function getInventorySummary(branchId?: string, categoryId?: string): Promise<InventorySummary> {
+export async function getInventorySummary(
+  branchId?: string,
+  categoryId?: string,
+  organizationId?: string
+): Promise<InventorySummary> {
   let targetCategoryIds: string[] | undefined
   if (categoryId && categoryId !== 'all') {
     targetCategoryIds = await getDescendantCategoryIds(categoryId)
@@ -341,13 +356,37 @@ export async function getInventorySummary(branchId?: string, categoryId?: string
   const where: Prisma.InventoryWhereInput = branchId ? { branchId } : {}
   const batchWhere: Prisma.BatchWhereInput = branchId ? { branchId } : {}
 
+  let orgBranchIds: string[] | undefined
+  if (organizationId && !branchId) {
+    const orgBranches = await prisma.branch.findMany({
+      where: { organizationId },
+      select: { id: true },
+    })
+    orgBranchIds = orgBranches.map((b) => b.id)
+    where.branch = { organizationId }
+    batchWhere.branchId = { in: orgBranchIds }
+  }
+
+  if (organizationId) {
+    where.product = {
+      ...((where.product as Prisma.ProductWhereInput) || {}),
+      organizationId,
+    }
+    batchWhere.product = {
+      ...((batchWhere.product as Prisma.ProductWhereInput) || {}),
+      organizationId,
+    }
+  }
+
   if (targetCategoryIds && targetCategoryIds.length > 0) {
     where.product = {
+      ...((where.product as Prisma.ProductWhereInput) || {}),
       categories: {
         some: { categoryId: { in: targetCategoryIds } },
       },
     }
     batchWhere.product = {
+      ...((batchWhere.product as Prisma.ProductWhereInput) || {}),
       categories: {
         some: { categoryId: { in: targetCategoryIds } },
       },
@@ -440,7 +479,7 @@ export async function getInventorySummary(branchId?: string, categoryId?: string
     prisma.stockAdjustment.count({
       where: {
         status: 'PENDING',
-        ...(branchId ? { branchId } : {}),
+        ...(branchId ? { branchId } : orgBranchIds ? { branchId: { in: orgBranchIds } } : {}),
       },
     }),
     prisma.inventory.count({

@@ -82,6 +82,7 @@ export interface BatchListParams {
   search?: string
   productId?: string
   branchId?: string
+  organizationId?: string
   supplierId?: string
   rack?: string
   box?: string
@@ -236,6 +237,7 @@ export async function getBatches(params: BatchListParams = {}): Promise<BatchLis
     search,
     productId,
     branchId,
+    organizationId,
     supplierId,
     rack,
     box,
@@ -249,6 +251,12 @@ export async function getBatches(params: BatchListParams = {}): Promise<BatchLis
   const skip = (page - 1) * limit
 
   const where: Prisma.BatchWhereInput = {}
+
+  if (organizationId) {
+    where.product = {
+      organizationId,
+    }
+  }
 
   if (search) {
     where.OR = [
@@ -265,6 +273,7 @@ export async function getBatches(params: BatchListParams = {}): Promise<BatchLis
 
   if (rack) {
     where.product = {
+      ...(where.product as Prisma.ProductWhereInput || {}),
       rack: { code: { equals: rack, mode: 'insensitive' } },
     }
   }

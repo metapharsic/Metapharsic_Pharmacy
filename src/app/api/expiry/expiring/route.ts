@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const query = expiringBatchesQuerySchema.parse(Object.fromEntries(searchParams))
     const branchId = await resolveBranchScope(user, query.branchId)
+    const orgFilter = user.isSuperAdmin ? undefined : (user.organizationId || '__NO_ACCESS__')
 
     const result = await getExpiringBatches({
       page: query.page,
@@ -25,6 +26,7 @@ export async function GET(req: NextRequest) {
       productId: query.productId,
       branchId: branchId ?? undefined,
       severity: query.severity,
+      organizationId: orgFilter,
     })
 
     return NextResponse.json({ success: true, ...result })

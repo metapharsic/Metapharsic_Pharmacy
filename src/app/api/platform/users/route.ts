@@ -298,6 +298,7 @@ export async function POST(req: Request) {
             storeCode: orgRecord.code || 'MAIN',
             storeName: orgRecord.name,
             privateCloudVpcId,
+            seedDemoProducts: false, // New users must never auto-inject products into empty shops
           })
         }
       }

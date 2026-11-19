@@ -10,6 +10,7 @@ export const createUserSchema = z.object({
     .regex(/[a-z]/, 'Must contain at least one lowercase letter')
     .regex(/[0-9]/, 'Must contain at least one number'),
   phone: z.string().optional(),
+  organizationId: z.string().optional(),
   roleIds: z.array(z.string()).min(1, 'At least one role is required'),
   branchId: z.string().optional(),
   isActive: z.boolean().default(true),

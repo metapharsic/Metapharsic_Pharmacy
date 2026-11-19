@@ -15,7 +15,8 @@ export async function GET(req: NextRequest) {
     const branchId = await resolveBranchScope(user, rawBranchId)
 
     const categoryId = searchParams.get("categoryId") || undefined
-    const summary = await getInventorySummary(branchId ?? undefined, categoryId)
+    const orgFilter = user.isSuperAdmin ? undefined : (user.organizationId || '__NO_ACCESS__')
+    const summary = await getInventorySummary(branchId ?? undefined, categoryId, orgFilter)
     return NextResponse.json({ success: true, data: summary })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

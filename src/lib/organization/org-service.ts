@@ -211,7 +211,7 @@ export async function onboardChemistShop(input: OnboardChemistShopInput) {
 
   const adminUser = await prisma.user.create({
     data: {
-      name: input.adminName.trim(),
+      name: (input.adminName || ((input as unknown as Record<string, unknown>).adminFullName as string) || 'Chemist Admin').trim(),
       email: input.adminEmail.trim().toLowerCase(),
       password: hashedPassword,
       organizationId: org.id,
@@ -303,6 +303,7 @@ export async function onboardChemistShop(input: OnboardChemistShopInput) {
       storeCode: cleanCode,
       storeName: org.name,
       privateCloudVpcId: input.privateCloudVpcId,
+      seedDemoProducts: false, // Brand new chemist shops must start 100% EMPTY!
     })
   } catch (err) {
     console.error('Failed to auto-provision sovereign pipeline', err)

@@ -107,6 +107,19 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(data.password, 12)
 
+    // Determine the target organization strictly without leaking default-org
+    let targetOrgId: string | null | undefined = data.organizationId
+    if (!targetOrgId && data.branchId) {
+      const branchRecord = await prisma.branch.findUnique({
+        where: { id: data.branchId },
+        select: { organizationId: true },
+      })
+      targetOrgId = branchRecord?.organizationId || null
+    }
+    if (!targetOrgId) {
+      targetOrgId = actor.organizationId || null
+    }
+
     const user = await prisma.user.create({
       data: {
         name: data.name,
@@ -114,7 +127,7 @@ export async function POST(req: NextRequest) {
         password: hashedPassword,
         phone: data.phone,
         branchId: data.branchId || null,
-        organizationId: actor.organizationId,
+        organizationId: targetOrgId,
         isActive: data.isActive,
         userRoles: {
           create: data.roleIds.map((roleId) => ({ roleId })),

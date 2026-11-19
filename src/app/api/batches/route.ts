@@ -16,12 +16,14 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const query = batchListQuerySchema.parse(Object.fromEntries(searchParams))
     const branchId = await resolveBranchScope(user, query.branchId)
+    const orgFilter = user.isSuperAdmin ? undefined : (user.organizationId || '__NO_ACCESS__')
 
     const result = await getBatches({
       page: query.page,
       limit: query.limit,
       search: query.search,
       branchId: branchId ?? undefined,
+      organizationId: orgFilter,
       productId: query.productId,
       supplierId: query.supplierId,
       rack: query.rack,

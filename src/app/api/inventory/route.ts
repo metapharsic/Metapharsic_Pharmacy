@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const query = inventoryListQuerySchema.parse(Object.fromEntries(searchParams))
     const branchId = await resolveBranchScope(user, query.branchId)
+    const orgFilter = user.isSuperAdmin ? undefined : (user.organizationId || '__NO_ACCESS__')
 
     const result = await getInventory({
       page: query.page,
@@ -27,6 +28,7 @@ export async function GET(req: NextRequest) {
       status: query.status,
       sortBy: query.sortBy,
       sortOrder: query.sortOrder,
+      organizationId: orgFilter,
     })
     return NextResponse.json({ success: true, ...result })
   } catch (err) {

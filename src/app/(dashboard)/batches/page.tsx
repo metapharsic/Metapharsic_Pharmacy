@@ -49,10 +49,15 @@ export default async function BatchManagementPage({
     )
   }
 
+  const orgFilter = tenant?.isSuperAdmin
+    ? undefined
+    : (tenant?.organizationId || session?.user?.organizationId || '__NO_ACCESS__')
+
   const firstPage = await getBatches({
     page: 1,
     limit: 20,
     branchId: defaultBranchId,
+    organizationId: orgFilter,
   })
 
   const initialRows: BatchRow[] = firstPage.data.map((b) => ({

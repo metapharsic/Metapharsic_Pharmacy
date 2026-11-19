@@ -26,10 +26,15 @@ export default async function ExpiredBatchesPage() {
     )
   }
 
+  const orgFilter = session?.user?.isSuperAdmin
+    ? undefined
+    : (session?.user?.organizationId ?? '__NO_ACCESS__')
+
   const firstPage = await getExpiredBatches({
     page: 1,
     limit: 20,
     branchId: defaultBranchId ?? undefined,
+    organizationId: orgFilter,
   })
 
   const initialRows: ExpiredBatchRow[] = firstPage.data.map((b) => ({

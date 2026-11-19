@@ -31,7 +31,10 @@ export default async function ExpiryManagementPage() {
     )
   }
 
-  const summary = await getExpirySummary(defaultBranchId ?? undefined)
+  const orgFilter = session?.user?.isSuperAdmin
+    ? undefined
+    : (session?.user?.organizationId ?? '__NO_ACCESS__')
+  const summary = await getExpirySummary(defaultBranchId ?? undefined, undefined, orgFilter)
 
   const tiles: {
     href: string

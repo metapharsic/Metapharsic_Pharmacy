@@ -32,8 +32,11 @@ export default async function SalesHistoryPage() {
   )
 
   const scope = await resolveBranchScope(session.user)
+  const orgFilter = session.user.isSuperAdmin
+    ? undefined
+    : (session.user.organizationId || '__NO_ACCESS__')
   const firstPage = await listSales(
-    { page: 1, limit: 20 },
+    { page: 1, limit: 20, organizationId: orgFilter },
     scope
   )
 

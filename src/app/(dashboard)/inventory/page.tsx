@@ -55,6 +55,10 @@ export default async function InventoryManagementPage({
     )
   }
 
+  const orgFilter = session?.user?.isSuperAdmin
+    ? undefined
+    : (tenant?.organizationId || session?.user?.organizationId || '__NO_ACCESS__')
+
   const [firstPage, initialSummary] = await Promise.all([
     getInventory({
       page: 1,
@@ -62,8 +66,9 @@ export default async function InventoryManagementPage({
       branchId: defaultBranchId,
       categoryId,
       status,
+      organizationId: orgFilter,
     }),
-    getInventorySummary(defaultBranchId, categoryId).catch(() => null),
+    getInventorySummary(defaultBranchId, categoryId, orgFilter).catch(() => null),
   ])
 
   const initialRows: InventoryRow[] = firstPage.data.map((p) => ({

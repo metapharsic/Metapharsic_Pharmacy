@@ -25,7 +25,8 @@ export async function GET(req: NextRequest) {
     const query = saleListQuerySchema.parse(Object.fromEntries(req.nextUrl.searchParams))
 
     const scope = await resolveBranchScope(user, query.branchId)
-    const result = await listSales(query, scope)
+    const orgFilter = user.isSuperAdmin ? undefined : (user.organizationId || '__NO_ACCESS__')
+    const result = await listSales({ ...query, organizationId: orgFilter }, scope)
 
     const data = !isAdmin
       ? (result.data as any[]).map((s) => ({

@@ -252,6 +252,7 @@ export interface SaleListParams {
   limit?: number
   search?: string
   branchId?: string
+  organizationId?: string
   status?: string
   paymentStatus?: string
   fromDate?: string
@@ -369,6 +370,9 @@ export async function listSales(
   const where: Prisma.SaleWhereInput = {}
   if (scope) where.branchId = scope
   else if (branchId) where.branchId = branchId
+  if (params.organizationId) {
+    where.branch = { organizationId: params.organizationId }
+  }
   if (status) where.status = status as never
   if (paymentStatus) where.paymentStatus = paymentStatus as never
 
@@ -646,16 +650,8 @@ export async function searchPosProducts(
 ): Promise<PosProductRow[]> {
   const where: Prisma.ProductWhereInput = {
     isActive: true,
-    ...(organizationId
-      ? {
-          OR: [
-            { organizationId },
-            { batches: { some: { branchId } } },
-          ],
-        }
-      : {
-          batches: { some: { branchId } },
-        }),
+    ...(organizationId ? { organizationId } : {}),
+    batches: { some: { branchId, status: 'ACTIVE', quantity: { gt: 0 } } },
   }
   const cleanSearch = search?.trim()
   if (cleanSearch) {

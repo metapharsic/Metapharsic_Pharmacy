@@ -22,6 +22,7 @@ export interface SovereignProvisioningOptions {
   storeCode: string
   storeName: string
   privateCloudVpcId?: string
+  seedDemoProducts?: boolean // Default false! New entities start 100% EMPTY!
 }
 
 export interface SovereignProvisioningReport {
@@ -433,7 +434,17 @@ export function resolveTerritoryFromZone(zone: string): TerritoryCode {
 export async function provisionSovereignTenant(
   opts: SovereignProvisioningOptions
 ): Promise<SovereignProvisioningReport> {
-  const { organizationId, branchId, adminUserId, territoryCode, geoZoneName, storeCode, storeName, privateCloudVpcId } = opts
+  const {
+    organizationId,
+    branchId,
+    adminUserId,
+    territoryCode,
+    geoZoneName,
+    storeCode,
+    storeName,
+    privateCloudVpcId,
+    seedDemoProducts = false, // ALWAYS false for new chemist shops / entities!
+  } = opts
   const terr = TERRITORIES[territoryCode] || TERRITORIES.SA
   const topology = getSovereignCloudTopology(territoryCode)
 
@@ -516,151 +527,150 @@ export async function provisionSovereignTenant(
   })
 
   // ─────────────────────────────────────────────────────────────
-  // PHASE 1: SOVEREIGN MEDICINE CATALOG (BILINGUAL ARABIC/ENGLISH)
+  // PHASE 1 & 2: MEDICINE CATALOG & BATCHES (STRICTLY OPTIONAL)
+  // New chemist shops are clean sovereign entities with 0 products/batches
   // ─────────────────────────────────────────────────────────────
-  const isGcc = ['SA', 'OM', 'BH', 'QA'].includes(territoryCode)
-  const drugTemplates = isGcc ? SOVEREIGN_DRUG_TEMPLATES.ARABIC_GCC : SOVEREIGN_DRUG_TEMPLATES.INDIA_MALDIVES
-
   const createdProducts: Array<{ id: string; category: string; mrp: number; ptr: number }> = []
+  let batchesCount = 0
 
-  for (const drug of drugTemplates) {
-    const isArabicTerritory = isGcc
-    const finalMrp = isArabicTerritory ? drug.mrpSar : drug.mrpInr
-    const finalPtr = isArabicTerritory ? drug.ptrSar : drug.ptrInr
-    const finalCost = finalPtr * 0.85
+  if (seedDemoProducts) {
+    const isGcc = ['SA', 'OM', 'BH', 'QA'].includes(territoryCode)
+    const drugTemplates = isGcc ? SOVEREIGN_DRUG_TEMPLATES.ARABIC_GCC : SOVEREIGN_DRUG_TEMPLATES.INDIA_MALDIVES
 
-    const sku = `${storeCode}-${drug.skuSuffix}`
-    const assignedRack = drug.category === 'Antibiotics' ? rackB.id : drug.category === 'Inhalers' ? rackCold.id : rackA.id
+    for (const drug of drugTemplates) {
+      const isArabicTerritory = isGcc
+      const finalMrp = isArabicTerritory ? drug.mrpSar : drug.mrpInr
+      const finalPtr = isArabicTerritory ? drug.ptrSar : drug.ptrInr
+      const finalCost = finalPtr * 0.85
 
-    const existingProduct = await prisma.product.findFirst({
-      where: {
-        organizationId,
-        OR: [{ barcode: drug.barcode }, { sku }, { name: drug.name }],
-      },
-    })
+      const sku = `${storeCode}-${drug.skuSuffix}`
+      const assignedRack = drug.category === 'Antibiotics' ? rackB.id : drug.category === 'Inhalers' ? rackCold.id : rackA.id
 
-    let product
-    if (existingProduct) {
-      product = await prisma.product.update({
-        where: { id: existingProduct.id },
-        data: {
-          nameAr: drug.nameAr,
-          genericNameAr: drug.genericNameAr,
-          mrp: finalMrp,
-          ptr: finalPtr,
-          costPrice: finalCost,
-          gstRate: drug.vatRate,
-          cgstRate: drug.vatRate / 2,
-          sgstRate: drug.vatRate / 2,
-          igstRate: drug.vatRate,
-          isGstExempt: drug.vatRate === 0,
-          rackId: assignedRack,
+      const existingProduct = await prisma.product.findFirst({
+        where: {
+          organizationId,
+          OR: [{ barcode: drug.barcode }, { sku }, { name: drug.name }],
         },
       })
-    } else {
-      product = await prisma.product.create({
-        data: {
-          organizationId,
-          name: drug.name,
-          nameAr: drug.nameAr,
-          genericName: drug.genericName,
-          genericNameAr: drug.genericNameAr,
-          sku,
-          barcode: drug.barcode,
-          manufacturer: isArabicTerritory ? 'SPIMACO / Tabuk Pharmaceuticals' : 'Sun Pharma / Cipla Ltd',
-          composition: `${drug.genericName} (${drug.genericNameAr})`,
-          drugSchedule: drug.schedule,
-          isPrescriptionRequired: drug.isPrescription,
-          unitOfMeasure: 'Strip',
-          tabsPerStrip: 10,
-          hsnCode: '3004',
-          gstRate: drug.vatRate,
-          cgstRate: drug.vatRate / 2,
-          sgstRate: drug.vatRate / 2,
-          igstRate: drug.vatRate,
-          isGstExempt: drug.vatRate === 0,
-          mrp: finalMrp,
-          ptr: finalPtr,
-          costPrice: finalCost,
-          rackId: assignedRack,
-          minStockLevel: 20,
-          reorderLevel: 50,
-          createdById: adminUserId,
-        },
+
+      let product
+      if (existingProduct) {
+        product = await prisma.product.update({
+          where: { id: existingProduct.id },
+          data: {
+            nameAr: drug.nameAr,
+            genericNameAr: drug.genericNameAr,
+            mrp: finalMrp,
+            ptr: finalPtr,
+            costPrice: finalCost,
+            gstRate: drug.vatRate,
+            cgstRate: drug.vatRate / 2,
+            sgstRate: drug.vatRate / 2,
+            igstRate: drug.vatRate,
+            isGstExempt: drug.vatRate === 0,
+            rackId: assignedRack,
+          },
+        })
+      } else {
+        product = await prisma.product.create({
+          data: {
+            organizationId,
+            name: drug.name,
+            nameAr: drug.nameAr,
+            genericName: drug.genericName,
+            genericNameAr: drug.genericNameAr,
+            sku,
+            barcode: drug.barcode,
+            manufacturer: isArabicTerritory ? 'SPIMACO / Tabuk Pharmaceuticals' : 'Sun Pharma / Cipla Ltd',
+            composition: `${drug.genericName} (${drug.genericNameAr})`,
+            drugSchedule: drug.schedule,
+            isPrescriptionRequired: drug.isPrescription,
+            unitOfMeasure: 'Strip',
+            tabsPerStrip: 10,
+            hsnCode: '3004',
+            gstRate: drug.vatRate,
+            cgstRate: drug.vatRate / 2,
+            sgstRate: drug.vatRate / 2,
+            igstRate: drug.vatRate,
+            isGstExempt: drug.vatRate === 0,
+            mrp: finalMrp,
+            ptr: finalPtr,
+            costPrice: finalCost,
+            rackId: assignedRack,
+            minStockLevel: 20,
+            reorderLevel: 50,
+            createdById: adminUserId,
+          },
+        })
+      }
+
+      createdProducts.push({
+        id: product.id,
+        category: drug.category,
+        mrp: finalMrp,
+        ptr: finalPtr,
       })
     }
 
-    createdProducts.push({
-      id: product.id,
-      category: drug.category,
-      mrp: finalMrp,
-      ptr: finalPtr,
-    })
-  }
+    const now = new Date()
+    for (let i = 0; i < createdProducts.length; i++) {
+      const prod = createdProducts[i]
+      const batchNum = `${territoryCode}-2026-B${101 + i}`
+      const mfgDate = new Date(now.getTime() - (90 + i * 10) * 24 * 60 * 60 * 1000)
+      const expDate = new Date(now.getTime() + (720 + i * 15) * 24 * 60 * 60 * 1000) // ~2 years out
+      const batchQty = 150 + (i % 5) * 25 // 150 - 250 units
 
-  // ─────────────────────────────────────────────────────────────
-  // PHASE 2: IN-COUNTRY BATCHES, EXPIRY TRACKING & INVENTORY
-  // ─────────────────────────────────────────────────────────────
-  let batchesCount = 0
-  const now = new Date()
-
-  for (let i = 0; i < createdProducts.length; i++) {
-    const prod = createdProducts[i]
-    const batchNum = `${territoryCode}-2026-B${101 + i}`
-    const mfgDate = new Date(now.getTime() - (90 + i * 10) * 24 * 60 * 60 * 1000)
-    const expDate = new Date(now.getTime() + (720 + i * 15) * 24 * 60 * 60 * 1000) // ~2 years out
-    const batchQty = 150 + (i % 5) * 25 // 150 - 250 units
-
-    await prisma.batch.upsert({
-      where: {
-        productId_batchNumber: {
+      await prisma.batch.upsert({
+        where: {
+          productId_batchNumber: {
+            productId: prod.id,
+            batchNumber: batchNum,
+          },
+        },
+        create: {
           productId: prod.id,
           batchNumber: batchNum,
-        },
-      },
-      create: {
-        productId: prod.id,
-        batchNumber: batchNum,
-        manufacturingDate: mfgDate,
-        expiryDate: expDate,
-        purchasePrice: prod.ptr,
-        ptr: prod.ptr,
-        mrp: prod.mrp,
-        quantity: batchQty,
-        status: 'ACTIVE',
-        branchId,
-      },
-      update: {
-        quantity: batchQty,
-        expiryDate: expDate,
-        status: 'ACTIVE',
-        mrp: prod.mrp,
-        ptr: prod.ptr,
-        branchId,
-      },
-    })
-
-    // Synchronize available quantity in inventory table
-    await prisma.inventory.upsert({
-      where: {
-        productId_branchId: {
-          productId: prod.id,
+          manufacturingDate: mfgDate,
+          expiryDate: expDate,
+          purchasePrice: prod.ptr,
+          ptr: prod.ptr,
+          mrp: prod.mrp,
+          quantity: batchQty,
+          status: 'ACTIVE',
           branchId,
         },
-      },
-      create: {
-        productId: prod.id,
-        branchId,
-        totalQuantity: batchQty,
-        availableQuantity: batchQty,
-      },
-      update: {
-        totalQuantity: batchQty,
-        availableQuantity: batchQty,
-      },
-    })
+        update: {
+          quantity: batchQty,
+          expiryDate: expDate,
+          status: 'ACTIVE',
+          mrp: prod.mrp,
+          ptr: prod.ptr,
+          branchId,
+        },
+      })
 
-    batchesCount++
+      // Synchronize available quantity in inventory table
+      await prisma.inventory.upsert({
+        where: {
+          productId_branchId: {
+            productId: prod.id,
+            branchId,
+          },
+        },
+        create: {
+          productId: prod.id,
+          branchId,
+          totalQuantity: batchQty,
+          availableQuantity: batchQty,
+        },
+        update: {
+          totalQuantity: batchQty,
+          availableQuantity: batchQty,
+        },
+      })
+
+      batchesCount++
+    }
   }
 
   // ─────────────────────────────────────────────────────────────

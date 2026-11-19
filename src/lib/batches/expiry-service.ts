@@ -43,6 +43,7 @@ export interface ExpiryListParams {
   search?: string
   productId?: string
   branchId?: string
+  organizationId?: string
   severity?: ExpirySeverity
 }
 
@@ -152,6 +153,12 @@ export async function getExpiringBatches(
   }
   if (productId) where.productId = productId
   if (branchId) where.branchId = branchId
+  if (params.organizationId) {
+    where.product = {
+      ...((where.product as Prisma.ProductWhereInput) || {}),
+      organizationId: params.organizationId,
+    }
+  }
 
   const rows = await prisma.batch.findMany({
     where,
@@ -209,6 +216,12 @@ export async function getExpiredBatches(
   }
   if (productId) where.productId = productId
   if (branchId) where.branchId = branchId
+  if (params.organizationId) {
+    where.product = {
+      ...((where.product as Prisma.ProductWhereInput) || {}),
+      organizationId: params.organizationId,
+    }
+  }
 
   const [rows, total] = await Promise.all([
     prisma.batch.findMany({
@@ -238,19 +251,31 @@ export async function getExpiredBatches(
  */
 export async function getExpirySummary(
   branchId?: string,
-  now: Date = new Date()
+  now: Date = new Date(),
+  organizationId?: string
 ): Promise<ExpirySummary> {
   await expireDueBatches()
 
   const windowEnd = new Date(now.getTime() + EXPIRY_INFO_DAYS * MS_PER_DAY)
 
+  const whereActive: Prisma.BatchWhereInput = {
+    status: 'ACTIVE',
+    expiryDate: { gt: now, lte: windowEnd },
+    ...(branchId ? { branchId } : {}),
+  }
+  const whereExpired: Prisma.BatchWhereInput = {
+    status: 'EXPIRED',
+    ...(branchId ? { branchId } : {}),
+  }
+
+  if (organizationId) {
+    whereActive.product = { organizationId }
+    whereExpired.product = { organizationId }
+  }
+
   const [expiringRows, expired] = await Promise.all([
     prisma.batch.findMany({
-      where: {
-        status: 'ACTIVE',
-        expiryDate: { gt: now, lte: windowEnd },
-        ...(branchId ? { branchId } : {}),
-      },
+      where: whereActive,
       select: {
         id: true,
         expiryDate: true,
@@ -260,7 +285,7 @@ export async function getExpirySummary(
       },
     }),
     prisma.batch.count({
-      where: { status: 'EXPIRED', ...(branchId ? { branchId } : {}) },
+      where: whereExpired,
     }),
   ])
 
