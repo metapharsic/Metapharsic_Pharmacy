@@ -38,6 +38,7 @@ import {
   Globe,
   KeyRound,
   Cloud,
+  Camera,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -169,6 +170,10 @@ export default function PlatformSuperAdminPage() {
   const [itemSearchTerm, setItemSearchTerm] = useState<string>('')
   const [exportDialogOpen, setExportDialogOpen] = useState<boolean>(false)
   const [exportSingleShopId, setExportSingleShopId] = useState<string | null>(null)
+
+  // Camera & Cash Drawer Advanced Privilege State
+  const [cameraPrivileges, setCameraPrivileges] = useState<Record<string, boolean>>({})
+  const [togglingCamera, setTogglingCamera] = useState<string | null>(null)
 
   // Onboard modal state
   const [onboardOpen, setOnboardOpen] = useState<boolean>(false)
@@ -337,6 +342,50 @@ export default function PlatformSuperAdminPage() {
       toast.error('Network error extending subscription')
     }
   }
+
+  const checkCameraPrivilege = async (orgId: string) => {
+    try {
+      const res = await fetch(`/api/platform/organizations/${orgId}/camera-privilege`)
+      const json = await res.json()
+      if (json.success) {
+        setCameraPrivileges((prev) => ({ ...prev, [orgId]: json.enabled }))
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
+  const handleToggleCameraPrivilege = async (orgId: string, currentStatus: boolean) => {
+    setTogglingCamera(orgId)
+    try {
+      const res = await fetch(`/api/platform/organizations/${orgId}/camera-privilege`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !currentStatus }),
+      })
+      const json = await res.json()
+      if (json.success) {
+        setCameraPrivileges((prev) => ({ ...prev, [orgId]: !currentStatus }))
+        toast.success(
+          !currentStatus
+            ? 'Granted Smart Camera & Cash Drawer Privilege'
+            : 'Revoked Smart Camera Privilege'
+        )
+      } else {
+        toast.error('Failed to update privilege', json.error?.message)
+      }
+    } catch (err: any) {
+      toast.error('Network error', err.message)
+    } finally {
+      setTogglingCamera(null)
+    }
+  }
+
+  useEffect(() => {
+    if (selectedChemist?.organizationId) {
+      void checkCameraPrivilege(selectedChemist.organizationId)
+    }
+  }, [selectedChemist?.organizationId])
 
   const filteredOrgs = useMemo(() => {
     return orgs.filter((org) => {
@@ -1173,6 +1222,22 @@ export default function PlatformSuperAdminPage() {
                           <Calendar className="h-3 w-3" />
                           +1 Year License
                         </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={togglingCamera === org.id}
+                          onClick={() =>
+                            handleToggleCameraPrivilege(
+                              org.id,
+                              Boolean(cameraPrivileges[org.id])
+                            )
+                          }
+                          className="h-7 text-[11px] gap-1 text-teal-600 hover:text-teal-700"
+                        >
+                          <Camera className="h-3 w-3" />
+                          {cameraPrivileges[org.id] ? 'Camera: ON' : 'Camera: OFF'}
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -1626,6 +1691,74 @@ export default function PlatformSuperAdminPage() {
                     </table>
                   </div>
                 )}
+              </div>
+
+              {/* Enterprise Feature Privilege: Camera & Cash Drawer Vision */}
+              <div className="rounded-lg border border-teal-500/30 bg-teal-500/5 p-3.5 space-y-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400">
+                      <Camera className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-foreground">
+                        In-Store Camera Surveillance & Smart Cash Drawer Privilege
+                      </span>
+                      <span className="block text-[10px] text-muted-foreground">
+                        Microsecond frame snapshot • Automated cash tender kick • Strict 48h rolling retention
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'text-[10px] font-mono uppercase font-bold',
+                        cameraPrivileges[selectedChemist.organizationId]
+                          ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600'
+                          : 'border-muted text-muted-foreground'
+                      )}
+                    >
+                      {cameraPrivileges[selectedChemist.organizationId] ? 'PRIVILEGE ACTIVE' : 'LOCKED'}
+                    </Badge>
+
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        handleToggleCameraPrivilege(
+                          selectedChemist.organizationId,
+                          Boolean(cameraPrivileges[selectedChemist.organizationId])
+                        )
+                      }
+                      disabled={togglingCamera === selectedChemist.organizationId}
+                      className={cn(
+                        'h-7 text-xs font-semibold px-2.5',
+                        cameraPrivileges[selectedChemist.organizationId]
+                          ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                          : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                      )}
+                    >
+                      {togglingCamera === selectedChemist.organizationId
+                        ? 'Updating...'
+                        : cameraPrivileges[selectedChemist.organizationId]
+                          ? 'Revoke Privilege'
+                          : 'Grant Privilege'}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px] text-muted-foreground border-t border-teal-500/20">
+                  <div>
+                    <strong className="text-foreground">Strict 48-Hour TTL:</strong> Rolling auto-purge deletes snapshots older than 2 days.
+                  </div>
+                  <div>
+                    <strong className="text-foreground">Per-Counter Isolation:</strong> Store Admins map individual cameras; no merging across counters.
+                  </div>
+                  <div>
+                    <strong className="text-foreground">POS Auto-Kick:</strong> Hardware drawer opens automatically when cash is tendered.
+                  </div>
+                </div>
               </div>
 
               <DialogFooter className="mt-4 border-t pt-3 flex flex-row items-center justify-between">

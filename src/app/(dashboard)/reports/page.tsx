@@ -1,4 +1,4 @@
-import { Package, ShieldAlert, Truck } from 'lucide-react'
+import { Package, ShieldAlert, Truck, Camera } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
@@ -26,6 +26,12 @@ const specializedReports = [
     description: 'Statutory compliance log for Schedule X and H1 drugs',
     href: '/reports/narcotics',
     icon: ShieldAlert,
+  },
+  {
+    title: 'Cash Drawer Surveillance & Security Log',
+    description: 'Counter overhead frames, POS cash auto-kicks, and strict 48h audit retention',
+    href: '/settings/camera-drawer',
+    icon: Camera,
   },
 ]
 

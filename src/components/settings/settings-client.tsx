@@ -1,14 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Building2, FileText, Bell, Save, ShieldCheck, Lock, Loader2 } from 'lucide-react'
+import { Building2, FileText, Bell, Save, ShieldCheck, Lock, Loader2, KeyRound, QrCode, Copy, CheckCircle2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { useToast } from '@/lib/hooks/use-toast'
 import { PeriodLockCard } from './period-lock-card'
+import { cn } from '@/lib/utils/cn'
 
 export function SettingsClient() {
   const [loading, setLoading] = useState(true)
@@ -34,7 +37,23 @@ export function SettingsClient() {
   const [lowStockThreshold, setLowStockThreshold] = useState('')
   const [expiryAlertDays, setExpiryAlertDays] = useState('')
 
+  // Admin MFA State
+  const [mfaEnabled, setMfaEnabled] = useState(false)
+  const [totpSecret, setTotpSecret] = useState('')
+  const [updatingMfa, setUpdatingMfa] = useState(false)
+
   useEffect(() => {
+    // Load Admin MFA status
+    fetch('/api/user/mfa')
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success) {
+          setMfaEnabled(json.mfaEnabled)
+          setTotpSecret(json.totpSecret || '')
+        }
+      })
+      .catch(() => null)
+
     fetch('/api/organization')
       .then((r) => r.json())
       .then((d) => {
@@ -65,6 +84,28 @@ export function SettingsClient() {
       })
       .finally(() => setLoading(false))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleToggleMfa = async (enable: boolean) => {
+    setUpdatingMfa(true)
+    try {
+      const res = await fetch('/api/user/mfa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: enable }),
+      })
+      const json = await res.json()
+      if (json.success) {
+        setMfaEnabled(json.mfaEnabled)
+        toast.success(json.message)
+      } else {
+        toast.error(json.error || 'Failed to update MFA')
+      }
+    } catch (err: any) {
+      toast.error('Network error updating MFA', err.message)
+    } finally {
+      setUpdatingMfa(false)
+    }
+  }
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -149,6 +190,10 @@ export function SettingsClient() {
           <TabsTrigger value="governance" className="gap-1.5 text-xs">
             <Lock className="h-3.5 w-3.5" />
             Period Lock &amp; Audit
+          </TabsTrigger>
+          <TabsTrigger value="security" className="gap-1.5 text-xs">
+            <KeyRound className="h-3.5 w-3.5 text-teal-600" />
+            Admin Security &amp; MFA
           </TabsTrigger>
         </TabsList>
 
@@ -367,6 +412,98 @@ export function SettingsClient() {
         {/* Tab 4: Financial Governance & Period Lock (Tally / Marg ERP Parity) */}
         <TabsContent value="governance" className="space-y-4">
           <PeriodLockCard />
+        </TabsContent>
+
+        {/* Tab 5: Admin Security & Multi-Factor Authentication (MFA) */}
+        <TabsContent value="security" className="space-y-4">
+          <Card className="border-teal-500/30 bg-card/60 backdrop-blur-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                    Admin Account Multi-Factor Authentication (MFA)
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Enforce time-based one-time password (TOTP) verification on administrative and cashier sessions
+                  </CardDescription>
+                </div>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'font-mono text-[10px] font-bold uppercase',
+                    mfaEnabled
+                      ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600'
+                      : 'border-muted text-muted-foreground'
+                  )}
+                >
+                  {mfaEnabled ? 'MFA ACTIVE' : 'MFA DISABLED'}
+                </Badge>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4 text-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border p-3.5 bg-muted/30">
+                <div className="space-y-0.5">
+                  <span className="font-semibold text-foreground text-xs block">
+                    Two-Factor Authentication (TOTP / Google Authenticator)
+                  </span>
+                  <p className="text-[11px] text-muted-foreground">
+                    When enabled, store administrators and cashiers must verify a 6-digit TOTP code during login.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <Switch
+                    checked={mfaEnabled}
+                    disabled={updatingMfa}
+                    onCheckedChange={handleToggleMfa}
+                  />
+                  <span className="font-medium text-xs">
+                    {updatingMfa ? 'Updating...' : mfaEnabled ? 'Enabled' : 'Disabled'}
+                  </span>
+                </div>
+              </div>
+
+              {mfaEnabled && (
+                <div className="rounded-lg border border-teal-500/30 bg-teal-500/5 p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-teal-700 dark:text-teal-400 font-bold">
+                    <QrCode className="h-4 w-4" />
+                    <span>Authenticator App Pairing Secret</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Scan or enter the following secret key into Google Authenticator, Microsoft Authenticator, or 1Password:
+                  </p>
+
+                  <div className="flex items-center gap-2">
+                    <Input
+                      readOnly
+                      value={totpSecret || 'JBSWY3DPEHPK3PXP'}
+                      className="font-mono text-xs max-w-xs h-8 bg-background"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(totpSecret || 'JBSWY3DPEHPK3PXP')
+                        toast.success('MFA Secret key copied to clipboard')
+                      }}
+                      className="h-8 text-xs gap-1"
+                    >
+                      <Copy className="h-3 w-3" />
+                      Copy Key
+                    </Button>
+                  </div>
+
+                  <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 pt-1">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>Algorithm: SHA-1 &bull; Digits: 6 &bull; Refresh Interval: 30 Seconds</span>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </form>

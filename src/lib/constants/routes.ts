@@ -111,6 +111,7 @@ export const ROUTES = {
   SETTINGS_POS: '/settings/pos',
   SETTINGS_SHORTCUTS: '/settings/shortcuts',
   SETTINGS_BACKUP: '/settings/backup',
+  SETTINGS_CAMERA_DRAWER: '/settings/camera-drawer',
 } as const
 
 // Routes that don't require authentication

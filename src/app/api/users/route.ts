@@ -117,7 +117,38 @@ export async function POST(req: NextRequest) {
       targetOrgId = branchRecord?.organizationId || null
     }
     if (!targetOrgId) {
-      targetOrgId = actor.organizationId || null
+      if (actor.organizationId && !actor.isSuperAdmin) {
+        targetOrgId = actor.organizationId
+      } else {
+        // Auto-provision a clean isolated tenant organization so data never leaks to default-org
+        const baseCode = data.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || 'PHARM'
+        let finalCode = baseCode
+        let attempt = 1
+        while (await prisma.organization.findFirst({ where: { OR: [{ code: finalCode }, { slug: finalCode.toLowerCase() }] } })) {
+          finalCode = `${baseCode.slice(0, 6)}${attempt++}`
+        }
+        const newOrg = await prisma.organization.create({
+          data: {
+            name: `${data.name.trim()} Pharmacy`,
+            code: finalCode,
+            slug: finalCode.toLowerCase(),
+            status: 'ACTIVE',
+            email: data.email,
+            phone: data.phone,
+          },
+        })
+        const newBranch = await prisma.branch.create({
+          data: {
+            organizationId: newOrg.id,
+            name: `${newOrg.name} - Main Counter`,
+            code: `${finalCode.slice(0, 4)}-01`,
+            isHeadOffice: true,
+            isActive: true,
+          },
+        })
+        targetOrgId = newOrg.id
+        data.branchId = newBranch.id
+      }
     }
 
     const user = await prisma.user.create({

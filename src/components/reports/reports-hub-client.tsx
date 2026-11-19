@@ -17,6 +17,14 @@ import {
   Send,
   ShoppingCart,
   Stethoscope,
+  Camera,
+  Clock,
+  KeyRound,
+  ShieldCheck,
+  ShieldAlert,
+  Maximize2,
+  Zap,
+  DollarSign,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -212,6 +220,34 @@ export function ReportsHubClient() {
       setSendingWhatsApp(false)
     }
   }
+
+  // Cash Drawer Intelligence Report State
+  const [drawerAnalytics, setDrawerAnalytics] = useState<any>(null)
+  const [drawerLoading, setDrawerLoading] = useState(false)
+  const [drawerFilter, setDrawerFilter] = useState('ALL')
+  const [drawerSearch, setDrawerSearch] = useState('')
+  const [zoomDrawerSnapshot, setZoomDrawerSnapshot] = useState<any>(null)
+
+  const fetchDrawerAnalytics = useCallback(async () => {
+    setDrawerLoading(true)
+    try {
+      const res = await fetch('/api/camera/drawer-events')
+      const json = await res.json()
+      if (json.success) {
+        setDrawerAnalytics(json.data)
+      }
+    } catch {
+      // Non-blocking
+    } finally {
+      setDrawerLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (activeTab === 'drawer' && !drawerAnalytics) {
+      void fetchDrawerAnalytics()
+    }
+  }, [activeTab, drawerAnalytics, fetchDrawerAnalytics])
 
   const handleCopyReportText = () => {
     if (!digestData?.formattedWhatsAppText) return
@@ -593,6 +629,10 @@ export function ReportsHubClient() {
           <TabsTrigger value="doctors" className="gap-2 text-xs font-semibold">
             <Stethoscope className="h-3.5 w-3.5" />
             Doctors &amp; Referrals ({doctors.length})
+          </TabsTrigger>
+          <TabsTrigger value="drawer" className="gap-2 text-xs font-semibold">
+            <Camera className="h-3.5 w-3.5 text-teal-600" />
+            Cash Drawer Intelligence &amp; Surveillance ({drawerAnalytics?.events?.length || 0})
           </TabsTrigger>
         </TabsList>
 
@@ -1024,7 +1064,327 @@ export function ReportsHubClient() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* ─── TAB 4: CASH DRAWER SURVEILLANCE & SECURITY AUDIT ───── */}
+        <TabsContent value="drawer" className="space-y-4">
+          {/* Executive KPI Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
+                  <span>Total Opens (48-Hr)</span>
+                  <Clock className="h-4 w-4 text-teal-600 opacity-70" />
+                </div>
+                <div className="text-xl font-bold font-mono text-foreground mt-1">
+                  {drawerAnalytics?.totalOpens48h ?? 0}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Strict 48-Hour rolling window</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
+                  <span>Today's Opens</span>
+                  <Zap className="h-4 w-4 text-emerald-600 opacity-70" />
+                </div>
+                <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1">
+                  {drawerAnalytics?.todayOpens ?? 0}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Since 00:00 midnight shift</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
+                  <span>Cash Tender Auto-Opens</span>
+                  <DollarSign className="h-4 w-4 text-blue-600 opacity-70" />
+                </div>
+                <div className="text-xl font-bold font-mono text-blue-600 dark:text-blue-400 mt-1">
+                  {drawerAnalytics?.cashCollectedOpens ?? 0}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Automated POS cash drawer kicks</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
+                  <span>Manual Admin / Key Opens</span>
+                  <KeyRound className="h-4 w-4 text-amber-600 opacity-70" />
+                </div>
+                <div className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400 mt-1">
+                  {drawerAnalytics?.manualAdminOpens ?? 0}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Supervisory overrides &amp; key turns</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Security Reconciliation & Integrity Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-lg border border-teal-500/30 bg-teal-500/5 text-xs">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400">
+                <ShieldCheck className="h-4 w-4" />
+              </div>
+              <div>
+                <span className="font-bold text-foreground">
+                  Security Integrity &amp; Cash Reconciliation Status
+                </span>
+                <p className="text-[11px] text-muted-foreground">
+                  Microsecond camera snapshots synchronized on cash collection with 48-hour rolling storage retention.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-600 font-mono text-[10px]">
+                48H RETENTION PROTOCOL ACTIVE
+              </Badge>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={fetchDrawerAnalytics}
+                disabled={drawerLoading}
+                className="h-7 text-xs gap-1"
+              >
+                <RefreshCw className={`h-3 w-3 ${drawerLoading ? 'animate-spin' : ''}`} />
+                Sync Audit
+              </Button>
+            </div>
+          </div>
+
+          {/* Filter & Search Bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="relative w-full sm:w-64">
+                <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
+                <Input
+                  placeholder="Search invoice, cashier, or notes..."
+                  value={drawerSearch}
+                  onChange={(e) => setDrawerSearch(e.target.value)}
+                  className="pl-8 h-8 text-xs"
+                />
+              </div>
+
+              <Select value={drawerFilter} onValueChange={setDrawerFilter}>
+                <SelectTrigger className="h-8 text-xs w-36">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL" className="text-xs">All Open Events</SelectItem>
+                  <SelectItem value="AUTO_CASH_COLLECTED" className="text-xs">Auto Cash Kicks</SelectItem>
+                  <SelectItem value="MANUAL_ADMIN_OPEN" className="text-xs">Manual Admin Opens</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Badge variant="outline" className="text-muted-foreground font-mono text-[11px] h-7 px-2.5">
+              Filtered Events: {
+                (drawerAnalytics?.events || [])
+                  .filter((e: any) => drawerFilter === 'ALL' || e.eventType === drawerFilter)
+                  .filter((e: any) => !drawerSearch || (e.invoiceNumber || '').toLowerCase().includes(drawerSearch.toLowerCase()) || e.userName.toLowerCase().includes(drawerSearch.toLowerCase()))
+                  .length
+              }
+            </Badge>
+          </div>
+
+          {/* Detailed Audit Table */}
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50 text-[11px] font-semibold">
+                    <TableCell className="py-2 px-3">Surveillance Frame</TableCell>
+                    <TableCell className="py-2 px-3">Event Classification</TableCell>
+                    <TableCell className="py-2 px-3">Timestamp</TableCell>
+                    <TableCell className="py-2 px-3">Invoice &amp; Amount</TableCell>
+                    <TableCell className="py-2 px-3">Cashier / Staff</TableCell>
+                    <TableCell className="py-2 px-3">Storage TTL (48h)</TableCell>
+                    <TableCell className="py-2 px-3">Notes / Hardware</TableCell>
+                    <TableCell className="py-2 px-3 text-center">Inspect</TableCell>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {drawerLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="h-28 text-center text-xs text-muted-foreground">
+                        <Loader2 className="h-5 w-5 animate-spin mx-auto mb-1 text-teal-600" />
+                        Loading cash drawer surveillance records...
+                      </TableCell>
+                    </TableRow>
+                  ) : !drawerAnalytics?.events || drawerAnalytics.events.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="h-28 text-center text-xs text-muted-foreground">
+                        No cash drawer opening events in the current 48-hour retention window.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    (drawerAnalytics.events as any[])
+                      .filter((e: any) => drawerFilter === 'ALL' || e.eventType === drawerFilter)
+                      .filter((e: any) => !drawerSearch || (e.invoiceNumber || '').toLowerCase().includes(drawerSearch.toLowerCase()) || e.userName.toLowerCase().includes(drawerSearch.toLowerCase()))
+                      .map((e: any) => {
+                        const openedTime = new Date(e.openedAt).getTime()
+                        const expiryTime = openedTime + 48 * 60 * 60 * 1000
+                        const diffMs = expiryTime - Date.now()
+                        const hoursLeft = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)))
+                        const minsLeft = Math.max(0, Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60)))
+
+                        return (
+                          <TableRow key={e.id} className="text-xs hover:bg-muted/40">
+                            {/* Frame Thumbnail */}
+                            <TableCell className="py-2 px-3">
+                              {e.snapshotData ? (
+                                <div
+                                  onClick={() => setZoomDrawerSnapshot(e)}
+                                  className="h-10 w-14 cursor-pointer overflow-hidden rounded border border-border/80 bg-black/60 shadow-xs relative group"
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={e.snapshotData}
+                                    alt="Counter Snapshot"
+                                    className="h-full w-full object-cover transition-transform group-hover:scale-110"
+                                  />
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Eye className="h-3.5 w-3.5 text-white" />
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="h-10 w-14 rounded border border-dashed flex items-center justify-center text-muted-foreground bg-muted/20">
+                                  <Camera className="h-3.5 w-3.5 opacity-40" />
+                                </div>
+                              )}
+                            </TableCell>
+
+                            {/* Classification */}
+                            <TableCell className="py-2 px-3">
+                              {e.eventType === 'AUTO_CASH_COLLECTED' ? (
+                                <Badge className="bg-emerald-600 font-mono text-[9px] text-white">
+                                  AUTO CASH
+                                </Badge>
+                              ) : e.eventType === 'MANUAL_ADMIN_OPEN' ? (
+                                <Badge variant="outline" className="border-amber-500/40 text-amber-600 font-mono text-[9px]">
+                                  MANUAL ADMIN
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="font-mono text-[9px]">
+                                  SENSOR
+                                </Badge>
+                              )}
+                            </TableCell>
+
+                            {/* Timestamp */}
+                            <TableCell className="py-2 px-3">
+                              <div className="font-medium text-foreground">
+                                {new Date(e.openedAt).toLocaleTimeString()}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground font-mono">
+                                {new Date(e.openedAt).toLocaleDateString()}
+                              </div>
+                            </TableCell>
+
+                            {/* Invoice & Cash */}
+                            <TableCell className="py-2 px-3 font-mono">
+                              {e.invoiceNumber ? (
+                                <div className="font-bold text-primary">{e.invoiceNumber}</div>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                              {e.cashAmount > 0 && (
+                                <div className="text-[10px] font-semibold text-emerald-600">
+                                  Cash: {Number(e.cashAmount).toFixed(2)}
+                                </div>
+                              )}
+                            </TableCell>
+
+                            {/* Staff */}
+                            <TableCell className="py-2 px-3">
+                              <div className="font-medium text-foreground">{e.userName}</div>
+                              <div className="text-[10px] text-muted-foreground">{e.branchName}</div>
+                            </TableCell>
+
+                            {/* Storage TTL */}
+                            <TableCell className="py-2 px-3">
+                              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 font-mono text-[10px] text-emerald-700 dark:text-emerald-400">
+                                {hoursLeft}h {minsLeft}m left
+                              </span>
+                            </TableCell>
+
+                            {/* Notes */}
+                            <TableCell className="py-2 px-3 text-muted-foreground text-[11px] max-w-[160px] truncate">
+                              {e.notes || 'Automated register actuation'}
+                            </TableCell>
+
+                            {/* Inspect */}
+                            <TableCell className="py-2 px-3 text-center">
+                              {e.snapshotData ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setZoomDrawerSnapshot(e)}
+                                  className="h-7 px-2 text-xs text-teal-600 hover:text-teal-700 gap-1"
+                                >
+                                  <Maximize2 className="h-3.5 w-3.5" />
+                                  Frame
+                                </Button>
+                              ) : (
+                                <span className="text-muted-foreground text-[10px]">No Frame</span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {/* ─── MODAL: CASH DRAWER FRAME ZOOM ────────────────────── */}
+      <Dialog open={Boolean(zoomDrawerSnapshot)} onOpenChange={() => setZoomDrawerSnapshot(null)}>
+        <DialogContent className="max-w-2xl p-4">
+          <DialogHeader className="pb-2 border-b">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-sm font-bold flex items-center gap-2">
+                <Camera className="h-4 w-4 text-teal-600" />
+                <span>Cash Drawer Surveillance Frame Inspection</span>
+              </DialogTitle>
+              <Badge variant="outline" className="border-teal-500/40 text-teal-600 font-mono text-[10px]">
+                48-HR VERIFIED
+              </Badge>
+            </div>
+            <DialogDescription className="text-xs">
+              Event: {zoomDrawerSnapshot?.eventType} &bull; Time: {zoomDrawerSnapshot ? new Date(zoomDrawerSnapshot.openedAt).toLocaleString() : ''}
+              {zoomDrawerSnapshot?.invoiceNumber ? ` &bull; Invoice: ${zoomDrawerSnapshot.invoiceNumber}` : ''}
+            </DialogDescription>
+          </DialogHeader>
+
+          {zoomDrawerSnapshot?.snapshotData && (
+            <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-black shadow-inner my-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={zoomDrawerSnapshot.snapshotData}
+                alt="Enlarged Cash Drawer Snapshot"
+                className="h-full w-full object-contain"
+              />
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setZoomDrawerSnapshot(null)}
+              className="text-xs"
+            >
+              Close Inspector
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ─── MODAL 1: SALE VIEW MODAL ───────────────────────── */}
       <Dialog open={saleModalOpen} onOpenChange={setSaleModalOpen}>

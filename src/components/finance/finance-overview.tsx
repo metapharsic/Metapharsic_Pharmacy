@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { AdminStatementGenerator } from './admin-statement-generator'
 import {
   Table,
   TableBody,
@@ -173,6 +174,7 @@ export function FinanceOverview({ summary, ledgers }: FinanceOverviewProps) {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <AdminStatementGenerator />
           <Dialog open={isCreatingLedger} onOpenChange={setIsCreatingLedger}>
             <DialogTrigger asChild>
               <Button variant="default" size="sm">

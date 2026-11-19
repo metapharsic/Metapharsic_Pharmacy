@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { CustomerFormDialog } from '@/components/customers/customer-form'
 import { CustomersTable, type CustomerRow } from '@/components/customers/customers-table'
+import { AdminStatementGenerator } from '@/components/finance/admin-statement-generator'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -130,6 +131,7 @@ export function CustomersView({ initialRows, initialPagination }: CustomersViewP
           ))}
         </div>
 
+        <AdminStatementGenerator triggerButtonText="Patient Khata Statement" />
         <CustomerFormDialog mode="create" onSuccess={() => void load({ reset: true })} />
       </div>
 

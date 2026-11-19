@@ -59,6 +59,8 @@ model User {
   stockAdjustments      StockAdjustment[]    @relation("AdjustmentCreatedBy")
   ScheduleH1Register    ScheduleH1Register[]
   NarcoticRegister      NarcoticRegister[]
+  cashDrawerEvents      CashDrawerEvent[]
+  storeCameraMappings   StoreCameraMapping[]
 
   @@index([organizationId])
   @@map("users")
@@ -223,6 +225,8 @@ model Organization {
   customers  Customer[]
   suppliers  Supplier[]
   categories Category[]
+  cashDrawerEvents    CashDrawerEvent[]
+  storeCameraMappings StoreCameraMapping[]
 
   @@map("organizations")
 }
@@ -256,6 +260,8 @@ model Branch {
   purchases        Purchase[]
   racks            Rack[]
   NarcoticRegister NarcoticRegister[]
+  cashDrawerEvents    CashDrawerEvent[]
+  storeCameraMappings StoreCameraMapping[]
 
   @@unique([organizationId, code])
   @@map("branches")
@@ -1592,4 +1598,52 @@ model BillAllocation {
   @@index([voucherEntryId])
   @@index([invoiceId])
   @@map("bill_allocations")
+}
+
+model CashDrawerEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  branchId       String
+  userId         String
+  eventType      String   // 'AUTO_CASH_COLLECTED' | 'MANUAL_ADMIN_OPEN' | 'EMERGENCY_OPEN' | 'SENSOR_DETECTED'
+  invoiceNumber  String?
+  cashAmount     Decimal? @default(0) @db.Decimal(12, 2)
+  snapshotData   String?  @db.Text
+  deviceId       String?
+  notes          String?
+  openedAt       DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch         Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([branchId, createdAt])
+  @@index([userId, createdAt])
+  @@map("cash_drawer_events")
+}
+
+model StoreCameraMapping {
+  id             String    @id @default(cuid())
+  organizationId String
+  branchId       String
+  userId         String    // Mapped strictly to individual user/counter
+  cameraName     String    @default("Counter Overhead Camera")
+  deviceId       String    // WebRTC deviceId, IP endpoint, or camera selector
+  streamType     String    @default("WEBCAM") // "WEBCAM" | "RTSP" | "IP_CAM"
+  ipStreamUrl    String?
+  isActive       Boolean   @default(true)
+  autoOpenDrawer Boolean   @default(true)
+  captureOnOpen  Boolean   @default(true)
+  lastDetectedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch         Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@map("store_camera_mappings")
 }

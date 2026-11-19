@@ -38,6 +38,7 @@ import {
   Store,
   Terminal,
   Keyboard,
+  Camera,
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
@@ -374,6 +375,7 @@ const STATIC_NAV_SECTIONS: NavSection[] = [
           { label: 'Roles', href: ROUTES.ROLES, icon: Shield, permission: 'roles:manage' },
           { label: 'Audit Logs', href: ROUTES.AUDIT, icon: ScrollText, permission: 'audit:read' },
           { label: 'Settings', href: ROUTES.SETTINGS, icon: Settings, permission: 'settings:read' },
+          { label: 'Camera & Cash Drawer', href: ROUTES.SETTINGS_CAMERA_DRAWER, icon: Camera, permission: 'settings:read', badge: '48H SEC', badgeVariant: 'teal' },
           { label: 'Database Backup (Excel)', href: ROUTES.SETTINGS_BACKUP, icon: Database, badge: '5 THREADS', badgeVariant: 'teal' },
           { label: 'Keyboard Shortcuts', href: ROUTES.SETTINGS_SHORTCUTS, icon: Keyboard, badge: 'F1', badgeVariant: 'teal' },
         ],
@@ -385,7 +387,17 @@ const STATIC_NAV_SECTIONS: NavSection[] = [
 function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const { data: session } = useSession()
   const { t, locale } = useI18n()
+
+  const userRoles = session?.user?.roles ?? []
+  const isAdmin = Boolean(
+    session?.user?.isSuperAdmin ||
+    userRoles.includes('owner') ||
+    userRoles.includes('admin') ||
+    userRoles.includes('manager') ||
+    userRoles.includes('super_admin')
+  )
 
   const translateLabel = (label: string): string => {
     if (locale !== 'ar') return label
@@ -435,6 +447,7 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
       'Roles': 'الأدوار والصلاحيات',
       'Audit Logs': 'سجلات تدقيق العمليات',
       'Settings': 'إعدادات المنظومة',
+      'Camera & Cash Drawer': 'الكاميرا والدرج النقدي (48 ساعة)',
       'Database Backup (Excel)': 'النسخ الاحتياطي لقاعدة البيانات',
       'Database Backup': 'النسخ الاحتياطي لقاعدة البيانات',
       'Keyboard Shortcuts': 'اختصارات لوحة المفاتيح',
@@ -474,7 +487,7 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
     const isActiveParent = item.children.some((child) => isLinkActive(child.href))
 
     return (
-      <Collapsible defaultOpen={isActiveParent}>
+      <Collapsible defaultOpen={isAdmin ? true : isActiveParent}>
         <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-100">
           <span className="flex items-center gap-2">
             <item.icon className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
@@ -746,7 +759,7 @@ export function Sidebar() {
   }, [isSuperAdmin, stats])
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r rtl:border-l rtl:border-r-0 border-border/80 bg-card select-none">
+    <aside className="flex h-screen w-64 min-w-[16rem] shrink-0 flex-col border-r rtl:border-l rtl:border-r-0 border-border/80 bg-card select-none">
       {/* Brand Header */}
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-border/70 px-4">
         <Logo size="md" />

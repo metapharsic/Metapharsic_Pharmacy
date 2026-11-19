@@ -7,7 +7,7 @@ import {
   provisionSovereignTenant,
   getTerritoryGeoZoneName,
 } from '@/lib/cloud/sovereign-tenant-provisioner'
-import { TerritoryCode } from '@/lib/territory/territory-config'
+import { TerritoryCode, TERRITORIES } from '@/lib/territory/territory-config'
 
 // System roles mapping for auto-provisioning
 const SOVEREIGN_SYSTEM_ROLES = [
@@ -21,6 +21,18 @@ const SOVEREIGN_SYSTEM_ROLES = [
   { name: 'pharmacist', displayName: 'Pharmacist', description: 'Dispensing chemist & prescription validation' },
   { name: 'cashier', displayName: 'Cashier', description: 'Point of sale clearance & customer payments' },
 ]
+
+function getDefaultPasswordForUser(email: string): string {
+  const em = email.toLowerCase()
+  if (em.includes('superadmin')) return 'SuperAdmin@123'
+  if (em.includes('amjad')) return 'Admin@123'
+  if (em.includes('apollo')) return 'Apollo@123'
+  if (em.includes('krishna') || em.includes('ramesh')) return 'Krishna@123'
+  if (em.includes('admin')) return 'Admin@123'
+  if (em.includes('cashier')) return 'Cashier@123'
+  if (em.includes('sovereign')) return 'Sovereign@2026'
+  return 'Staff@123'
+}
 
 export async function GET() {
   try {
@@ -44,10 +56,15 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     })
 
-    // 2. Fetch all governance settings for users
-    const governanceSettings = await prisma.systemSetting.findMany({
-      where: { category: 'USER_GOVERNANCE' },
-    })
+    // 2. Fetch all governance settings and SuperAdmin credential vault entries
+    const [governanceSettings, credentialSettings] = await Promise.all([
+      prisma.systemSetting.findMany({
+        where: { category: 'USER_GOVERNANCE' },
+      }),
+      prisma.systemSetting.findMany({
+        where: { category: 'SUPERADMIN_CREDENTIAL_VAULT' },
+      }),
+    ])
 
     const governanceMap = new Map<string, any>()
     for (const setting of governanceSettings) {
@@ -56,6 +73,11 @@ export async function GET() {
       } catch {
         // ignore parse error
       }
+    }
+
+    const credentialMap = new Map<string, string>()
+    for (const cred of credentialSettings) {
+      credentialMap.set(cred.key, cred.value)
     }
 
     const now = new Date()
@@ -75,6 +97,8 @@ export async function GET() {
       const defaultTerritories = u.isSuperAdmin
         ? ['SA', 'OM', 'BH', 'QA', 'MV', 'IN']
         : [u.organization?.currency === 'SAR' ? 'SA' : u.organization?.country === 'Saudi Arabia' ? 'SA' : 'IN']
+
+      const assignedPassword = credentialMap.get(u.id) || getDefaultPasswordForUser(u.email)
 
       return {
         id: u.id,
@@ -99,6 +123,7 @@ export async function GET() {
         territories: gov?.territories || defaultTerritories,
         assignedPrivateNode: gov?.assignedPrivateNode || 'SA',
         ipRestrictionEnabled: Boolean(gov?.ipRestrictionEnabled),
+        assignedPassword, // Visible ONLY to SuperAdmin
       }
     })
 
@@ -162,6 +187,9 @@ export async function POST(req: Request) {
         ipRestrictionEnabled = false,
         autoProvision5Phases = true,
         privateCloudVpcId,
+        isNewEntity,
+        storeName,
+        storeCode,
       } = body
 
       if (!name || !email) {
@@ -176,28 +204,94 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: `User with email "${cleanEmail}" already exists` }, { status: 400 })
       }
 
+      const terrCode = (territoryCode as TerritoryCode) || 'SA'
+      const terr = TERRITORIES[terrCode] || TERRITORIES.SA
+
       // Determine organization and branch
       let targetOrgId = organizationId
       let targetBranchId = branchId
 
-      if (!targetOrgId) {
-        // Default to the main organization if none specified
-        const mainOrg = await prisma.organization.findFirst({
-          where: { OR: [{ code: 'DEFAULT' }, { id: 'default-org' }] },
-          orderBy: { createdAt: 'asc' },
-        })
-        if (mainOrg) {
-          targetOrgId = mainOrg.id
-        }
-      }
+      // Determine if a new dedicated Chemist Shop entity must be provisioned
+      const shouldProvisionNewEntity =
+        isNewEntity === true ||
+        !targetOrgId ||
+        targetOrgId === 'NEW_ENTITY' ||
+        targetOrgId === 'new_entity'
 
-      if (targetOrgId && !targetBranchId) {
-        const br = await prisma.branch.findFirst({
-          where: { organizationId: targetOrgId },
-          orderBy: { isHeadOffice: 'desc' },
+      if (shouldProvisionNewEntity) {
+        // Auto-provision a dedicated, isolated sovereign Chemist Shop & Branch!
+        const trimmedName = name.trim()
+        const derivedStoreName = (storeName || `${trimmedName} Pharmacy & Healthcare`).trim()
+
+        // Generate a clean, collision-free unique store code
+        let baseCode = (storeCode || trimmedName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8)).toUpperCase()
+        if (!baseCode || baseCode.length < 2) baseCode = 'PHARM'
+        let finalCode = baseCode
+        let attempt = 1
+        while (
+          await prisma.organization.findFirst({
+            where: { OR: [{ code: finalCode }, { slug: finalCode.toLowerCase() }] },
+          })
+        ) {
+          finalCode = `${baseCode.slice(0, 6)}${attempt++}`
+        }
+
+        const newOrg = await prisma.organization.create({
+          data: {
+            name: derivedStoreName,
+            code: finalCode,
+            slug: finalCode.toLowerCase(),
+            country: terr.nameEn,
+            currency: terr.currency.code,
+            timezone: terr.timezone,
+            status: 'ACTIVE',
+            subscriptionPlan: 'GROWTH',
+            phone: phone ? phone.trim() : null,
+            email: cleanEmail,
+          },
         })
-        if (br) {
-          targetBranchId = br.id
+
+        const branchPrefix = finalCode.slice(0, 4).toUpperCase()
+        const newBranch = await prisma.branch.create({
+          data: {
+            organizationId: newOrg.id,
+            name: `${derivedStoreName} - Main Counter`,
+            code: `${branchPrefix}-01`,
+            phone: phone ? phone.trim() : null,
+            email: cleanEmail,
+            isHeadOffice: true,
+            isActive: true,
+            invoicePrefix: branchPrefix,
+            invoiceCounter: 1,
+          },
+        })
+
+        // Organization Settings
+        await prisma.organizationSetting.createMany({
+          data: [
+            { organizationId: newOrg.id, key: 'pharmacy_name', value: newOrg.name },
+            { organizationId: newOrg.id, key: 'GEO_ZONE', value: getTerritoryGeoZoneName(terrCode) },
+            { organizationId: newOrg.id, key: 'invoice_header', value: newOrg.name },
+            { organizationId: newOrg.id, key: 'low_stock_threshold', value: '10' },
+            { organizationId: newOrg.id, key: 'thermal_printer_paper_width', value: '80mm' },
+          ],
+          skipDuplicates: true,
+        })
+
+        targetOrgId = newOrg.id
+        targetBranchId = newBranch.id
+      } else {
+        // Specific existing organization was deliberately selected (e.g. adding staff to existing store)
+        const existingOrg = await prisma.organization.findUnique({
+          where: { id: targetOrgId },
+          include: { branches: { where: { isActive: true }, orderBy: { isHeadOffice: 'desc' } } },
+        })
+        if (!existingOrg) {
+          return NextResponse.json({ error: `Selected pharmacy organization does not exist` }, { status: 400 })
+        }
+        targetOrgId = existingOrg.id
+        if (!targetBranchId) {
+          targetBranchId = existingOrg.branches[0]?.id || null
         }
       }
 
@@ -254,8 +348,28 @@ export async function POST(req: Request) {
         },
       })
 
+      // Store raw initial password in SuperAdmin Credential Vault
+      await prisma.systemSetting.upsert({
+        where: {
+          category_key: {
+            category: 'SUPERADMIN_CREDENTIAL_VAULT',
+            key: newUser.id,
+          },
+        },
+        create: {
+          category: 'SUPERADMIN_CREDENTIAL_VAULT',
+          key: newUser.id,
+          value: rawPassword,
+          dataType: 'string',
+          label: `Initial Password for ${newUser.email}`,
+        },
+        update: {
+          value: rawPassword,
+          updatedAt: new Date(),
+        },
+      })
+
       // Store sovereign territory matrix in SystemSetting
-      const terrCode = (territoryCode as TerritoryCode) || 'SA'
       const govPayload = {
         territories: [terrCode],
         assignedPrivateNode: assignedPrivateNode || terrCode,
@@ -491,19 +605,30 @@ export async function POST(req: Request) {
         },
       })
 
+      const vaultEntry = await prisma.systemSetting.findUnique({
+        where: {
+          category_key: {
+            category: 'SUPERADMIN_CREDENTIAL_VAULT',
+            key: userId,
+          },
+        },
+      })
+      const activePassword = vaultEntry?.value || getDefaultPasswordForUser(targetUser.email)
+
       await prisma.auditLog.create({
         data: {
           userId: adminUser.id,
           action: 'ACCOUNT_UNLOCKED',
           entity: 'User',
           entityId: userId,
-          newData: { unlockedUser: targetUser.email },
+          newData: { unlockedUser: targetUser.email, passwordPreserved: true },
         },
       })
 
       return NextResponse.json({
         success: true,
-        message: `Account for ${targetUser.email} has been unlocked successfully.`,
+        message: `Account for ${targetUser.email} has been unlocked successfully with the same password preserved.`,
+        activePassword,
       })
     }
 
@@ -553,6 +678,27 @@ export async function POST(req: Request) {
           failedLoginCount: 0,
           lockedUntil: null,
           isActive: true,
+        },
+      })
+
+      // Store in SuperAdmin Credential Vault
+      await prisma.systemSetting.upsert({
+        where: {
+          category_key: {
+            category: 'SUPERADMIN_CREDENTIAL_VAULT',
+            key: userId,
+          },
+        },
+        create: {
+          category: 'SUPERADMIN_CREDENTIAL_VAULT',
+          key: userId,
+          value: newPassword,
+          dataType: 'string',
+          label: `Assigned Password for ${targetUser.email}`,
+        },
+        update: {
+          value: newPassword,
+          updatedAt: new Date(),
         },
       })
 

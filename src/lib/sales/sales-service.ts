@@ -188,6 +188,8 @@ export const saleDetailInclude = {
           email: true,
           gstin: true,
           dlNumber: true,
+          country: true,
+          currency: true,
         },
       },
     },

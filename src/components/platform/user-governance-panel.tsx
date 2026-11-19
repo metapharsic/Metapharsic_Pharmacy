@@ -26,6 +26,9 @@ import {
   Layers,
   Settings2,
   Sparkles,
+  Copy,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -66,6 +69,7 @@ interface UserItem {
   territories: string[]
   assignedPrivateNode: string
   ipRestrictionEnabled: boolean
+  assignedPassword?: string
 }
 
 // Sovereign system roles available for assignment
@@ -109,7 +113,9 @@ export function UserGovernancePanel() {
     email: '',
     phone: '',
     password: 'Sovereign@2026',
-    organizationId: '',
+    organizationId: 'NEW_ENTITY',
+    storeName: '',
+    storeCode: '',
     territoryCode: 'SA' as TerritoryCode,
     assignedPrivateNode: 'SA',
     roleNames: ['pharmacist'],
@@ -142,6 +148,7 @@ export function UserGovernancePanel() {
   const [govMustChangePassword, setGovMustChangePassword] = useState(false)
   const [govIpRestriction, setGovIpRestriction] = useState(false)
   const [savingGovernance, setSavingGovernance] = useState(false)
+  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({})
 
   const fetchUsers = async () => {
     try {
@@ -166,11 +173,6 @@ export function UserGovernancePanel() {
       const json = await res.json()
       if (json.organizations && Array.isArray(json.organizations)) {
         setOrgList(json.organizations)
-        // Auto-select main organization if none selected
-        const main = json.organizations.find((o: any) => o.code === 'DEFAULT' || o.id === 'default-org') || json.organizations[0]
-        if (main) {
-          setCreateForm((prev) => ({ ...prev, organizationId: prev.organizationId || main.id }))
-        }
       }
     } catch {
       // Non-blocking fallback
@@ -227,6 +229,7 @@ export function UserGovernancePanel() {
         body: JSON.stringify({
           action: 'create-and-provision',
           ...createForm,
+          isNewEntity: createForm.organizationId === 'NEW_ENTITY' || !createForm.organizationId,
         }),
       })
 
@@ -291,7 +294,13 @@ export function UserGovernancePanel() {
       })
       const data = await res.json()
       if (res.ok && data.success) {
-        toast.success(data.message)
+        const activePwd = data.activePassword || user.assignedPassword || 'Admin@123'
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(activePwd).catch(() => null)
+        }
+        toast.success(
+          `Account for ${user.email} unlocked! Password: "${activePwd}" (copied to clipboard to give to user).`
+        )
         fetchUsers()
       } else {
         toast.error(data.error || 'Failed to unlock user')
@@ -663,6 +672,33 @@ export function UserGovernancePanel() {
                           <div className="font-semibold text-foreground">{u.name}</div>
                           <div className="text-[11px] text-muted-foreground">{u.email}</div>
                           {u.phone && <div className="text-[10px] text-slate-400 font-mono">{u.phone}</div>}
+
+                          {/* SuperAdmin-Only Password Reveal & Copy to give to user */}
+                          {u.assignedPassword && (
+                            <div className="mt-1 flex items-center gap-1 font-mono text-[10px] bg-amber-500/10 text-amber-900 dark:text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30 w-fit">
+                              <KeyRound className="h-2.5 w-2.5 text-amber-600" />
+                              <span className="font-semibold">{revealedPasswords[u.id] ? u.assignedPassword : '••••••••'}</span>
+                              <button
+                                type="button"
+                                onClick={() => setRevealedPasswords((prev) => ({ ...prev, [u.id]: !prev[u.id] }))}
+                                className="ml-1 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                                title={revealedPasswords[u.id] ? 'Hide Password' : 'Show Password (SuperAdmin Only)'}
+                              >
+                                {revealedPasswords[u.id] ? <EyeOff className="h-2.5 w-2.5" /> : <Eye className="h-2.5 w-2.5" />}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard?.writeText(u.assignedPassword!)
+                                  toast.success(`Copied password for ${u.name} to clipboard`)
+                                }}
+                                className="ml-0.5 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                                title="Copy Password to give to user"
+                              >
+                                <Copy className="h-2.5 w-2.5" />
+                              </button>
+                            </div>
+                          )}
                         </td>
 
                         {/* Organization & Branch */}
@@ -1152,16 +1188,19 @@ export function UserGovernancePanel() {
             {/* Target Pharmacy Organization */}
             <div className="space-y-1">
               <Label htmlFor="create-org" className="text-xs font-semibold">
-                Assigned Pharmacy Organization &amp; Dispensary Branch
+                Assigned Pharmacy Organization &amp; Dispensary Branch *
               </Label>
               <Select
-                value={createForm.organizationId}
+                value={createForm.organizationId || 'NEW_ENTITY'}
                 onValueChange={(val) => setCreateForm({ ...createForm, organizationId: val })}
               >
                 <SelectTrigger id="create-org" className="text-xs h-9">
                   <SelectValue placeholder="Select pharmacy organization..." />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="NEW_ENTITY" className="font-semibold text-emerald-700 dark:text-emerald-400">
+                    ✨ [NEW SOVEREIGN ENTITY] Auto-Provision Dedicated Chemist Shop (Clean Slate)
+                  </SelectItem>
                   {orgList.map((org) => (
                     <SelectItem key={org.id} value={org.id}>
                       {org.name} ({org.code}) {org.code === 'DEFAULT' || org.id === 'default-org' ? '⭐ [MAIN DISPENSARY]' : ''}
@@ -1170,6 +1209,39 @@ export function UserGovernancePanel() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* If NEW_ENTITY is selected, show custom store name & store code */}
+            {(createForm.organizationId === 'NEW_ENTITY' || !createForm.organizationId) && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-2.5 rounded-lg border border-emerald-500/30 bg-emerald-50/10">
+                <div className="space-y-1">
+                  <Label htmlFor="create-store-name" className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300">
+                    Chemist Shop / Pharmacy Name
+                  </Label>
+                  <Input
+                    id="create-store-name"
+                    placeholder={createForm.name ? `${createForm.name.trim()} Pharmacy` : 'e.g. Al-Amal Community Pharmacy'}
+                    value={createForm.storeName}
+                    onChange={(e) => setCreateForm({ ...createForm, storeName: e.target.value })}
+                    className="text-xs h-8"
+                  />
+                  <p className="text-[10px] text-zinc-500">Auto-generated from Personnel Name if blank.</p>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="create-store-code" className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300">
+                    Store Code (Unique Identifier)
+                  </Label>
+                  <Input
+                    id="create-store-code"
+                    placeholder="e.g. AMAL, FAISAL, MEDCARE"
+                    value={createForm.storeCode}
+                    onChange={(e) => setCreateForm({ ...createForm, storeCode: e.target.value.toUpperCase() })}
+                    className="text-xs h-8 font-mono uppercase"
+                  />
+                  <p className="text-[10px] text-zinc-500">Unique alphanumeric tenant identifier.</p>
+                </div>
+              </div>
+            )}
 
             {/* Sovereign Territory & VPC Node */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

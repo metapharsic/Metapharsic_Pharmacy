@@ -41,6 +41,7 @@ import {
 } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { triggerCashCollectionDrawer } from '@/lib/camera/camera-client'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -1468,6 +1469,15 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
         setFinalizeOpen(false)
         clearCart()
         toast.success(`Invoice ${String(json.data.invoiceNumber ?? '')} created`)
+
+        // ─── Automated Cash Drawer Kick on Cash Collection ─────
+        if (params.paymentMethod === 'CASH') {
+          void triggerCashCollectionDrawer({
+            invoiceNumber: String(json.data.invoiceNumber ?? ''),
+            cashAmount: params.cashTendered || netTotal,
+            notes: `POS Cash Collection • Invoice ${String(json.data.invoiceNumber ?? '')}`,
+          })
+        }
 
         if (json.tallySync?.status === 'SYNCED') {
           toast.success('Pushed to Accounts', 'Sales voucher auto-synced to ledger')
