@@ -1,4 +1,6 @@
 import prisma from '@/lib/db/prisma'
+import { TerritoryCode, getTerritory } from '@/lib/territory/territory-config'
+import { resolveGeoZone } from './geo-zones'
 
 export interface PlatformIAMPolicy {
   // Password security
@@ -19,13 +21,22 @@ export interface PlatformIAMPolicy {
   ipWhitelistEnabled: boolean
   allowedIpRanges: string[]
 
-  // Geo-fencing & Shift Control
+  // Sovereign Geofencing & Cross-Border Governance
   geoFencingEnforced: boolean
+  allowedTerritories: TerritoryCode[]
   allowedZones: string[]
-  allowDispensaryAfterHours: boolean // If false, normal staff cannot log in outside 06:00 - 23:00
+  blockCrossBorderLogins: boolean
+  
+  // Shift & Operating Hours Control
+  allowDispensaryAfterHours: boolean
+  shiftStartHour: number // e.g. 7 for 07:00
+  shiftEndHour: number   // e.g. 24 for 00:00 midnight
+  enableRamadanHours: boolean
+  enablePrayerTimePauses: boolean
 
-  // Session limits
-  allowConcurrentLogins: boolean // If false, logging in on terminal B terminates terminal A
+  // Session limits & Auditing
+  allowConcurrentLogins: boolean
+  strictAuditLogging: boolean
 }
 
 export const DEFAULT_IAM_POLICY: PlatformIAMPolicy = {
@@ -45,10 +56,32 @@ export const DEFAULT_IAM_POLICY: PlatformIAMPolicy = {
   allowedIpRanges: ['127.0.0.1', '::1', '192.168.0.0/16', '10.0.0.0/8'],
 
   geoFencingEnforced: false,
-  allowedZones: ['South Zone', 'North Zone', 'West Zone', 'East Zone', 'Central Zone', 'On-Premises / LAN'],
+  allowedTerritories: ['SA', 'OM', 'QA', 'BH', 'MV', 'IN'],
+  allowedZones: [
+    'KSA - Central Region (Riyadh)',
+    'KSA - Western Region (Makkah/Jeddah)',
+    'KSA - Eastern Province (Dammam)',
+    'Oman - Muscat Capital Region',
+    'Oman - Dhofar & Regional',
+    'Qatar - Doha & Al Rayyan',
+    'Bahrain - Manama & Muharraq',
+    'Maldives - Greater Malé',
+    'India - South Zone',
+    'India - West Zone',
+    'India - North Zone',
+    'India - East & Central',
+    'On-Premises / LAN',
+  ],
+  blockCrossBorderLogins: true,
+
   allowDispensaryAfterHours: true,
+  shiftStartHour: 7,
+  shiftEndHour: 24,
+  enableRamadanHours: false,
+  enablePrayerTimePauses: true,
 
   allowConcurrentLogins: true,
+  strictAuditLogging: true,
 }
 
 const IAM_CATEGORY = 'SECURITY'
@@ -128,5 +161,105 @@ export async function validatePasswordIAMRules(password: string): Promise<{ vali
   return {
     valid: errors.length === 0,
     errors,
+  }
+}
+
+/**
+ * Sovereign Geopolitical and IAM Security Gate Evaluation
+ */
+export async function evaluateGeopoliticalIAMGate({
+  user,
+  ipAddress,
+  clientTimezone,
+  isSuperAdmin,
+}: {
+  user: {
+    id: string
+    email: string
+    organization?: { country?: string | null; state?: string | null; city?: string | null } | null
+    branch?: { state?: string | null; city?: string | null } | null
+  }
+  ipAddress?: string
+  clientTimezone?: string
+  isSuperAdmin: boolean
+}): Promise<{
+  allowed: boolean
+  crossBorderViolation: boolean
+  afterHoursViolation: boolean
+  resolvedZone: string
+  reason?: string
+}> {
+  const policy = await getPlatformIAMPolicy()
+
+  // Root SuperAdmin bypasses geofencing & shift limits for 24/7 global incident response
+  if (isSuperAdmin) {
+    return {
+      allowed: true,
+      crossBorderViolation: false,
+      afterHoursViolation: false,
+      resolvedZone: 'Global HQ Command Console',
+    }
+  }
+
+  const registeredCountry = (user.organization?.country || 'SA').toUpperCase() as TerritoryCode
+  const registeredState = user.branch?.state || user.organization?.state || ''
+  const registeredCity = user.branch?.city || user.organization?.city || ''
+
+  // Resolve active zone from client context
+  const resolvedZone = resolveGeoZone(
+    registeredState,
+    registeredCity,
+    ipAddress,
+    registeredCountry,
+    clientTimezone
+  )
+
+  // 1. Cross-Border Sovereign Geofencing Gate
+  let crossBorderViolation = false
+  if (policy.geoFencingEnforced && policy.blockCrossBorderLogins) {
+    const territoryDef = getTerritory(registeredCountry)
+    if (!policy.allowedTerritories.includes(registeredCountry)) {
+      crossBorderViolation = true
+      return {
+        allowed: false,
+        crossBorderViolation: true,
+        afterHoursViolation: false,
+        resolvedZone,
+        reason: `Dispensary login blocked: Account is bound to sovereign territory ${territoryDef.flag} ${territoryDef.nameEn}. Access from unregistered zone is restricted by IAM policy.`,
+      }
+    }
+  }
+
+  // 2. Dispensary Operating Hours Shift Gate
+  let afterHoursViolation = false
+  if (!policy.allowDispensaryAfterHours) {
+    const tz = getTerritory(registeredCountry).timezone
+    try {
+      const localTimeString = new Date().toLocaleTimeString('en-US', {
+        timeZone: tz,
+        hour12: false,
+        hour: '2-digit',
+      })
+      const currentHour = parseInt(localTimeString, 10)
+      if (currentHour < policy.shiftStartHour || currentHour >= policy.shiftEndHour) {
+        afterHoursViolation = true
+        return {
+          allowed: false,
+          crossBorderViolation: false,
+          afterHoursViolation: true,
+          resolvedZone,
+          reason: `Dispensary terminal locked: Operating hours in ${registeredCountry} are ${policy.shiftStartHour}:00 to ${policy.shiftEndHour}:00. Counter logins outside shift hours require Manager override.`,
+        }
+      }
+    } catch {
+      // ignore timezone calculation failure
+    }
+  }
+
+  return {
+    allowed: true,
+    crossBorderViolation,
+    afterHoursViolation,
+    resolvedZone,
   }
 }

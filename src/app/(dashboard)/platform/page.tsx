@@ -644,8 +644,8 @@ export default function PlatformSuperAdminPage() {
               : 'border-transparent text-muted-foreground hover:text-foreground'
           )}
         >
-          <Globe className="h-4 w-4" />
-          <span>Geo-Political Zones &amp; Area Logins</span>
+          <Globe className="h-4 w-4 text-emerald-600" />
+          <span>Sovereign Geopolitical Zones &amp; Cross-Border Radar</span>
         </button>
 
         <button

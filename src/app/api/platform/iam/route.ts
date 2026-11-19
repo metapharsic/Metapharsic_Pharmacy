@@ -22,10 +22,17 @@ const iamPolicySchema = z.object({
   allowedIpRanges: z.array(z.string()),
 
   geoFencingEnforced: z.boolean(),
+  allowedTerritories: z.array(z.enum(['SA', 'OM', 'QA', 'BH', 'MV', 'IN'])).optional(),
   allowedZones: z.array(z.string()),
+  blockCrossBorderLogins: z.boolean().optional(),
   allowDispensaryAfterHours: z.boolean(),
+  shiftStartHour: z.number().int().min(0).max(23).optional(),
+  shiftEndHour: z.number().int().min(1).max(24).optional(),
+  enableRamadanHours: z.boolean().optional(),
+  enablePrayerTimePauses: z.boolean().optional(),
 
   allowConcurrentLogins: z.boolean(),
+  strictAuditLogging: z.boolean().optional(),
 })
 
 export const dynamic = 'force-dynamic'

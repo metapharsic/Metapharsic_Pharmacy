@@ -11,7 +11,7 @@
 
 import prisma from '@/lib/db/prisma'
 import bcrypt from 'bcryptjs'
-import { getPlatformIAMPolicy } from '@/lib/platform/iam-service'
+import { getPlatformIAMPolicy, evaluateGeopoliticalIAMGate } from '@/lib/platform/iam-service'
 
 export interface LoginThreadStatus {
   id: number
@@ -54,6 +54,7 @@ export async function executeMultiThreadLogin(credentials: {
 }): Promise<MultiThreadLoginResult> {
   const overallStart = performance.now()
   const cleanEmail = credentials.email.trim().toLowerCase()
+  let resolvedZone = 'On-Premises / LAN'
 
   // Initial thread status descriptors
   const threads: LoginThreadStatus[] = [
@@ -208,14 +209,39 @@ export async function executeMultiThreadLogin(credentials: {
     const isSuperAdmin = Boolean(user.isSuperAdmin || roles.includes('super_admin'))
     const canDispenseNarcotics = isSuperAdmin || roles.includes('owner') || roles.includes('manager') || permissions.includes('sales:narcotics')
 
+    // Geopolitical IAM Security Gate Handshake
+    let clientTz = 'Asia/Riyadh'
+    try {
+      clientTz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    } catch {
+      // ignore
+    }
+
+    const gate = await evaluateGeopoliticalIAMGate({
+      user,
+      ipAddress: credentials.ipAddress,
+      clientTimezone: clientTz,
+      isSuperAdmin,
+    })
+
+    resolvedZone = gate.resolvedZone
+
+    if (!gate.allowed) {
+      threads[1].status = 'ERROR'
+      threads[1].durationMs = Math.round(performance.now() - tStart)
+      threads[1].details = gate.reason || 'Sovereign IAM policy violation'
+      throw new Error(gate.reason || 'Sovereign IAM policy violation')
+    }
+
     const duration = Math.round(performance.now() - tStart)
     threads[1].durationMs = Math.max(1, duration)
     threads[1].status = 'COMPLETED'
-    threads[1].details = `${roles.length} Roles, ${permissions.length} Permissions • Narcotic Clearance: ${canDispenseNarcotics ? 'AUTHORIZED' : 'RESTRICTED'}`
+    threads[1].details = `${roles.length} Roles • Zone: ${gate.resolvedZone} • Narcotic Clearance: ${canDispenseNarcotics ? 'AUTHORIZED' : 'RESTRICTED'}`
     threads[1].metrics = {
       rolesCount: roles.length,
       permissionsCount: permissions.length,
       isSuperAdmin: isSuperAdmin ? 1 : 0,
+      sovereignZone: gate.resolvedZone,
       scheduleH1Access: canDispenseNarcotics ? 'APPROVED' : 'LOCKED',
     }
   }
@@ -265,6 +291,7 @@ export async function executeMultiThreadLogin(credentials: {
               device: credentials.deviceFingerprint || 'Touch-Enabled Terminal',
               userAgent: credentials.userAgent?.slice(0, 150) || 'Local Browser',
               ip: credentials.ipAddress || '127.0.0.1',
+              sovereignZone: resolvedZone,
               timestamp: new Date().toISOString(),
               threadsExecuted: 5,
             },
