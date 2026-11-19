@@ -1,16 +1,17 @@
 import { NextResponse } from 'next/server'
 import {
-  listAllSovereignCloudNodes,
-  getSovereignCloudTopology,
-} from '@/lib/cloud/sovereign-cloud-topology'
+  getDynamicSovereignCloudNodes,
+  getDynamicSovereignCloudNode,
+} from '@/lib/cloud/sovereign-cloud-service'
+import { TerritoryCode } from '@/lib/territory/territory-config'
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
-    const territory = searchParams.get('territory')
+    const territory = searchParams.get('territory') as TerritoryCode | null
 
-    const nodes = listAllSovereignCloudNodes()
-    const activeNode = territory ? getSovereignCloudTopology(territory) : getSovereignCloudTopology('SA')
+    const nodes = await getDynamicSovereignCloudNodes()
+    const activeNode = territory ? await getDynamicSovereignCloudNode(territory) : nodes[0]
 
     return NextResponse.json({
       success: true,

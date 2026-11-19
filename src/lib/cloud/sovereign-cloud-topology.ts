@@ -9,7 +9,10 @@
  * - India: Digital Personal Data Protection Act (DPDPA 2023) & CDSCO Compliance
  */
 
-import { TerritoryCode, TERRITORIES } from '@/lib/territory/territory-config'
+import { TerritoryCode } from '@/lib/territory/territory-config'
+
+export type PrivateCloudDeploymentMode = 'DEDICATED_PRIVATE_VPC' | 'ON_PREM_POD' | 'HYBRID_SOVEREIGN'
+export type NodeQuarantineStatus = 'OPERATIONAL' | 'QUARANTINED' | 'MAINTENANCE' | 'DR_FAILOVER'
 
 export interface SovereignCloudNode {
   territoryCode: TerritoryCode
@@ -28,6 +31,24 @@ export interface SovereignCloudNode {
   latencyMs: number
   replicationLagMs: number
   inCountryStorageGuaranteed: boolean
+
+  // Private Cloud Architecture & Provisioning
+  deploymentMode: PrivateCloudDeploymentMode
+  vpcId: string
+  privateSubnetCidr: string
+  dedicatedDbEndpoint: string
+  dedicatedDbPoolSize: number
+  activeDbConnections: number
+  dataResidencyStatus: 'STRICT_IN_COUNTRY_ENFORCED' | 'SOVEREIGN_POD_ISOLATED'
+  hsmKeyArn: string
+  backupRetentionDays: number
+  assignedSuperAdmin: string
+  crossBorderEgressBlocked: boolean
+  allocatedVcpu: number
+  allocatedRamGb: number
+  allocatedStorageTb: number
+  lastProvisionedAt: string
+  quarantineStatus: NodeQuarantineStatus
 }
 
 export const SOVEREIGN_CLOUD_TOPOLOGIES: Record<TerritoryCode, SovereignCloudNode> = {
@@ -48,6 +69,24 @@ export const SOVEREIGN_CLOUD_TOPOLOGIES: Record<TerritoryCode, SovereignCloudNod
     latencyMs: 14.2,
     replicationLagMs: 2.1,
     inCountryStorageGuaranteed: true,
+
+    // Private Cloud Configuration
+    deploymentMode: 'DEDICATED_PRIVATE_VPC',
+    vpcId: 'vpc-sa-central-pri-991',
+    privateSubnetCidr: '10.240.10.0/24',
+    dedicatedDbEndpoint: 'postgresql://sa-db.internal:5432/sovereign_rx_sa',
+    dedicatedDbPoolSize: 50,
+    activeDbConnections: 18,
+    dataResidencyStatus: 'STRICT_IN_COUNTRY_ENFORCED',
+    hsmKeyArn: 'arn:aws:kms:me-central-1:hsm-cluster-sa-77492',
+    backupRetentionDays: 3650,
+    assignedSuperAdmin: 'superadmin@metapharsic.com',
+    crossBorderEgressBlocked: true,
+    allocatedVcpu: 64,
+    allocatedRamGb: 256,
+    allocatedStorageTb: 10,
+    lastProvisionedAt: '2026-11-19T10:00:00.000Z',
+    quarantineStatus: 'OPERATIONAL',
   },
   OM: {
     territoryCode: 'OM',
@@ -66,6 +105,24 @@ export const SOVEREIGN_CLOUD_TOPOLOGIES: Record<TerritoryCode, SovereignCloudNod
     latencyMs: 18.5,
     replicationLagMs: 3.4,
     inCountryStorageGuaranteed: true,
+
+    // Private Cloud Configuration
+    deploymentMode: 'ON_PREM_POD',
+    vpcId: 'vpc-om-muscat-odp-412',
+    privateSubnetCidr: '10.241.10.0/24',
+    dedicatedDbEndpoint: 'postgresql://om-db.internal:5432/sovereign_rx_om',
+    dedicatedDbPoolSize: 40,
+    activeDbConnections: 14,
+    dataResidencyStatus: 'STRICT_IN_COUNTRY_ENFORCED',
+    hsmKeyArn: 'pkcs11:token=ODP-Luna-HSM-OM-8831',
+    backupRetentionDays: 3650,
+    assignedSuperAdmin: 'oman-governor@metapharsic.com',
+    crossBorderEgressBlocked: true,
+    allocatedVcpu: 48,
+    allocatedRamGb: 192,
+    allocatedStorageTb: 8,
+    lastProvisionedAt: '2026-11-19T10:00:00.000Z',
+    quarantineStatus: 'OPERATIONAL',
   },
   BH: {
     territoryCode: 'BH',
@@ -84,6 +141,24 @@ export const SOVEREIGN_CLOUD_TOPOLOGIES: Record<TerritoryCode, SovereignCloudNod
     latencyMs: 12.8,
     replicationLagMs: 1.8,
     inCountryStorageGuaranteed: true,
+
+    // Private Cloud Configuration
+    deploymentMode: 'DEDICATED_PRIVATE_VPC',
+    vpcId: 'vpc-bh-manama-pri-303',
+    privateSubnetCidr: '10.242.10.0/24',
+    dedicatedDbEndpoint: 'postgresql://bh-db.internal:5432/sovereign_rx_bh',
+    dedicatedDbPoolSize: 40,
+    activeDbConnections: 12,
+    dataResidencyStatus: 'STRICT_IN_COUNTRY_ENFORCED',
+    hsmKeyArn: 'arn:aws:kms:me-south-1:hsm-cluster-bh-44129',
+    backupRetentionDays: 3650,
+    assignedSuperAdmin: 'bahrain-governor@metapharsic.com',
+    crossBorderEgressBlocked: true,
+    allocatedVcpu: 32,
+    allocatedRamGb: 128,
+    allocatedStorageTb: 6,
+    lastProvisionedAt: '2026-11-19T10:00:00.000Z',
+    quarantineStatus: 'OPERATIONAL',
   },
   QA: {
     territoryCode: 'QA',
@@ -102,6 +177,24 @@ export const SOVEREIGN_CLOUD_TOPOLOGIES: Record<TerritoryCode, SovereignCloudNod
     latencyMs: 16.1,
     replicationLagMs: 2.5,
     inCountryStorageGuaranteed: true,
+
+    // Private Cloud Configuration
+    deploymentMode: 'DEDICATED_PRIVATE_VPC',
+    vpcId: 'vpc-qa-doha-pri-882',
+    privateSubnetCidr: '10.243.10.0/24',
+    dedicatedDbEndpoint: 'postgresql://qa-db.internal:5432/sovereign_rx_qa',
+    dedicatedDbPoolSize: 40,
+    activeDbConnections: 15,
+    dataResidencyStatus: 'STRICT_IN_COUNTRY_ENFORCED',
+    hsmKeyArn: 'arn:aws:kms:me-central-2:hsm-cluster-qa-66291',
+    backupRetentionDays: 3650,
+    assignedSuperAdmin: 'qatar-governor@metapharsic.com',
+    crossBorderEgressBlocked: true,
+    allocatedVcpu: 48,
+    allocatedRamGb: 192,
+    allocatedStorageTb: 8,
+    lastProvisionedAt: '2026-11-19T10:00:00.000Z',
+    quarantineStatus: 'OPERATIONAL',
   },
   MV: {
     territoryCode: 'MV',
@@ -120,6 +213,24 @@ export const SOVEREIGN_CLOUD_TOPOLOGIES: Record<TerritoryCode, SovereignCloudNod
     latencyMs: 28.4,
     replicationLagMs: 5.2,
     inCountryStorageGuaranteed: true,
+
+    // Private Cloud Configuration
+    deploymentMode: 'HYBRID_SOVEREIGN',
+    vpcId: 'vpc-mv-male-dhiraagu-554',
+    privateSubnetCidr: '10.244.10.0/24',
+    dedicatedDbEndpoint: 'postgresql://mv-db.internal:5432/sovereign_rx_mv',
+    dedicatedDbPoolSize: 30,
+    activeDbConnections: 8,
+    dataResidencyStatus: 'STRICT_IN_COUNTRY_ENFORCED',
+    hsmKeyArn: 'pkcs11:token=Dhiraagu-HSM-MV-1029',
+    backupRetentionDays: 3650,
+    assignedSuperAdmin: 'maldives-governor@metapharsic.com',
+    crossBorderEgressBlocked: true,
+    allocatedVcpu: 24,
+    allocatedRamGb: 96,
+    allocatedStorageTb: 4,
+    lastProvisionedAt: '2026-11-19T10:00:00.000Z',
+    quarantineStatus: 'OPERATIONAL',
   },
   IN: {
     territoryCode: 'IN',
@@ -138,6 +249,24 @@ export const SOVEREIGN_CLOUD_TOPOLOGIES: Record<TerritoryCode, SovereignCloudNod
     latencyMs: 8.6,
     replicationLagMs: 1.1,
     inCountryStorageGuaranteed: true,
+
+    // Private Cloud Configuration
+    deploymentMode: 'DEDICATED_PRIVATE_VPC',
+    vpcId: 'vpc-in-mumbai-pri-108',
+    privateSubnetCidr: '10.245.10.0/24',
+    dedicatedDbEndpoint: 'postgresql://in-db.internal:5432/sovereign_rx_in',
+    dedicatedDbPoolSize: 100,
+    activeDbConnections: 42,
+    dataResidencyStatus: 'STRICT_IN_COUNTRY_ENFORCED',
+    hsmKeyArn: 'arn:aws:kms:ap-south-1:hsm-cluster-in-99120',
+    backupRetentionDays: 3650,
+    assignedSuperAdmin: 'india-governor@metapharsic.com',
+    crossBorderEgressBlocked: true,
+    allocatedVcpu: 128,
+    allocatedRamGb: 512,
+    allocatedStorageTb: 20,
+    lastProvisionedAt: '2026-11-19T10:00:00.000Z',
+    quarantineStatus: 'OPERATIONAL',
   },
 }
 

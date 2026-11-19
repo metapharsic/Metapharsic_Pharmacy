@@ -5,15 +5,17 @@ import {
   getEntityActivityLogs,
   getActiveOnlineUsersSummary,
 } from '@/lib/platform/platform-monitoring-service'
+import { getDynamicSovereignCloudNodes } from '@/lib/cloud/sovereign-cloud-service'
 
 export async function GET() {
   try {
     await requireSuperAdmin()
 
-    const [telemetry, activityLogs, summary] = await Promise.all([
+    const [telemetry, activityLogs, summary, sovereignNodes] = await Promise.all([
       getSystemTelemetry(),
       getEntityActivityLogs(50),
       getActiveOnlineUsersSummary(),
+      getDynamicSovereignCloudNodes(),
     ])
 
     return NextResponse.json({
@@ -21,6 +23,7 @@ export async function GET() {
       telemetry,
       activityLogs,
       summary,
+      sovereignNodes,
     })
   } catch (error: any) {
     const isAuth = error?.message === 'Unauthorized'
