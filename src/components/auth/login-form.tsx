@@ -38,6 +38,8 @@ import { ROUTES } from '@/lib/constants/routes'
 import { loginSchema, type LoginInput } from '@/lib/validations/auth'
 import { TouchPad, DEFAULT_CHEMIST_PROFILES } from './touch-pad'
 import { ThreadStatusCard, type ThreadItem } from './thread-status-card'
+import { LanguageToggle } from '@/components/shared/language-toggle'
+import { useI18n } from '@/lib/i18n/i18n-context'
 import {
   Dialog,
   DialogContent,
@@ -50,6 +52,7 @@ export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get('callbackUrl') ?? ROUTES.DASHBOARD
+  const { t, locale, dir } = useI18n()
 
   // View Mode: 'touchpad' (Mobile / POS Keypad) vs 'standard' (Desktop form)
   const [viewMode, setViewMode] = useState<'touchpad' | 'standard'>('touchpad')
@@ -222,6 +225,14 @@ export function LoginForm() {
 
   return (
     <div className="w-full space-y-4">
+      {/* Sovereign Geopolitical Zone & Language Controls */}
+      <div className="flex items-center justify-between pb-1">
+        <span className="text-xs font-semibold text-muted-foreground">
+          {t('territory.title', 'Sovereign Zone & Language')}
+        </span>
+        <LanguageToggle />
+      </div>
+
       {/* View Switcher Controls (Mobile Touch Pad View vs Desktop Standard View) */}
       <div className="flex items-center justify-between rounded-xl bg-slate-200/70 p-1 dark:bg-slate-900 border border-border">
         <button
@@ -234,7 +245,7 @@ export function LoginForm() {
           }`}
         >
           <Smartphone className="h-3.5 w-3.5" />
-          <span>Mobile Touch Pad View</span>
+          <span>{t('auth.touchPadView', 'Mobile Touch Pad View')}</span>
         </button>
         <button
           type="button"
@@ -246,7 +257,7 @@ export function LoginForm() {
           }`}
         >
           <LayoutGrid className="h-3.5 w-3.5" />
-          <span>Standard Login View</span>
+          <span>{t('auth.standardView', 'Standard Login View')}</span>
         </button>
       </div>
 
@@ -285,10 +296,10 @@ export function LoginForm() {
             </div>
             <div>
               <CardTitle className="text-xl font-bold tracking-tight">
-                Chemist Dispensary Sign In
+                {t('auth.signIn', 'Chemist Dispensary Sign In')}
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground">
-                Enter authorized chemist credentials • Multi-threaded backup enabled
+                {t('auth.welcomeBack', 'Enter authorized chemist credentials • Multi-threaded backup enabled')}
               </CardDescription>
             </div>
           </CardHeader>
@@ -297,7 +308,7 @@ export function LoginForm() {
             <CardContent className="space-y-4 pt-2">
               <div className="space-y-1.5">
                 <Label htmlFor="email" className="text-xs font-semibold text-foreground/80">
-                  Staff Email Address
+                  {t('auth.selectProfile', 'Staff Email Address')}
                 </Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -319,13 +330,13 @@ export function LoginForm() {
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password" className="text-xs font-semibold text-foreground/80">
-                    Password
+                    {t('auth.enterPassword', 'Password')}
                   </Label>
                   <a
                     href={ROUTES.RESET_PASSWORD}
                     className="text-xs font-medium text-teal-600 hover:text-teal-700 hover:underline dark:text-teal-400"
                   >
-                    Forgot key?
+                    {t('auth.forgotPassword', 'Forgot key?')}
                   </a>
                 </div>
                 <div className="relative">

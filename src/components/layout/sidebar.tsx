@@ -50,6 +50,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { ROUTES } from '@/lib/constants/routes'
+import { useI18n } from '@/lib/i18n/i18n-context'
 import { cn } from '@/lib/utils/cn'
 
 type BadgeVariant = 'default' | 'rose' | 'amber' | 'teal'
@@ -384,6 +385,37 @@ const STATIC_NAV_SECTIONS: NavSection[] = [
 function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const { t } = useI18n()
+
+  const translateLabel = (label: string): string => {
+    const map: Record<string, string> = {
+      'Overview': t('nav.dashboard', 'Overview'),
+      'POS Billing': t('nav.pos', 'POS Billing'),
+      'Products': t('nav.products', 'Products'),
+      'All Products': t('nav.products', 'All Products'),
+      'Categories': t('nav.categories', 'Categories'),
+      'Inventory': t('nav.inventory', 'Inventory'),
+      'Stock Overview': t('nav.inventory', 'Stock Overview'),
+      'Batches': t('nav.batches', 'Batches'),
+      'Purchases': t('nav.purchases', 'Purchases'),
+      'All Purchases': t('nav.purchases', 'All Purchases'),
+      'Suppliers': t('nav.suppliers', 'Suppliers'),
+      'Sales & Rx': t('nav.sales', 'Sales & Rx'),
+      'Sales History': t('nav.sales', 'Sales History'),
+      'Prescriptions': t('nav.prescriptions', 'Prescriptions'),
+      'Expiry Watch': t('nav.expiry', 'Expiry Watch'),
+      'Batch Expiry': t('nav.expiry', 'Batch Expiry'),
+      'Customers': t('nav.customers', 'Customers'),
+      'Doctors': t('nav.doctors', 'Doctors'),
+      'Reports': t('nav.reports', 'Reports'),
+      'Settings': t('nav.settings', 'Settings'),
+      'Keyboard Shortcuts': t('nav.shortcuts', 'Keyboard Shortcuts'),
+      'Database Backup': t('nav.backup', 'Database Backup'),
+      'Telemetry & Health': t('nav.telemetry', 'Telemetry & Health'),
+      'Platform Overview': t('nav.superadmin', 'Platform Overview'),
+    }
+    return map[label] || label
+  }
 
   const isLinkActive = (href?: string) => {
     if (!href) return false
@@ -406,7 +438,7 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
         <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-100">
           <span className="flex items-center gap-2">
             <item.icon className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
-            <span>{item.label}</span>
+            <span>{translateLabel(item.label)}</span>
             {item.badge && (
               <span
                 className={cn(
@@ -427,7 +459,7 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
           <ChevronDown className="h-3 w-3 text-slate-400 transition-transform [[data-state=open]>&]:rotate-180" />
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <div className="ml-3 mt-1 space-y-0.5 border-l border-slate-200/80 pl-2 dark:border-slate-800">
+          <div className="ml-3 rtl:mr-3 rtl:ml-0 mt-1 space-y-0.5 border-l rtl:border-r rtl:border-l-0 border-slate-200/80 pl-2 rtl:pr-2 rtl:pl-0 dark:border-slate-800">
             {item.children.map((child) => (
               <NavItemComponent key={child.label} item={child} depth={depth + 1} />
             ))}
@@ -445,7 +477,7 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
       className={cn(
         'group flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150',
         isActive
-          ? 'bg-teal-50 text-teal-950 font-semibold border-l-2 border-teal-600 pl-[8px] dark:bg-teal-950/40 dark:text-teal-200 dark:border-teal-400'
+          ? 'bg-teal-50 text-teal-950 font-semibold border-l-2 rtl:border-r-2 rtl:border-l-0 border-teal-600 pl-[8px] rtl:pr-[8px] rtl:pl-[8px] dark:bg-teal-950/40 dark:text-teal-200 dark:border-teal-400'
           : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-100'
       )}
     >
@@ -456,7 +488,7 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
             isActive ? 'text-teal-700 dark:text-teal-400' : 'text-slate-500 group-hover:text-slate-700 dark:text-slate-400'
           )}
         />
-        <span>{item.label}</span>
+        <span>{translateLabel(item.label)}</span>
       </span>
       {item.badge && (
         <span
@@ -647,7 +679,7 @@ export function Sidebar() {
   }, [isSuperAdmin, stats])
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r border-border/80 bg-card select-none">
+    <aside className="flex h-screen w-64 flex-col border-r rtl:border-l rtl:border-r-0 border-border/80 bg-card select-none">
       {/* Brand Header */}
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-border/70 px-4">
         <Logo size="md" />

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { useI18n } from '@/lib/i18n/i18n-context'
 import { cn } from '@/lib/utils/cn'
 
 export interface QuickStaffProfile {
@@ -80,6 +81,7 @@ export function TouchPad({
   onSwitchToDesktop,
   onOpenDiagnostics,
 }: TouchPadProps) {
+  const { t, locale, dir } = useI18n()
   const [staffList, setStaffList] = useState<QuickStaffProfile[]>(DEFAULT_CHEMIST_PROFILES)
   const [selectedProfile, setSelectedProfile] = useState<QuickStaffProfile>(DEFAULT_CHEMIST_PROFILES[0])
   const [pinValue, setPinValue] = useState<string>('')
@@ -201,24 +203,24 @@ export function TouchPad({
       <div className="py-3 text-center">
         <div className="inline-flex items-center gap-1.5 rounded-full bg-teal-500/10 border border-teal-500/30 px-3 py-0.5 text-[10px] font-bold text-teal-300 uppercase tracking-wider mb-1">
           <Store className="h-3 w-3" />
-          {selectedProfile.shopName || 'Retail Dispensary Counter'}
+          {selectedProfile.shopName || (locale === 'ar' ? 'صيدلية ميتافارسيك المعتمدة' : 'Retail Dispensary Counter')}
         </div>
         <h2 className="text-base font-extrabold text-white tracking-tight">
-          Chemist Counter Sign-In
+          {t('auth.fastTouchLogin', 'Chemist Counter Sign-In')}
         </h2>
         <p className="text-[11px] text-slate-400">
-          Select onboarded staff profile & enter authorized password
+          {t('auth.selectProfile', 'Select onboarded staff profile & enter authorized password')}
         </p>
       </div>
 
       {/* Dynamic Onboarded Chemist Staff Selector */}
       <div className="space-y-1.5 mb-3">
         <div className="flex items-center justify-between text-[10px] text-slate-400 px-1 font-semibold uppercase tracking-wider">
-          <span>Onboarded Chemist Staff:</span>
+          <span>{locale === 'ar' ? 'موظفو الصيدلية المعتمدون:' : 'Onboarded Chemist Staff:'}</span>
           {isLoadingStaff && (
             <span className="flex items-center gap-1 text-teal-400 font-normal">
               <RefreshCw className="h-2.5 w-2.5 animate-spin" />
-              <span>Syncing...</span>
+              <span>{locale === 'ar' ? 'جاري المزامنة...' : 'Syncing...'}</span>
             </span>
           )}
         </div>
@@ -226,6 +228,14 @@ export function TouchPad({
         <div className="grid grid-cols-3 gap-2">
           {staffList.slice(0, 3).map((profile) => {
             const isSelected = selectedProfile.email === profile.email && !customEmail
+            const displayRole = locale === 'ar'
+              ? profile.role.toLowerCase().includes('owner') || profile.role.toLowerCase().includes('admin')
+                ? 'مدير الفرع'
+                : profile.role.toLowerCase().includes('manager')
+                  ? 'مدير المخزون'
+                  : 'صيدلي مسؤول'
+              : profile.role
+
             return (
               <button
                 key={profile.email}
@@ -255,7 +265,7 @@ export function TouchPad({
                   {profile.name}
                 </span>
                 <span className="text-[9px] text-teal-400 truncate w-full font-medium">
-                  {profile.role}
+                  {displayRole}
                 </span>
               </button>
             )
@@ -409,12 +419,12 @@ export function TouchPad({
         {isSubmitting ? (
           <span className="flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin text-white" />
-            <span>Verifying 5 Chemist Threads...</span>
+            <span>{locale === 'ar' ? 'جاري التحقق عبر 5 خيوط معالجة...' : 'Verifying 5 Chemist Threads...'}</span>
           </span>
         ) : (
           <span className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4" />
-            <span>Access Dispensary Counter</span>
+            <span>{locale === 'ar' ? 'دخول كاونتر الصرف الدوائي' : 'Access Dispensary Counter'}</span>
           </span>
         )}
       </Button>
@@ -427,7 +437,7 @@ export function TouchPad({
             onClick={onSwitchToDesktop}
             className="text-teal-400 hover:text-teal-300 hover:underline flex items-center gap-1"
           >
-            <span>Standard Desktop View</span>
+            <span>{locale === 'ar' ? 'عرض الكمبيوتر القياسي' : 'Standard Desktop View'}</span>
           </button>
         )}
 
@@ -438,7 +448,7 @@ export function TouchPad({
             className="text-slate-400 hover:text-slate-200 flex items-center gap-1 font-mono text-[10px]"
           >
             <Sparkles className="h-3 w-3 text-amber-400" />
-            <span>Thread Diagnostics</span>
+            <span>{locale === 'ar' ? 'بيانات الخيوط' : 'Thread Diagnostics'}</span>
           </button>
         )}
       </div>

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <main className="flex min-h-screen w-full flex-col lg:flex-row bg-background">
+    <main className="flex min-h-screen w-full flex-col lg:flex-row rtl:lg:flex-row-reverse bg-background">
       {/* Left Showcase Panel — Enterprise Healthcare Showcase */}
       <div className="relative hidden w-full lg:flex lg:w-1/2 flex-col justify-between p-12 bg-clinical-mesh text-white overflow-hidden">
         {/* Ambient glow decoration */}

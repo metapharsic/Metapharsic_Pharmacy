@@ -6,6 +6,7 @@ import { SessionProvider } from '@/components/auth/session-provider'
 import { ConfirmationDialog } from '@/components/shared/confirmation-dialog'
 import { KeyboardShortcutsProvider } from '@/components/shared/keyboard-shortcuts-provider'
 import { DatabaseBackupProvider } from '@/components/shared/database-backup-provider'
+import { I18nProvider } from '@/lib/i18n/i18n-context'
 import { getSession } from '@/lib/auth/auth-helpers'
 import './globals.css'
 
@@ -31,13 +32,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`} suppressHydrationWarning>
         <SessionProvider session={session}>
-          <DatabaseBackupProvider>
-            <KeyboardShortcutsProvider>
-              {children}
-              <ConfirmationDialog />
-              <Toaster position="top-right" richColors closeButton />
-            </KeyboardShortcutsProvider>
-          </DatabaseBackupProvider>
+          <I18nProvider>
+            <DatabaseBackupProvider>
+              <KeyboardShortcutsProvider>
+                {children}
+                <ConfirmationDialog />
+                <Toaster position="top-right" richColors closeButton />
+              </KeyboardShortcutsProvider>
+            </DatabaseBackupProvider>
+          </I18nProvider>
         </SessionProvider>
       </body>
     </html>

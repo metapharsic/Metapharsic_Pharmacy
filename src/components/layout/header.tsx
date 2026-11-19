@@ -11,12 +11,15 @@ import { ROUTES } from '@/lib/constants/routes'
 import { isSoundMuted, toggleSound, playClickSound } from '@/lib/sound/sound-effects'
 import { useShortcuts } from '@/components/shared/keyboard-shortcuts-provider'
 import { useDatabaseBackup } from '@/components/shared/database-backup-provider'
+import { LanguageToggle } from '@/components/shared/language-toggle'
+import { useI18n } from '@/lib/i18n/i18n-context'
 import { cn } from '@/lib/utils/cn'
 
 export function Header() {
   const { data: session } = useSession()
   const { openShortcuts } = useShortcuts()
   const { openBackup } = useDatabaseBackup()
+  const { t, locale, dir } = useI18n()
   const [timeStr, setTimeStr] = useState<string>('')
   const [dateStr, setDateStr] = useState<string>('')
 
@@ -188,7 +191,7 @@ export function Header() {
           title="Chemist Fast Keyboard Shortcuts Cheat Sheet (Press F1 anytime)"
         >
           <Keyboard className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400" />
-          <span className="hidden sm:inline">Shortcuts</span>
+          <span className="hidden sm:inline">{t('nav.shortcuts', 'Shortcuts')}</span>
           <kbd className="rounded bg-muted px-1.5 py-0.5 text-[9px] font-mono font-bold text-muted-foreground border">
             F1
           </kbd>
@@ -203,9 +206,12 @@ export function Header() {
           title="Download Multi-Thread Database Backup in Excel (.xlsx) or Send to Email"
         >
           <Database className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-          <span className="hidden sm:inline">Backup</span>
+          <span className="hidden sm:inline">{t('nav.backup', 'Backup')}</span>
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
         </Button>
+
+        {/* Dual-Script Sovereign Territory & Language Selector */}
+        <LanguageToggle />
 
         {/* Procedural Audio Feedback Mute / Unmute Toggle */}
         <Button

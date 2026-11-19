@@ -47,6 +47,6 @@ export const config = {
      * - /api/reports/daily-closing, /api/cron (automated EOD report and cron triggers)
      * - /_next/static, /_next/image, /favicon.ico (static files)
      */
-    '/((?!login|register|reset-password|pos-camera|api/pos2/strip-camera-bridge|api/auth|api/login-threads|api/reset-password|api/reports/daily-closing|api/cron|_next/static|_next/image|favicon.ico|public).*)',
+    '/((?!login|register|reset-password|pos-camera|api/pos2/strip-camera-bridge|api/auth|api/login-threads|api/territory|api/reset-password|api/reports/daily-closing|api/cron|_next/static|_next/image|favicon.ico|public).*)',
   ],
 }

@@ -319,7 +319,9 @@ model Product {
   id                     String            @id @default(cuid())
   organizationId         String?
   name                   String
+  nameAr                 String?
   genericName            String?
+  genericNameAr          String?
   sku                    String
   barcode                String?
   description            String?           @db.Text
