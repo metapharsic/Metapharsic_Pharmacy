@@ -36,6 +36,8 @@ import {
 import { useToast } from '@/lib/hooks/use-toast'
 import { calculateIntelligentBillDiscount } from '@/lib/pricing/discount-exemption'
 import { playSuccessCheckoutSound, playWarningSound } from '@/lib/sound/sound-effects'
+import { useI18n } from '@/lib/i18n/i18n-context'
+import { formatCurrency, roundCurrency } from '@/lib/territory/currency-service'
 import type { CustomerProfileData } from './customer-profiling-bar'
 
 export interface DoctorOption {
@@ -86,6 +88,29 @@ export function BillFinalizeDialog({
   saving,
 }: BillFinalizeDialogProps) {
   const toast = useToast()
+
+  // Dynamic Sovereign Territory & Currency Formatter
+  let formatPrice = (n: number) => `₹${n.toFixed(2)}`
+  let territoryCode = 'IN'
+  let territoryTaxName = 'GST Tax Amount'
+  let denominations = [100, 200, 500, 1000, 2000]
+
+  try {
+    const i18n = useI18n()
+    formatPrice = i18n.formatPrice
+    territoryCode = i18n.territory
+    territoryTaxName =
+      i18n.territoryDef.tax.regime === 'GST'
+        ? 'GST Tax Amount'
+        : `${i18n.territoryDef.tax.taxAuthorityNameEn} (${i18n.territoryDef.tax.standardVatRate}%)`
+
+    if (territoryCode === 'SA') denominations = [10, 20, 50, 100, 200, 500]
+    else if (territoryCode === 'OM' || territoryCode === 'BH') denominations = [1, 5, 10, 20, 50]
+    else if (territoryCode === 'QA') denominations = [10, 50, 100, 200, 500]
+    else if (territoryCode === 'MV') denominations = [20, 50, 100, 200, 500]
+  } catch {
+    // fallback to INR defaults
+  }
 
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>('')
   const [billDiscountPercent, setBillDiscountPercent] = useState<number>(0)
@@ -333,7 +358,7 @@ export function BillFinalizeDialog({
                 value={cashTendered || ''}
                 onChange={(e) => setCashTendered(parseFloat(e.target.value) || 0)}
                 className="h-9 font-mono text-sm font-bold"
-                placeholder={`₹${netPayable}`}
+                placeholder={formatPrice(netPayable)}
               />
               <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                 <Button
@@ -343,9 +368,9 @@ export function BillFinalizeDialog({
                   className="h-6 px-2 text-[10px]"
                   onClick={() => setCashTendered(netPayable)}
                 >
-                  Exact (₹{netPayable})
+                  Exact ({formatPrice(netPayable)})
                 </Button>
-                {[100, 200, 500, 1000, 2000]
+                {denominations
                   .filter((d) => d >= netPayable)
                   .slice(0, 4)
                   .map((denom) => (
@@ -357,14 +382,14 @@ export function BillFinalizeDialog({
                       className="h-6 px-2 font-mono text-[10px]"
                       onClick={() => setCashTendered(denom)}
                     >
-                      ₹{denom}
+                      {formatPrice(denom)}
                     </Button>
                   ))}
               </div>
               <div className="flex items-center justify-between rounded-md border border-emerald-500/20 bg-emerald-500/10 p-2 text-xs font-medium">
                 <span className="text-emerald-800 dark:text-emerald-300">💵 Change to Return:</span>
                 <span className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-400">
-                  ₹{changeToReturn.toFixed(2)}
+                  {formatPrice(changeToReturn)}
                 </span>
               </div>
             </div>
@@ -383,7 +408,7 @@ export function BillFinalizeDialog({
                     Patient Khata Ledger: <strong>{selectedCustomer?.name || customerName}</strong>
                   </span>
                   <span className="font-mono font-bold text-amber-800 dark:text-amber-300">
-                    Current Udhaar: ₹{(selectedCustomer?.outstandingBalance || 0).toFixed(2)}
+                    Current Udhaar: {formatPrice(selectedCustomer?.outstandingBalance || 0)}
                   </span>
                 </div>
               )}
@@ -394,18 +419,18 @@ export function BillFinalizeDialog({
             <div className="space-y-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 text-xs">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-emerald-800 dark:text-emerald-300">
-                  📲 Dynamic UPI QR
+                  📲 Dynamic Payment QR
                 </span>
                 <Badge
                   variant="outline"
                   className="border-emerald-500/30 text-[10px] text-emerald-600"
                 >
-                  Paytm / PhonePe / GPay
+                  Sovereign Instant Pay
                 </Badge>
               </div>
               <p className="text-[11px] text-muted-foreground">
                 Customer scans the dynamic QR code displayed on screen or printed thermal receipt
-                for ₹{netPayable.toFixed(2)}.
+                for {formatPrice(netPayable)}.
               </p>
             </div>
           )}
@@ -428,35 +453,35 @@ export function BillFinalizeDialog({
           <div className="space-y-1.5 rounded-lg border bg-muted/50 p-3 text-xs">
             <div className="flex justify-between text-muted-foreground">
               <span>Gross Subtotal:</span>
-              <span className="font-mono">₹{subtotal.toFixed(2)}</span>
+              <span className="font-mono">{formatPrice(subtotal)}</span>
             </div>
             {itemDiscountTotal > 0 && (
               <div className="flex justify-between text-emerald-600">
                 <span>Item Discounts:</span>
-                <span className="font-mono">-₹{itemDiscountTotal.toFixed(2)}</span>
+                <span className="font-mono">-{formatPrice(itemDiscountTotal)}</span>
               </div>
             )}
             {billDiscountAmount > 0 && (
               <div className="flex justify-between font-medium text-emerald-600">
                 <span>Bill Discount ({billDiscountPercent}%):</span>
-                <span className="font-mono">-₹{billDiscountAmount.toFixed(2)}</span>
+                <span className="font-mono">-{formatPrice(billDiscountAmount)}</span>
               </div>
             )}
             <div className="flex justify-between text-muted-foreground">
-              <span>GST Tax Amount:</span>
-              <span className="font-mono">+₹{taxTotal.toFixed(2)}</span>
+              <span>{territoryTaxName}:</span>
+              <span className="font-mono">+{formatPrice(taxTotal)}</span>
             </div>
             {roundOff !== 0 && (
               <div className="flex justify-between text-muted-foreground">
                 <span>Round-off:</span>
                 <span className="font-mono">
-                  {roundOff > 0 ? `+₹${roundOff.toFixed(2)}` : `-₹${Math.abs(roundOff).toFixed(2)}`}
+                  {roundOff > 0 ? `+${formatPrice(roundOff)}` : `-${formatPrice(Math.abs(roundOff))}`}
                 </span>
               </div>
             )}
             <div className="flex justify-between border-t pt-2 text-sm font-bold text-foreground">
               <span>Net Amount Payable:</span>
-              <span className="font-mono text-base text-emerald-600">₹{netPayable.toFixed(2)}</span>
+              <span className="font-mono text-base text-emerald-600">{formatPrice(netPayable)}</span>
             </div>
           </div>
         </div>
