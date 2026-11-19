@@ -663,7 +663,9 @@ export async function searchPosProducts(
       {
         OR: [
           { name: { contains: cleanSearch, mode: 'insensitive' } },
+          { nameAr: { contains: cleanSearch, mode: 'insensitive' } },
           { genericName: { contains: cleanSearch, mode: 'insensitive' } },
+          { genericNameAr: { contains: cleanSearch, mode: 'insensitive' } },
           { sku: { contains: cleanSearch, mode: 'insensitive' } },
           { barcode: { contains: cleanSearch, mode: 'insensitive' } },
           { manufacturer: { contains: cleanSearch, mode: 'insensitive' } },
@@ -681,7 +683,9 @@ export async function searchPosProducts(
     select: {
       id: true,
       name: true,
+      nameAr: true,
       genericName: true,
+      genericNameAr: true,
       sku: true,
       barcode: true,
       rack: true,
@@ -782,7 +786,9 @@ export async function searchPosProducts(
     return {
       id: p.id,
       name: p.name,
+      nameAr: (p as any).nameAr ?? null,
       genericName: p.genericName,
+      genericNameAr: (p as any).genericNameAr ?? null,
       sku: p.sku,
       barcode: p.barcode,
       rack: p.rack ? formatRack(p.rack) : null,

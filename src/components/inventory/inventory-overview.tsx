@@ -84,6 +84,7 @@ import {
   type PosCartLine,
 } from '@/lib/stores/pos-cart-store'
 import { useSession } from 'next-auth/react'
+import { useI18n } from '@/lib/i18n/i18n-context'
 
 interface InventoryOverviewProps {
   initialRows: InventoryRow[]
@@ -122,6 +123,7 @@ export function InventoryOverview({
   const toast = useToast()
   const { summary: posSummary } = usePosCart()
   const { data: session } = useSession()
+  const { isAr, translateCategory } = useI18n()
 
   // Determine admin role for this session
   const isAdmin = (session?.user?.roles ?? []).some((r: string) =>
@@ -548,7 +550,7 @@ export function InventoryOverview({
           <div className="flex flex-wrap items-center gap-1.5 p-2 rounded-xl border border-border/70 bg-gradient-to-r from-card to-background shadow-xs">
             <span className="text-[11px] font-semibold text-muted-foreground px-2 flex items-center gap-1.5">
               <Sparkles className="h-3.5 w-3.5 text-primary animate-pulse" />
-              Chemist Shortcuts:
+              {isAr ? 'اختصارات الصيدلي:' : 'Chemist Shortcuts:'}
             </span>
             <Button
               variant={status === 'all' ? 'secondary' : 'ghost'}
@@ -556,7 +558,7 @@ export function InventoryOverview({
               onClick={() => setStatus('all')}
               className="h-7 text-xs px-2.5 font-medium"
             >
-              All Stock ({summary?.totalSkus ?? 0})
+              {isAr ? `جميع الأصناف (${summary?.totalSkus ?? 0})` : `All Stock (${summary?.totalSkus ?? 0})`}
             </Button>
             <Button
               variant={status === 'low_stock' ? 'secondary' : 'ghost'}
@@ -565,7 +567,7 @@ export function InventoryOverview({
               className="h-7 text-xs px-2.5 font-medium text-amber-600 dark:text-amber-400"
             >
               <AlertTriangle className="h-3 w-3 mr-1" />
-              Low Stock ({summary?.lowStockCount ?? 0})
+              {isAr ? `نواقص المخزون (${summary?.lowStockCount ?? 0})` : `Low Stock (${summary?.lowStockCount ?? 0})`}
             </Button>
             <Button
               variant="ghost"
@@ -574,7 +576,7 @@ export function InventoryOverview({
               className="h-7 text-xs px-2.5 font-medium text-amber-600 hover:text-amber-700 hover:bg-amber-500/10"
             >
               <Boxes className="h-3 w-3 mr-1" />
-              Rack &amp; Box Layout
+              {isAr ? 'مخطط الأرفف والصناديق' : 'Rack & Box Layout'}
             </Button>
             <Button
               variant="ghost"
@@ -583,7 +585,7 @@ export function InventoryOverview({
               className="h-7 text-xs px-2.5 font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-500/10"
             >
               <Clock className="h-3 w-3 mr-1" />
-              FEFO Near Expiry ({summary?.nearExpiryBatchesCount ?? 1})
+              {isAr ? `قريب الصلاحية (${summary?.nearExpiryBatchesCount ?? 1})` : `FEFO Near Expiry (${summary?.nearExpiryBatchesCount ?? 1})`}
             </Button>
             <Button
               variant="ghost"
@@ -592,7 +594,7 @@ export function InventoryOverview({
               className="h-7 text-xs px-2.5 font-medium text-destructive hover:bg-destructive/10"
             >
               <TrendingDown className="h-3 w-3 mr-1" />
-              Dead Stock Radar
+              {isAr ? 'رادار الرواكد' : 'Dead Stock Radar'}
             </Button>
             <Button
               variant="ghost"
@@ -601,7 +603,7 @@ export function InventoryOverview({
               className="h-7 text-xs px-2.5 font-medium text-sky-600 hover:text-sky-700 hover:bg-sky-500/10"
             >
               <Truck className="h-3 w-3 mr-1" />
-              Vendor Inventory
+              {isAr ? 'مخزون الموردين' : 'Vendor Inventory'}
             </Button>
             <Button
               variant="ghost"
@@ -610,7 +612,7 @@ export function InventoryOverview({
               className="h-7 text-xs px-2.5 font-medium text-muted-foreground hover:text-foreground"
             >
               <FileText className="h-3 w-3 mr-1" />
-              Audit Ledger
+              {isAr ? 'سجل التدقيق' : 'Audit Ledger'}
             </Button>
           </div>
 
@@ -621,7 +623,7 @@ export function InventoryOverview({
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search medicine, SKU, Rack, Shelf, Box, barcode…"
+                placeholder={isAr ? 'ابحث عن الدواء، الكود، الرف، الخانة، الباركود...' : 'Search medicine, SKU, Rack, Shelf, Box, barcode…'}
                 className="pl-8 h-9 text-xs"
               />
             </div>
@@ -629,10 +631,10 @@ export function InventoryOverview({
             <div className="flex flex-wrap items-center gap-2">
               <Select value={branchId} onValueChange={setBranchId}>
                 <SelectTrigger className="w-44 h-9 text-xs font-medium">
-                  <SelectValue placeholder="All branches" />
+                  <SelectValue placeholder={isAr ? 'جميع الفروع' : 'All branches'} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All branches</SelectItem>
+                  <SelectItem value="all">{isAr ? 'جميع الفروع' : 'All branches'}</SelectItem>
                   {branches.map((b) => (
                     <SelectItem key={b.id} value={b.id} className="text-xs">
                       {b.name}
@@ -643,13 +645,13 @@ export function InventoryOverview({
 
               <Select value={categoryId} onValueChange={setCategoryId}>
                 <SelectTrigger className="w-52 h-9 text-xs font-medium">
-                  <SelectValue placeholder="All Classifications" />
+                  <SelectValue placeholder={isAr ? 'جميع التصنيفات' : 'All Classifications'} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Classifications</SelectItem>
+                  <SelectItem value="all">{isAr ? 'جميع التصنيفات' : 'All Classifications'}</SelectItem>
                   {categories.map((c) => (
                     <SelectItem key={c.id} value={c.id} className="text-xs">
-                      {c.parentName ? `${c.parentName} › ${c.name}` : c.name}
+                      {c.parentName ? `${c.parentName} › ${isAr ? translateCategory(c.name) : c.name}` : (isAr ? translateCategory(c.name) : c.name)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -657,14 +659,14 @@ export function InventoryOverview({
 
               <Select value={status} onValueChange={setStatus}>
                 <SelectTrigger className="w-32 h-9 text-xs font-medium">
-                  <SelectValue placeholder="All status" />
+                  <SelectValue placeholder={isAr ? 'جميع الحالات' : 'All status'} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All status</SelectItem>
-                  <SelectItem value="in_stock">In Stock</SelectItem>
-                  <SelectItem value="low_stock">Low Stock</SelectItem>
-                  <SelectItem value="out_of_stock">Out of Stock</SelectItem>
-                  <SelectItem value="overstock">Overstock</SelectItem>
+                  <SelectItem value="all">{isAr ? 'جميع الحالات' : 'All status'}</SelectItem>
+                  <SelectItem value="in_stock">{isAr ? 'متوفر بالمخزون' : 'In Stock'}</SelectItem>
+                  <SelectItem value="low_stock">{isAr ? 'رصيد منخفض' : 'Low Stock'}</SelectItem>
+                  <SelectItem value="out_of_stock">{isAr ? 'نفد من المخزون' : 'Out of Stock'}</SelectItem>
+                  <SelectItem value="overstock">{isAr ? 'مخزون فائض' : 'Overstock'}</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -676,7 +678,7 @@ export function InventoryOverview({
                 className="h-9 gap-1.5 border-primary/40 bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground font-medium text-xs transition-all shadow-xs"
               >
                 <Barcode className="h-4 w-4" />
-                <span>Barcode Gun</span>
+                <span>{isAr ? 'قارئ الباركود' : 'Barcode Gun'}</span>
               </Button>
 
               <Button
@@ -686,7 +688,7 @@ export function InventoryOverview({
                 className="h-9 gap-1.5 bg-primary hover:bg-primary/90 text-xs"
               >
                 <Sparkles className="h-3.5 w-3.5" />
-                <span>Auto-PO</span>
+                <span>{isAr ? 'أمر شراء ذكي' : 'Auto-PO'}</span>
               </Button>
 
               {/* Export CSV */}
@@ -695,10 +697,10 @@ export function InventoryOverview({
                 size="sm"
                 onClick={handleExportCsv}
                 className="h-9 gap-1 text-xs text-muted-foreground hover:text-foreground"
-                title="Export stock ledger to CSV"
+                title={isAr ? 'تصدير كشف المخزون إلى ملف CSV' : 'Export stock ledger to CSV'}
               >
                 <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
-                <span className="hidden sm:inline">Export CSV</span>
+                <span className="hidden sm:inline">{isAr ? 'تصدير كشف' : 'Export CSV'}</span>
               </Button>
 
               {/* Print Stock Sheet */}
@@ -707,16 +709,16 @@ export function InventoryOverview({
                 size="sm"
                 onClick={handlePrintStockSheet}
                 className="h-9 gap-1 text-xs text-muted-foreground hover:text-foreground"
-                title="Print physical stock audit sheet"
+                title={isAr ? 'طباعة كشف الجرد الفعلي للمخزون' : 'Print physical stock audit sheet'}
               >
                 <Printer className="h-4 w-4" />
-                <span className="hidden sm:inline">Print</span>
+                <span className="hidden sm:inline">{isAr ? 'طباعة' : 'Print'}</span>
               </Button>
             </div>
 
             <div className="ml-auto flex items-center gap-2">
               <div className="text-xs text-muted-foreground">
-                Page {page} of {Math.max(totalPages, 1)}
+                {isAr ? `صفحة ${page} من ${Math.max(totalPages, 1)}` : `Page ${page} of ${Math.max(totalPages, 1)}`}
               </div>
               <Button
                 variant="outline"
@@ -725,7 +727,7 @@ export function InventoryOverview({
                 onClick={() => load({ page: page - 1 })}
                 className="h-8 px-2 text-xs"
               >
-                Prev
+                {isAr ? 'السابق' : 'Prev'}
               </Button>
               <Button
                 variant="outline"
@@ -734,7 +736,7 @@ export function InventoryOverview({
                 onClick={() => load({ page: page + 1 })}
                 className="h-8 px-2 text-xs"
               >
-                Next
+                {isAr ? 'التالي' : 'Next'}
               </Button>
             </div>
           </div>
@@ -751,7 +753,7 @@ export function InventoryOverview({
               }`}
             >
               <Boxes className="h-3 w-3" />
-              <span>All Stock ({summary?.totalSkus ?? rows.length})</span>
+              <span>{isAr ? `جميع المخزون (${summary?.totalSkus ?? rows.length})` : `All Stock (${summary?.totalSkus ?? rows.length})`}</span>
             </button>
 
             <button
@@ -764,7 +766,7 @@ export function InventoryOverview({
               }`}
             >
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              <span>In Stock</span>
+              <span>{isAr ? 'متوفر' : 'In Stock'}</span>
             </button>
 
             <button
@@ -777,7 +779,7 @@ export function InventoryOverview({
               }`}
             >
               <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-              <span>Low Stock ({summary?.lowStockCount ?? 0})</span>
+              <span>{isAr ? `رصيد منخفض (${summary?.lowStockCount ?? 0})` : `Low Stock (${summary?.lowStockCount ?? 0})`}</span>
             </button>
 
             <button
@@ -790,7 +792,7 @@ export function InventoryOverview({
               }`}
             >
               <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-              <span>Out of Stock ({summary?.outOfStockCount ?? 0})</span>
+              <span>{isAr ? `نافد (${summary?.outOfStockCount ?? 0})` : `Out of Stock (${summary?.outOfStockCount ?? 0})`}</span>
             </button>
 
             <button
@@ -803,7 +805,7 @@ export function InventoryOverview({
               }`}
             >
               <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
-              <span>Overstock</span>
+              <span>{isAr ? 'مخزون فائض' : 'Overstock'}</span>
             </button>
           </div>
 

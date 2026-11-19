@@ -22,7 +22,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { InventorySummary } from '@/lib/inventory/inventory-service'
-import { formatCurrency } from '@/lib/utils/currency'
+import { useI18n } from '@/lib/i18n/i18n-context'
 
 interface InventoryKpiCardsProps {
   summary: InventorySummary | null
@@ -41,6 +41,7 @@ export function InventoryKpiCards({
   onTabChange,
   onRefresh,
 }: InventoryKpiCardsProps) {
+  const { isAr, formatPrice } = useI18n()
   if (loading && !summary) {
     return (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -78,21 +79,21 @@ export function InventoryKpiCards({
         <div className="flex items-center justify-between text-muted-foreground mb-1.5">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1.5">
             <Coins className="h-3.5 w-3.5" />
-            Stock Valuation
+            {isAr ? 'تقييم المخزون' : 'Stock Valuation'}
           </span>
           <Badge variant="outline" className="text-[10px] bg-background/80 font-mono">
-            {s.marginPercent.toFixed(1)}% margin
+            {s.marginPercent.toFixed(1)}% {isAr ? 'هامش' : 'margin'}
           </Badge>
         </div>
 
         <div className="space-y-1">
           <div className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-mono">
-            {formatCurrency(s.valuationAtMrp)}
+            {formatPrice(s.valuationAtMrp)}
           </div>
           <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-border/40 pt-1.5">
-            <span>Cost: {formatCurrency(s.valuationAtCost)}</span>
-            <span className="text-emerald-600 dark:text-emerald-400 font-medium flex items-center">
-              +₹{Math.round(s.potentialGrossProfit).toLocaleString('en-IN')}
+            <span>{isAr ? 'التكلفة: ' : 'Cost: '}{formatPrice(s.valuationAtCost)}</span>
+            <span className="text-emerald-600 dark:text-emerald-400 font-medium flex items-center font-mono">
+              +{formatPrice(s.potentialGrossProfit)}
             </span>
           </div>
         </div>
@@ -110,26 +111,30 @@ export function InventoryKpiCards({
         <div className="flex items-center justify-between text-muted-foreground mb-1.5">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-sky-600 dark:text-sky-400 flex items-center gap-1.5">
             <Boxes className="h-3.5 w-3.5" />
-            Total On-Hand Stock
+            {isAr ? 'إجمالي المخزون الحالي' : 'Total On-Hand Stock'}
           </span>
           <Badge variant="outline" className="text-[10px] bg-background/80 font-mono text-sky-600 dark:text-sky-400">
-            {s.totalSkus} SKUs
+            {s.totalSkus} {isAr ? 'صنف' : 'SKUs'}
           </Badge>
         </div>
 
         <div className="space-y-1">
           <div className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-mono">
-            {s.availableUnits.toLocaleString('en-IN')}{' '}
-            <span className="text-xs font-normal text-muted-foreground">units available</span>
+            {s.availableUnits.toLocaleString()}{' '}
+            <span className="text-xs font-normal text-muted-foreground">
+              {isAr ? 'وحدة متاحة' : 'units available'}
+            </span>
           </div>
           <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-border/40 pt-1.5">
-            <span>Total Units: {s.totalUnits.toLocaleString('en-IN')}</span>
+            <span>{isAr ? 'إجمالي الوحدات: ' : 'Total Units: '}{s.totalUnits.toLocaleString()}</span>
             {s.reservedUnits > 0 ? (
               <span className="text-amber-600 dark:text-amber-400 font-medium">
-                {s.reservedUnits} reserved in carts
+                {s.reservedUnits} {isAr ? 'محجوز بالسلات' : 'reserved in carts'}
               </span>
             ) : (
-              <span className="text-emerald-600 dark:text-emerald-400">0 locked</span>
+              <span className="text-emerald-600 dark:text-emerald-400">
+                {isAr ? '0 محجوز' : '0 locked'}
+              </span>
             )}
           </div>
         </div>
@@ -147,11 +152,11 @@ export function InventoryKpiCards({
         <div className="flex items-center justify-between text-muted-foreground mb-1.5">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
             <AlertTriangle className="h-3.5 w-3.5" />
-            Reorder Alert Radar
+            {isAr ? 'رادار إعادة الطلب' : 'Reorder Alert Radar'}
           </span>
           {s.outOfStockCount > 0 && (
             <Badge variant="destructive" className="text-[10px] font-mono">
-              {s.outOfStockCount} Out of Stock
+              {s.outOfStockCount} {isAr ? 'نافد' : 'Out of Stock'}
             </Badge>
           )}
         </div>
@@ -161,12 +166,14 @@ export function InventoryKpiCards({
             <span className="text-xl sm:text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-400 font-mono">
               {s.lowStockCount}
             </span>
-            <span className="text-xs text-muted-foreground">medicines below reorder point</span>
+            <span className="text-xs text-muted-foreground">
+              {isAr ? 'أدوية دون حد الطلب' : 'medicines below reorder point'}
+            </span>
           </div>
           <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-border/40 pt-1.5">
-            <span>Filter Low Stock</span>
+            <span>{isAr ? 'تصفية النواقص' : 'Filter Low Stock'}</span>
             <span className="text-primary font-medium flex items-center gap-0.5 text-[10px]">
-              Click to view <ArrowUpRight className="h-3 w-3" />
+              {isAr ? 'انقر للعرض' : 'Click to view'} <ArrowUpRight className="h-3 w-3" />
             </span>
           </div>
         </div>
@@ -180,11 +187,11 @@ export function InventoryKpiCards({
         <div className="flex items-center justify-between text-muted-foreground mb-1.5">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5" />
-            FEFO Expiry Radar
+            {isAr ? 'رادار صلاحيات FEFO' : 'FEFO Expiry Radar'}
           </span>
           {s.expiredBatchesCount > 0 && (
             <Badge variant="destructive" className="text-[10px] font-mono animate-pulse">
-              {s.expiredBatchesCount} Expired
+              {s.expiredBatchesCount} {isAr ? 'منتهي الصلاحية' : 'Expired'}
             </Badge>
           )}
         </div>
@@ -194,12 +201,14 @@ export function InventoryKpiCards({
             <span className="text-xl sm:text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400 font-mono">
               {s.nearExpiryBatchesCount}
             </span>
-            <span className="text-xs text-muted-foreground">batches expiring &lt;90 days</span>
+            <span className="text-xs text-muted-foreground">
+              {isAr ? 'تشغيلات تنتهي خلال 90 يوم' : 'batches expiring <90 days'}
+            </span>
           </div>
           <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-border/40 pt-1.5">
-            <span>FEFO Batch Radar</span>
+            <span>{isAr ? 'رادار تشغيلات FEFO' : 'FEFO Batch Radar'}</span>
             <span className="text-rose-600 dark:text-rose-400 font-medium flex items-center gap-0.5 text-[10px]">
-              Open Radar <ArrowUpRight className="h-3 w-3" />
+              {isAr ? 'فتح الرادار' : 'Open Radar'} <ArrowUpRight className="h-3 w-3" />
             </span>
           </div>
         </div>

@@ -30,6 +30,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { checkDiscountExemption } from '@/lib/pricing/discount-exemption'
 import { formatDate } from '@/lib/utils/date'
+import { useI18n } from '@/lib/i18n/i18n-context'
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -45,7 +46,9 @@ export interface ProductBatchSummary {
 export interface ProductRow {
   id: string
   name: string
+  nameAr?: string | null
   genericName?: string | null
+  genericNameAr?: string | null
   sku: string
   barcode?: string | null
   manufacturer?: string | null
@@ -92,6 +95,16 @@ interface ProductTableProps {
 
 // ─── Columns ─────────────────────────────────────────────────
 
+interface I18nHelpers {
+  locale: string
+  isPureArabic: boolean
+  translateDrug: (nameEn?: string | null, nameAr?: string | null) => string
+  translateGeneric: (genEn?: string | null, genAr?: string | null) => string | null
+  translateCategory: (cat?: string | null) => string
+  translateSchedule: (sched?: string | null) => string
+  formatPrice: (amount: number | string) => string
+}
+
 function useColumns(
   onView: (p: ProductRow) => void,
   onEdit: (p: ProductRow) => void,
@@ -105,8 +118,11 @@ function useColumns(
   onSellAtPos?: (p: ProductRow) => void,
   selectedProductIds: string[] = [],
   onToggleSelect?: (id: string) => void,
-  onSelectAll?: () => void
+  onSelectAll?: () => void,
+  i18n?: I18nHelpers
 ): ColumnDef<ProductRow>[] {
+  const isAr = i18n?.locale === 'ar'
+
   return [
     {
       id: 'select',
@@ -116,7 +132,7 @@ function useColumns(
           checked={Array.isArray(selectedProductIds) && selectedProductIds.length > 0}
           onChange={() => onSelectAll?.()}
           className="rounded border-border cursor-pointer h-3.5 w-3.5"
-          title="Select / Deselect all"
+          title={isAr ? 'تحديد / إلغاء تحديد الكل' : 'Select / Deselect all'}
         />
       ),
       cell: ({ row }) => {
@@ -130,64 +146,72 @@ function useColumns(
               onToggleSelect?.(row.original.id)
             }}
             className="rounded border-border cursor-pointer h-3.5 w-3.5"
-            title="Select product"
+            title={isAr ? 'تحديد الدواء' : 'Select product'}
           />
         )
       },
     },
     {
       accessorKey: 'name',
-      header: 'Product',
-      cell: ({ row }) => (
-        <div>
-          <p className="font-medium text-foreground">{row.original.name}</p>
-          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-            {row.original.genericName && (
-              <span className="text-xs text-muted-foreground">{row.original.genericName}</span>
+      header: isAr ? 'الدواء والمستحضر' : 'Product',
+      cell: ({ row }) => {
+        const localizedName = i18n ? i18n.translateDrug(row.original.name, row.original.nameAr) : row.original.name
+        const genericName = i18n ? i18n.translateGeneric(row.original.genericName, row.original.genericNameAr) : row.original.genericName
+
+        return (
+          <div>
+            <p className="font-semibold text-foreground text-xs">{localizedName}</p>
+            {isAr && !i18n?.isPureArabic && row.original.nameAr && (
+              <p className="text-[10px] text-muted-foreground font-sans">({row.original.name})</p>
             )}
-            {row.original.genericName && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onFindSubstitutes?.(row.original)
-                }}
-                className="inline-flex items-center gap-0.5 text-[10px] text-primary hover:text-primary/80 hover:underline font-medium"
-                title="Find equivalent generic salt substitutes"
-              >
-                <Sparkles className="h-2.5 w-2.5" />
-                Substitutes
-              </button>
-            )}
-            {row.original.manufacturer && (
-              <span className="text-[10px] text-muted-foreground/80 bg-muted px-1 py-0.2 rounded font-normal">
-                {row.original.manufacturer}
-              </span>
-            )}
-            {Boolean(row.original.tabsPerStrip && row.original.tabsPerStrip > 1) && (
-              <span className="text-[10px] text-primary/90 bg-primary/10 border border-primary/20 px-1 py-0.2 rounded font-mono font-medium">
-                ⚡ {row.original.tabsPerStrip}T/strip
-              </span>
-            )}
+            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+              {genericName && (
+                <span className="text-xs text-muted-foreground">{genericName}</span>
+              )}
+              {genericName && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onFindSubstitutes?.(row.original)
+                  }}
+                  className="inline-flex items-center gap-0.5 text-[10px] text-primary hover:text-primary/80 hover:underline font-medium"
+                  title={isAr ? 'البحث عن البدائل والمكافئات الحيوية' : 'Find equivalent generic salt substitutes'}
+                >
+                  <Sparkles className="h-2.5 w-2.5" />
+                  {isAr ? 'البدائل' : 'Substitutes'}
+                </button>
+              )}
+              {row.original.manufacturer && (
+                <span className="text-[10px] text-muted-foreground/80 bg-muted px-1 py-0.2 rounded font-normal">
+                  {row.original.manufacturer}
+                </span>
+              )}
+              {Boolean(row.original.tabsPerStrip && row.original.tabsPerStrip > 1) && (
+                <span className="text-[10px] text-primary/90 bg-primary/10 border border-primary/20 px-1 py-0.2 rounded font-mono font-medium">
+                  ⚡ {row.original.tabsPerStrip}{isAr ? ' قرص/شريط' : 'T/strip'}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-      ),
+        )
+      },
     },
     {
       accessorKey: 'sku',
-      header: 'SKU',
+      header: isAr ? 'رمز الصنف SKU' : 'SKU',
       cell: ({ row }) => <span className="font-mono text-xs">{row.original.sku}</span>,
     },
     {
       accessorKey: 'categories',
-      header: 'Categories',
+      header: isAr ? 'التصنيفات الدوائية' : 'Categories',
       cell: ({ row }) => {
         const cats = Array.isArray(row.original.categories) ? row.original.categories : []
         return (
           <div className="flex flex-wrap gap-1">
             {cats.slice(0, 2).map((c) => (
               <Badge key={c.category?.id || Math.random()} variant="secondary" className="text-xs">
-                {c.category?.name || 'General'}
+                {i18n ? i18n.translateCategory(c.category?.name) : (c.category?.name || 'General')}
               </Badge>
             ))}
             {cats.length > 2 && (
@@ -196,7 +220,9 @@ function useColumns(
               </Badge>
             )}
             {cats.length === 0 && (
-              <span className="text-muted-foreground text-xs italic">Uncategorized</span>
+              <span className="text-muted-foreground text-xs italic">
+                {isAr ? 'بدون تصنيف' : 'Uncategorized'}
+              </span>
             )}
           </div>
         )
@@ -204,7 +230,7 @@ function useColumns(
     },
     {
       accessorKey: 'totalStock',
-      header: 'Live Stock',
+      header: isAr ? 'الرصيد الفعلي' : 'Live Stock',
       cell: ({ row }) => {
         const stock = row.original.totalStock ?? 0
         const minLevel = row.original.minStockLevel ?? 10
@@ -215,34 +241,34 @@ function useColumns(
             type="button"
             onClick={() => onInspectBatches?.(row.original)}
             className="text-left group/stock cursor-pointer focus:outline-none"
-            title="Click to view batch lot breakdown, expiries & rates"
+            title={isAr ? 'انقر لعرض تفاصيل التشغيلات والصلاحية' : 'Click to view batch lot breakdown, expiries & rates'}
           >
             {stock === 0 ? (
               <div>
                 <Badge variant="outline" className="bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30 text-[11px] font-mono py-0 group-hover/stock:border-rose-500">
-                  Out of Stock
+                  {isAr ? 'نفد من المخزون' : 'Out of Stock'}
                 </Badge>
                 <span className="block text-[10px] text-muted-foreground group-hover/stock:text-primary transition-colors mt-0.5 underline-offset-2 hover:underline">
-                  0 batches ▾
+                  {isAr ? '0 تشغيلات ▾' : '0 batches ▾'}
                 </span>
               </div>
             ) : stock <= minLevel ? (
               <div>
                 <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 text-[11px] font-mono py-0 gap-0.5 group-hover/stock:border-amber-500">
                   <AlertTriangle className="h-2.5 w-2.5" />
-                  Low: {stock} units
+                  {isAr ? `منخفض: ${stock} وحدة` : `Low: ${stock} units`}
                 </Badge>
                 <span className="block text-[10px] text-muted-foreground group-hover/stock:text-primary transition-colors mt-0.5 underline-offset-2 hover:underline">
-                  {batchCount} {batchCount === 1 ? 'batch' : 'batches'} ▾
+                  {isAr ? `${batchCount} تشغيلات ▾` : `${batchCount} ${batchCount === 1 ? 'batch' : 'batches'} ▾`}
                 </span>
               </div>
             ) : (
               <div>
                 <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 text-[11px] font-mono py-0 group-hover/stock:border-emerald-500">
-                  {stock} units
+                  {isAr ? `${stock} وحدة` : `${stock} units`}
                 </Badge>
                 <span className="block text-[10px] text-muted-foreground group-hover/stock:text-primary transition-colors mt-0.5 underline-offset-2 hover:underline">
-                  {batchCount} {batchCount === 1 ? 'batch' : 'batches'} ▾
+                  {isAr ? `${batchCount} تشغيلات ▾` : `${batchCount} ${batchCount === 1 ? 'batch' : 'batches'} ▾`}
                 </span>
               </div>
             )}
@@ -252,7 +278,7 @@ function useColumns(
     },
     {
       accessorKey: 'earliestExpiry',
-      header: 'Earliest Expiry',
+      header: isAr ? 'أقرب صلاحية' : 'Earliest Expiry',
       cell: ({ row }) => {
         const exp = row.original.earliestExpiry
         if (!exp) return <span className="text-muted-foreground text-xs">—</span>
@@ -265,7 +291,7 @@ function useColumns(
             <span>{formatted}</span>
             {row.original.isNearExpiry && (
               <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[9px] py-0 px-1 font-sans">
-                Near Expiry
+                {isAr ? 'قريب الانتهاء' : 'Near Expiry'}
               </Badge>
             )}
           </div>
@@ -275,7 +301,7 @@ function useColumns(
     {
       id: 'rack',
       accessorFn: (row) => formatRack(row.rack),
-      header: 'Rack',
+      header: isAr ? 'الرف والموقع' : 'Rack',
       cell: ({ row }) => {
         const displayRack = formatRack(row.original.rack)
         return (
@@ -283,7 +309,7 @@ function useColumns(
             type="button"
             onClick={() => onQuickUpdateRack?.(row.original)}
             className="text-left group/rack cursor-pointer hover:scale-105 transition-transform focus:outline-none"
-            title="Click to relocate shelf/godown location"
+            title={isAr ? 'انقر لتحديد موقع الرف والخزينة' : 'Click to relocate shelf/godown location'}
           >
             {displayRack ? (
               <Badge variant="secondary" className="font-mono text-[11px] gap-1 py-0 px-1.5 group-hover/rack:border-primary">
@@ -292,7 +318,7 @@ function useColumns(
               </Badge>
             ) : (
               <span className="text-muted-foreground text-[11px] italic group-hover/rack:text-primary underline-offset-2 hover:underline">
-                + Set Rack
+                {isAr ? '+ تحديد الرف' : '+ Set Rack'}
               </span>
             )}
           </button>
@@ -301,17 +327,19 @@ function useColumns(
     },
     {
       accessorKey: 'mrp',
-      header: 'MRP',
+      header: isAr ? 'سعر الجمهور' : 'MRP',
       cell: ({ row }) => {
         const mrpNum = parseFloat(row.original.mrp)
+        const formattedPrice = i18n ? i18n.formatPrice(mrpNum) : `₹${row.original.mrp}`
         const tabs = row.original.tabsPerStrip
-        const tabRate = tabs && tabs > 1 && !isNaN(mrpNum) ? (mrpNum / tabs).toFixed(2) : null
+        const tabRate = tabs && tabs > 1 && !isNaN(mrpNum) ? (mrpNum / tabs) : null
+
         return (
           <div>
-            <span className="font-mono font-medium">₹{row.original.mrp}</span>
+            <span className="font-mono font-medium">{formattedPrice}</span>
             {tabRate && (
               <span className="block text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-medium">
-                ⚡ ₹{tabRate}/tab
+                ⚡ {i18n ? i18n.formatPrice(tabRate) : `₹${tabRate.toFixed(2)}`}{isAr ? '/قرص' : '/tab'}
               </span>
             )}
           </div>
@@ -320,40 +348,44 @@ function useColumns(
     },
     {
       accessorKey: 'isPrescriptionRequired',
-      header: 'Rx',
+      header: isAr ? 'التصنيف' : 'Rx',
       cell: ({ row }) => {
         const sched = row.original.drugSchedule
         if (sched && sched !== 'NONE') {
           return (
             <Badge variant="warning" className="text-[10px] py-0 px-1">
-              Sched {sched}
+              {isAr ? `مراقب (${sched})` : `Sched ${sched}`}
             </Badge>
           )
         }
         return row.original.isPrescriptionRequired ? (
-          <Badge variant="warning" className="text-[10px] py-0 px-1">Rx</Badge>
+          <Badge variant="warning" className="text-[10px] py-0 px-1">
+            {isAr ? 'وصفة طبية (Rx)' : 'Rx'}
+          </Badge>
         ) : (
-          <Badge variant="outline" className="text-[10px] py-0 px-1">OTC</Badge>
+          <Badge variant="outline" className="text-[10px] py-0 px-1">
+            {isAr ? 'عام (OTC)' : 'OTC'}
+          </Badge>
         )
       },
     },
     {
       accessorKey: 'isActive',
-      header: 'Status',
+      header: isAr ? 'الحالة' : 'Status',
       cell: ({ row }) => (
         <Badge variant={row.original.isActive ? 'success' : 'destructive'}>
-          {row.original.isActive ? 'Active' : 'Inactive'}
+          {row.original.isActive ? (isAr ? 'نشط' : 'Active') : (isAr ? 'معطل' : 'Inactive')}
         </Badge>
       ),
     },
     {
       accessorKey: 'createdAt',
-      header: 'Created',
+      header: isAr ? 'تاريخ التسجيل' : 'Created',
       cell: ({ row }) => formatDate(row.original.createdAt),
     },
     {
       id: 'actions',
-      header: '',
+      header: isAr ? 'إجراءات' : '',
       cell: ({ row }) => {
         const product = row.original
         const isShortage = (product.totalStock ?? 0) <= (product.minStockLevel ?? 10)
@@ -461,6 +493,26 @@ export function ProductTable({
   onRequestReorder,
   onSellAtPos,
 }: ProductTableProps) {
+  const {
+    locale,
+    isPureArabic,
+    translateDrug,
+    translateGeneric,
+    translateCategory,
+    translateSchedule,
+    formatPrice,
+  } = useI18n()
+
+  const i18nHelpers: I18nHelpers = {
+    locale,
+    isPureArabic,
+    translateDrug,
+    translateGeneric,
+    translateCategory,
+    translateSchedule,
+    formatPrice,
+  }
+
   return (
     <DataTable
       columns={useColumns(
@@ -476,18 +528,19 @@ export function ProductTable({
         onSellAtPos,
         selectedProductIds,
         onToggleSelect,
-        onSelectAll
+        onSelectAll,
+        i18nHelpers
       )}
       data={products}
       isLoading={isLoading}
       searchKey="name"
-      searchPlaceholder="Search products…"
-      emptyMessage="No products found. Add your first product to get started."
+      searchPlaceholder={locale === 'ar' ? 'ابحث بالاسم التجاري أو العلمي...' : 'Search products…'}
+      emptyMessage={locale === 'ar' ? 'لم يتم العثور على أدوية مطابقة' : 'No products found. Add your first product to get started.'}
       toolbar={
         onAddProduct && (
           <Button size="sm" onClick={onAddProduct}>
             <PackagePlus className="mr-2 h-4 w-4" />
-            Add Product
+            {locale === 'ar' ? 'تسجيل دواء جديد' : 'Add Product'}
           </Button>
         )
       }

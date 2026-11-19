@@ -71,6 +71,7 @@ import {
 } from '@/lib/sound/sound-effects'
 import { cn } from '@/lib/utils/cn'
 import { formatCurrency } from '@/lib/utils/currency'
+import { useI18n } from '@/lib/i18n/i18n-context'
 
 import {
   BatchSelectionModal,
@@ -127,7 +128,9 @@ export interface PosBatchItem {
 export interface PosProductRow {
   id: string
   name: string
+  nameAr?: string | null
   genericName: string | null
+  genericNameAr?: string | null
   sku: string
   barcode: string | null
   rack?: string | null
@@ -251,6 +254,16 @@ function getMedicineIcon(unitOfMeasure: string, categoryName?: string | null) {
 
 export function PosClient({ user, branches, initialConfig }: PosClientProps) {
   const toast = useToast()
+  const {
+    locale,
+    isPureArabic,
+    translateDrug,
+    translateGeneric,
+    translateUnit,
+    translateCategory,
+    formatPrice,
+    t,
+  } = useI18n()
   const searchRef = useRef<HTMLInputElement>(null)
   const pathname = usePathname()
   const router = useRouter()
@@ -545,7 +558,9 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
     if (cleanSearch) {
       list = list.filter((p) => {
         const matchName = p.name.toLowerCase().includes(cleanSearch)
+        const matchNameAr = p.nameAr?.toLowerCase().includes(cleanSearch)
         const matchGeneric = p.genericName?.toLowerCase().includes(cleanSearch)
+        const matchGenericAr = p.genericNameAr?.toLowerCase().includes(cleanSearch)
         const matchSku = p.sku.toLowerCase().includes(cleanSearch)
         const matchBarcode = p.barcode?.toLowerCase().includes(cleanSearch)
         const matchRack = p.rack?.toLowerCase().includes(cleanSearch)
@@ -557,7 +572,9 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
         )
         return (
           matchName ||
+          matchNameAr ||
           matchGeneric ||
+          matchGenericAr ||
           matchSku ||
           matchBarcode ||
           matchRack ||
@@ -1666,22 +1683,23 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
   }
 
   // ─── Category & Filter Tabs ─────────────────────────────────
+  const isAr = locale === 'ar'
   const FILTER_TABS = [
-    { id: 'ALL', label: 'All Medicines', count: products.length },
+    { id: 'ALL', label: isAr ? 'جميع الأدوية' : 'All Medicines', count: products.length },
     {
       id: 'IN_STOCK',
-      label: 'In Stock',
+      label: isAr ? 'المتوفر فقط' : 'In Stock',
       count: products.filter((p) => p.availableQuantity > 0).length,
     },
-    { id: 'TABLETS', label: 'Tablets' },
-    { id: 'SYRUPS', label: 'Syrups' },
-    { id: 'CAPSULES', label: 'Capsules' },
-    { id: 'INJECTIONS', label: 'Injections' },
-    { id: 'DROPS', label: 'Drops' },
-    { id: 'OINTMENTS', label: 'Ointments' },
+    { id: 'TABLETS', label: isAr ? 'أقراص وأشرطة' : 'Tablets' },
+    { id: 'SYRUPS', label: isAr ? 'أشربة ومحاليل' : 'Syrups' },
+    { id: 'CAPSULES', label: isAr ? 'كبسولات' : 'Capsules' },
+    { id: 'INJECTIONS', label: isAr ? 'حقن وأمبولات' : 'Injections' },
+    { id: 'DROPS', label: isAr ? 'قطرات طبية' : 'Drops' },
+    { id: 'OINTMENTS', label: isAr ? 'مراهم وكريمات' : 'Ointments' },
     {
       id: 'RX',
-      label: 'Rx Only',
+      label: isAr ? 'أدوية بوصفة (Rx)' : 'Rx Only',
       count: products.filter((p) => p.isPrescriptionRequired || RX_SCHEDULES.has(p.drugSchedule))
         .length,
     },
@@ -1811,7 +1829,11 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     onKeyDown={handleSearchKeyDown}
-                    placeholder="Search name, SKU, generic formula or scan barcode…"
+                    placeholder={
+                      isAr
+                        ? 'ابحث بالاسم التجاري، العلمي، المادة الفعالة أو امسح الباركود (F3)...'
+                        : 'Search name, SKU, generic formula or scan barcode…'
+                    }
                     className="h-10 border-border/80 bg-background pl-9 pr-9 text-sm font-normal text-foreground shadow-inner placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary"
                     autoFocus
                   />
@@ -1840,7 +1862,7 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
                 >
                   <Barcode className="h-4 w-4" />
                   <Camera className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Scan Barcode</span>
+                  <span className="hidden sm:inline">{isAr ? 'مسح الباركود' : 'Scan Barcode'}</span>
                 </Button>
 
                 {/* Touchscreen Cut-Strip AI Scanner Button */}
@@ -1852,14 +1874,14 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
                 >
                   <Scan className="h-4 w-4" />
                   <Zap className="h-3.5 w-3.5" />
-                  <span>Cut-Strip AI Dispenser</span>
+                  <span>{isAr ? 'الصرف الذكي للأشرطة' : 'Cut-Strip AI Dispenser'}</span>
                 </Button>
 
                 {/* Branch Selector */}
                 {user.branchId === null && branches.length > 1 && (
                   <Select value={branchId ?? undefined} onValueChange={(v) => setBranchId(v)}>
                     <SelectTrigger className="h-10 w-44 text-xs font-medium">
-                      <SelectValue placeholder="Select branch" />
+                      <SelectValue placeholder={isAr ? 'اختر الفرع' : 'Select branch'} />
                     </SelectTrigger>
                     <SelectContent>
                       {branches.map((b) => (
@@ -1879,7 +1901,7 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
                   onClick={() => setHeldOpen(true)}
                 >
                   <Barcode className="h-4 w-4 text-muted-foreground" />
-                  Held Bills
+                  {isAr ? 'الفواتير المعلقة' : 'Held Bills'}
                   {heldBills.length > 0 && (
                     <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-[10px]">
                       {heldBills.length}
@@ -1927,28 +1949,32 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
             <div className="flex items-center justify-between border-b bg-muted/20 px-4 py-1.5 text-xs text-muted-foreground">
               <div className="flex items-center gap-2 font-medium">
                 <span>
-                  Showing <strong className="text-foreground">{displayedProducts.length}</strong>{' '}
-                  medicines (A-Z)
+                  {isAr ? (
+                    <>عرض <strong className="text-foreground">{displayedProducts.length}</strong> صنفاً دوائياً</>
+                  ) : (
+                    <>Showing <strong className="text-foreground">{displayedProducts.length}</strong> medicines (A-Z)</>
+                  )}
                 </span>
                 {search.trim() && (
                   <Badge variant="outline" className="text-[10px] font-normal">
-                    filtered by &ldquo;{search.trim()}&rdquo;
+                    {isAr ? `تصفية حسب "${search.trim()}"` : `filtered by "${search.trim()}"`}
                   </Badge>
                 )}
               </div>
               <div className="hidden items-center gap-3 text-[11px] sm:flex">
                 <span>
-                  💡 Press{' '}
-                  <kbd className="rounded border bg-muted px-1 py-0.5 font-mono text-[10px]">
-                    Enter
-                  </kbd>{' '}
-                  to add top match
+                  {isAr ? (
+                    <>💡 اضغط <kbd className="rounded border bg-muted px-1 py-0.5 font-mono text-[10px]">Enter</kbd> لإضافة أول صنف</>
+                  ) : (
+                    <>💡 Press <kbd className="rounded border bg-muted px-1 py-0.5 font-mono text-[10px]">Enter</kbd> to add top match</>
+                  )}
                 </span>
                 <span>
-                  <kbd className="rounded border bg-muted px-1 py-0.5 font-mono text-[10px]">
-                    Esc
-                  </kbd>{' '}
-                  to clear
+                  {isAr ? (
+                    <><kbd className="rounded border bg-muted px-1 py-0.5 font-mono text-[10px]">Esc</kbd> للمسح</>
+                  ) : (
+                    <><kbd className="rounded border bg-muted px-1 py-0.5 font-mono text-[10px]">Esc</kbd> to clear</>
+                  )}
                 </span>
               </div>
             </div>
@@ -2068,14 +2094,14 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
                               variant="secondary"
                               className="px-1.5 py-0 text-[10px] font-medium"
                             >
-                              {p.unitOfMeasure}
+                              {translateUnit(p.unitOfMeasure)}
                             </Badge>
                             {isRx && (
                               <Badge
                                 variant="destructive"
                                 className="px-1.5 py-0 text-[10px] font-bold"
                               >
-                                Rx
+                                {isAr ? 'وصفة' : 'Rx'}
                               </Badge>
                             )}
                             {p.rack && (
@@ -2101,10 +2127,15 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
                         {/* Middle: Medicine Name & Composition / Generic */}
                         <div className="my-1.5">
                           <h4 className="line-clamp-2 text-xs font-semibold leading-tight text-foreground transition-colors group-hover:text-primary sm:text-sm">
-                            {p.name}
+                            {translateDrug(p.name, p.nameAr)}
                           </h4>
+                          {isAr && !isPureArabic && p.nameAr && (
+                            <p className="line-clamp-1 text-[10px] text-muted-foreground font-sans">
+                              ({p.name})
+                            </p>
+                          )}
                           <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">
-                            {p.genericName || p.composition || p.categoryName || 'General Medicine'}
+                            {translateGeneric(p.genericName, p.genericNameAr) || p.composition || (p.categoryName ? translateCategory(p.categoryName) : (isAr ? 'مستحضر دوائي' : 'General Medicine'))}
                           </p>
                           <p className="mt-0.5 font-mono text-[10px] text-muted-foreground/70">
                             {p.sku}
@@ -2141,11 +2172,11 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
                             <div className="ml-1 shrink-0">
                               {fefoBatch.isNearExpiry ? (
                                 <span className="font-bold text-amber-600 dark:text-amber-400">
-                                  ⚠️ Sell first
+                                  {isAr ? '⚠️ صرف أولاً' : '⚠️ Sell first'}
                                 </span>
                               ) : (
                                 <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                                  Sell first
+                                  {isAr ? 'صرف أولاً' : 'Sell first'}
                                 </span>
                               )}
                             </div>
@@ -2155,23 +2186,23 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
                         {/* Bottom: Price & Stock Status */}
                         <div className="flex items-center justify-between border-t border-border/50 pt-2">
                           <span className="text-sm font-bold text-foreground">
-                            {formatCurrency(p.mrp)}
+                            {formatPrice(p.mrp)}
                           </span>
 
                           {/* Stock availability indicator */}
                           {outOfStock ? (
                             <span className="inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                              Out of stock
+                              {isAr ? 'نفد' : 'Out of stock'}
                             </span>
                           ) : isLowStock ? (
                             <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
                               <AlertCircle className="h-3 w-3" />
-                              {p.availableQuantity} left
+                              {isAr ? `متبقي ${p.availableQuantity}` : `${p.availableQuantity} left`}
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
                               <Check className="h-3 w-3" />
-                              {p.availableQuantity} in stock
+                              {isAr ? `${p.availableQuantity} متاح` : `${p.availableQuantity} in stock`}
                             </span>
                           )}
                         </div>
@@ -2191,9 +2222,9 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
                 <ShoppingCart className="h-4 w-4" />
               </div>
               <div>
-                <h2 className="text-sm font-bold leading-none">Active Bill</h2>
+                <h2 className="text-sm font-bold leading-none">{isAr ? 'فاتورة الصرف الحالية' : 'Active Bill'}</h2>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  {cart.length} {cart.length === 1 ? 'line item' : 'line items'}
+                  {isAr ? `${cart.length} أصناف بالسلة` : `${cart.length} ${cart.length === 1 ? 'line item' : 'line items'}`}
                 </p>
               </div>
               <div className="ml-auto flex items-center gap-1.5">
@@ -2207,7 +2238,7 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
                   }}
                   disabled={cart.length === 0}
                 >
-                  Hold
+                  {isAr ? 'تعليق (F6)' : 'Hold'}
                 </Button>
                 <Button
                   variant="ghost"
@@ -2217,7 +2248,7 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
                   disabled={cart.length === 0}
                 >
                   <RotateCcw className="mr-1 h-3.5 w-3.5" />
-                  Clear
+                  {isAr ? 'تفريغ' : 'Clear'}
                 </Button>
               </div>
             </div>
@@ -2230,9 +2261,11 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
                     <ShoppingCart className="h-6 w-6 opacity-40" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">Cart is empty</p>
+                    <p className="text-sm font-medium">{isAr ? 'سلة الصرف فارغة' : 'Cart is empty'}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      Click any medicine card from the grid to add it to this bill.
+                      {isAr
+                        ? 'انقر على أي دواء من القائمة لإضافته إلى الفاتورة أو امسح الباركود'
+                        : 'Click any medicine card from the grid to add it to this bill.'}
                     </p>
                   </div>
                 </div>
@@ -2250,11 +2283,11 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="line-clamp-1 text-xs font-semibold text-foreground">
-                          {c.name}
+                          {translateDrug(c.name, (c as any).nameAr)}
                         </div>
                         <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                          <span className="font-mono">{c.sku}</span> · {formatCurrency(c.mrp)}/
-                          {c.unitOfMeasure}
+                          <span className="font-mono">{c.sku}</span> · {formatPrice(c.mrp)}/
+                          {translateUnit(c.unitOfMeasure)}
                           {((c.tabsPerStrip && c.tabsPerStrip > 1) ||
                             c.unitOfMeasure === 'STRIP' ||
                             c.isTabletSale) && (
@@ -2388,7 +2421,7 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
                       {/* Line Total */}
                       <div className="text-right">
                         <span className="text-xs font-bold tabular-nums text-foreground">
-                          {formatCurrency(
+                          {formatPrice(
                             c.quantity * c.mrp * (1 - (c.discountPercent || 0) / 100)
                           )}
                         </span>
@@ -2397,13 +2430,13 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
 
                     {atMaxStock && (
                       <p className="mt-1.5 text-[10px] font-medium text-amber-600">
-                        Maximum available branch stock reached ({c.availableQuantity})
+                        {isAr ? `تم الوصول للحد الأقصى للرصيد المتاح (${c.availableQuantity})` : `Maximum available branch stock reached (${c.availableQuantity})`}
                       </p>
                     )}
 
                     {over && (
                       <p className="mt-1 text-[10px] font-medium text-destructive">
-                        Exceeds {config.maxDiscountPercent}% limit — requires discount override
+                        {isAr ? `تجاوز حد الخصم المسموح ${config.maxDiscountPercent}%` : `Exceeds ${config.maxDiscountPercent}% limit — requires discount override`}
                       </p>
                     )}
                   </div>
@@ -2415,38 +2448,38 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
             <div className="space-y-3 border-t bg-muted/10 p-4">
               <dl className="space-y-1.5 text-xs">
                 <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Subtotal</dt>
+                  <dt className="text-muted-foreground">{isAr ? 'المجموع الفرعي' : 'Subtotal'}</dt>
                   <dd className="font-medium tabular-nums">
-                    {formatCurrency(pricing.totals.subtotal)}
+                    {formatPrice(pricing.totals.subtotal)}
                   </dd>
                 </div>
                 {pricing.totals.discountAmount > 0 && (
                   <div className="flex justify-between font-medium text-emerald-600">
-                    <dt>Discount</dt>
+                    <dt>{isAr ? 'الخصم الممنوح' : 'Discount'}</dt>
                     <dd className="tabular-nums">
-                      −{formatCurrency(pricing.totals.discountAmount)}
+                      −{formatPrice(pricing.totals.discountAmount)}
                     </dd>
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <dt className="text-muted-foreground">GST (included/added)</dt>
+                  <dt className="text-muted-foreground">{isAr ? 'ضريبة القيمة المضافة (0% أدوية بشرية معفاة)' : 'GST (included/added)'}</dt>
                   <dd className="font-medium tabular-nums">
-                    {formatCurrency(pricing.totals.taxAmount)}
+                    {formatPrice(pricing.totals.taxAmount)}
                   </dd>
                 </div>
                 {config.roundOffTotal && pricing.totals.roundOffDifference !== 0 && (
                   <div className="flex justify-between text-muted-foreground">
-                    <dt>Round-off</dt>
+                    <dt>{isAr ? 'جبر الكسور' : 'Round-off'}</dt>
                     <dd className="tabular-nums">
-                      {formatCurrency(pricing.totals.roundOffDifference)}
+                      {formatPrice(pricing.totals.roundOffDifference)}
                     </dd>
                   </div>
                 )}
                 <Separator className="my-2" />
                 <div className="flex justify-between text-base font-extrabold text-foreground">
-                  <dt>Total Amount</dt>
-                  <dd className="tabular-nums text-primary">
-                    {formatCurrency(pricing.totals.totalAmount)}
+                  <dt>{isAr ? 'المبلغ الإجمالي المستحق' : 'Total Amount'}</dt>
+                  <dd className="tabular-nums text-primary font-bold">
+                    {formatPrice(pricing.totals.totalAmount)}
                   </dd>
                 </div>
               </dl>
@@ -2454,7 +2487,7 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
               <Input
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Invoice remarks / customer notes (optional)"
+                placeholder={isAr ? 'ملاحظات الفاتورة والعميل (اختياري)...' : 'Invoice remarks / customer notes (optional)'}
                 className="h-8 text-xs placeholder:text-muted-foreground"
               />
 
@@ -2465,7 +2498,7 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
                 disabled={cart.length === 0}
               >
                 <FileCheck className="h-4 w-4" />
-                Finalize Bill (Ctrl+W / Ctrl+A)
+                {isAr ? 'اعتماد وصرف الفاتورة (F9 / Ctrl+W)' : 'Finalize Bill (Ctrl+W / Ctrl+A)'}
               </Button>
 
               <Button
@@ -2475,7 +2508,7 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
                 disabled={cart.length === 0}
               >
                 <Calculator className="h-3.5 w-3.5" />
-                Split / Direct Payment ({formatCurrency(pricing.totals.totalAmount)})
+                {isAr ? `الدفع الفوري (${formatPrice(pricing.totals.totalAmount)})` : `Split / Direct Payment (${formatPrice(pricing.totals.totalAmount)})`}
               </Button>
             </div>
           </div>
@@ -2815,7 +2848,9 @@ export function PosClient({ user, branches, initialConfig }: PosClientProps) {
             if (!isOpen) setSelectedProductForBatch(null)
           }}
           productName={selectedProductForBatch.name}
+          productNameAr={selectedProductForBatch.nameAr}
           genericName={selectedProductForBatch.genericName}
+          genericNameAr={selectedProductForBatch.genericNameAr}
           dpcoCeiling={(selectedProductForBatch as any).dpcoCeiling}
           drugSchedule={selectedProductForBatch.drugSchedule}
           isDiscountable={(selectedProductForBatch as any).isDiscountable}

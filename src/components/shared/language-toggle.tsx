@@ -31,10 +31,13 @@ import { cn } from '@/lib/utils/cn'
 export function LanguageToggle({ className }: { className?: string }) {
   const {
     locale,
+    languageMode,
+    isPureArabic,
     dir,
     territory,
     territoryDef,
     setLocale,
+    setLanguageMode,
     setTerritory,
     t,
     threads,
@@ -45,14 +48,13 @@ export function LanguageToggle({ className }: { className?: string }) {
   const [showTelemetryModal, setShowTelemetryModal] = useState(false)
   const territories = getAllTerritories()
 
-  const toggleLanguage = () => {
+  const handleSelectLanguageMode = (mode: 'ar-pure' | 'ar-bilingual' | 'en') => {
     try {
       playClickSound()
     } catch {
       // sound optional
     }
-    const nextLocale = locale === 'en' ? 'ar' : 'en'
-    setLocale(nextLocale)
+    setLanguageMode(mode)
   }
 
   const handleSelectTerritory = (tDef: TerritoryDefinition) => {
@@ -73,25 +75,111 @@ export function LanguageToggle({ className }: { className?: string }) {
   return (
     <>
       <div className={cn('flex items-center gap-1', className)}>
-        {/* Quick Language Toggle Button */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={toggleLanguage}
-          className="h-8.5 px-2.5 rounded-lg border-border/70 text-xs font-semibold hover:border-teal-500/50 hover:bg-teal-500/10 transition-colors gap-1.5"
-          title={locale === 'en' ? 'تبديل إلى الواجهة العربية (RTL)' : 'Switch to English interface (LTR)'}
-        >
-          <span className="text-sm">{territoryDef.flag}</span>
-          <span className="font-bold text-foreground">
-            {locale === 'en' ? 'العربية' : 'English'}
-          </span>
-          <Badge
-            variant="outline"
-            className="text-[9px] px-1 py-0 font-mono uppercase bg-muted border-border/60"
-          >
-            {locale === 'en' ? 'LTR' : 'RTL'}
-          </Badge>
-        </Button>
+        {/* Language Selection Dropdown Menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8.5 px-2.5 rounded-lg border-border/70 text-xs font-semibold hover:border-teal-500/50 hover:bg-teal-500/10 transition-colors gap-1.5"
+              title={
+                languageMode === 'ar-pure'
+                  ? 'العربية بالكامل (100% بدون إنجليزية)'
+                  : languageMode === 'ar-bilingual'
+                    ? 'ثنائي اللغة (عربي / إنجليزي)'
+                    : 'English Interface'
+              }
+            >
+              <span className="text-sm">{territoryDef.flag}</span>
+              <span className="font-bold text-foreground">
+                {languageMode === 'ar-pure'
+                  ? 'العربية بالكامل'
+                  : languageMode === 'ar-bilingual'
+                    ? 'ثنائي اللغة'
+                    : 'English'}
+              </span>
+              <Badge
+                variant="outline"
+                className="text-[9px] px-1 py-0 font-mono uppercase bg-muted border-border/60"
+              >
+                {languageMode === 'ar-pure' ? 'عربي 100%' : languageMode === 'ar-bilingual' ? 'AR/EN' : 'EN'}
+              </Badge>
+            </Button>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent align="end" className="w-64 p-2">
+            <DropdownMenuLabel className="text-xs font-bold text-foreground/80">
+              {locale === 'ar' ? 'اختر وضع لغة النظام' : 'Select System Language Mode'}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+
+            {/* 100% Pure Arabic Option */}
+            <DropdownMenuItem
+              onClick={() => handleSelectLanguageMode('ar-pure')}
+              className={cn(
+                'flex items-center justify-between cursor-pointer rounded-md px-2.5 py-2 text-xs transition-colors',
+                languageMode === 'ar-pure'
+                  ? 'bg-teal-500/10 text-teal-900 dark:text-teal-200 font-semibold border border-teal-500/30'
+                  : 'hover:bg-muted text-foreground'
+              )}
+            >
+              <div className="flex flex-col">
+                <span className="font-bold flex items-center gap-1.5">
+                  <span>🇸🇦</span>
+                  <span>العربية بالكامل (Pure Arabic)</span>
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  تعريب كامل للمخزون ونقطة البيع بدون إنجليزية
+                </span>
+              </div>
+              {languageMode === 'ar-pure' && <Check className="h-4 w-4 text-teal-600 dark:text-teal-400" />}
+            </DropdownMenuItem>
+
+            {/* Bilingual Option */}
+            <DropdownMenuItem
+              onClick={() => handleSelectLanguageMode('ar-bilingual')}
+              className={cn(
+                'flex items-center justify-between cursor-pointer rounded-md px-2.5 py-2 text-xs transition-colors',
+                languageMode === 'ar-bilingual'
+                  ? 'bg-teal-500/10 text-teal-900 dark:text-teal-200 font-semibold border border-teal-500/30'
+                  : 'hover:bg-muted text-foreground'
+              )}
+            >
+              <div className="flex flex-col">
+                <span className="font-bold flex items-center gap-1.5">
+                  <span>🌐</span>
+                  <span>ثنائي اللغة (Bilingual AR / EN)</span>
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  عرض الأسماء بالأصلية والمترجمة معاً
+                </span>
+              </div>
+              {languageMode === 'ar-bilingual' && <Check className="h-4 w-4 text-teal-600 dark:text-teal-400" />}
+            </DropdownMenuItem>
+
+            {/* English Option */}
+            <DropdownMenuItem
+              onClick={() => handleSelectLanguageMode('en')}
+              className={cn(
+                'flex items-center justify-between cursor-pointer rounded-md px-2.5 py-2 text-xs transition-colors',
+                languageMode === 'en'
+                  ? 'bg-teal-500/10 text-teal-900 dark:text-teal-200 font-semibold border border-teal-500/30'
+                  : 'hover:bg-muted text-foreground'
+              )}
+            >
+              <div className="flex flex-col">
+                <span className="font-bold flex items-center gap-1.5">
+                  <span>🇬🇧</span>
+                  <span>English (Full English)</span>
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  Standard International LTR interface
+                </span>
+              </div>
+              {languageMode === 'en' && <Check className="h-4 w-4 text-teal-600 dark:text-teal-400" />}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* Territory & Precision Selector Dropdown */}
         <DropdownMenu>

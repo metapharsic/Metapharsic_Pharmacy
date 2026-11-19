@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 
 import { ProductCatalog } from '@/components/products/product-catalog'
+import { ProductsPageHeader } from '@/components/products/products-page-header'
 import type { ProductRow } from '@/components/products/product-table'
 import { can } from '@/lib/auth/auth-helpers'
 import { getTenantContext } from '@/lib/auth/tenant-context'
@@ -78,7 +79,9 @@ export default async function ProductCatalogPage({
     return {
       id: p.id,
       name: p.name,
+      nameAr: (p as any).nameAr || null,
       genericName: p.genericName,
+      genericNameAr: (p as any).genericNameAr || null,
       sku: p.sku,
       barcode: p.barcode,
       manufacturer: p.manufacturer,
@@ -109,10 +112,7 @@ export default async function ProductCatalogPage({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Product Catalog</h1>
-        <p className="text-muted-foreground">Manage your pharmaceutical product master database</p>
-      </div>
+      <ProductsPageHeader />
       <ProductCatalog
         initialProducts={initialProducts}
         initialPagination={firstPage.pagination}

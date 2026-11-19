@@ -19,7 +19,7 @@ export function Header() {
   const { data: session } = useSession()
   const { openShortcuts } = useShortcuts()
   const { openBackup } = useDatabaseBackup()
-  const { t, locale, dir } = useI18n()
+  const { t, locale, dir, isAr } = useI18n()
   const [timeStr, setTimeStr] = useState<string>('')
   const [dateStr, setDateStr] = useState<string>('')
 
@@ -27,7 +27,7 @@ export function Header() {
     const updateTime = () => {
       const now = new Date()
       setTimeStr(
-        now.toLocaleTimeString('en-US', {
+        now.toLocaleTimeString(isAr ? 'ar-SA' : 'en-US', {
           hour: '2-digit',
           minute: '2-digit',
           second: '2-digit',
@@ -35,7 +35,7 @@ export function Header() {
         })
       )
       setDateStr(
-        now.toLocaleDateString('en-US', {
+        now.toLocaleDateString(isAr ? 'ar-SA' : 'en-US', {
           weekday: 'short',
           month: 'short',
           day: 'numeric',
@@ -45,19 +45,29 @@ export function Header() {
     updateTime()
     const timer = setInterval(updateTime, 1000)
     return () => clearInterval(timer)
-  }, [])
+  }, [isAr])
 
   const userRoles = session?.user?.roles ?? []
   const isOwner = userRoles.includes('owner')
-  const roleLabel = isOwner
-    ? 'Admin'
-    : userRoles.includes('manager')
-      ? 'Store Manager'
-      : userRoles.includes('pharmacist')
-        ? 'Pharmacist'
-        : userRoles.includes('cashier')
-          ? 'Cashier'
-          : (userRoles[0] ?? 'Staff')
+  const roleLabel = isAr
+    ? isOwner
+      ? 'مدير النظام'
+      : userRoles.includes('manager')
+        ? 'مدير الفرع'
+        : userRoles.includes('pharmacist')
+          ? 'صيدلي مرخص'
+          : userRoles.includes('cashier')
+            ? 'أمين الصندوق'
+            : 'طاقم العمل'
+    : isOwner
+      ? 'Admin'
+      : userRoles.includes('manager')
+        ? 'Store Manager'
+        : userRoles.includes('pharmacist')
+          ? 'Pharmacist'
+          : userRoles.includes('cashier')
+            ? 'Cashier'
+            : (userRoles[0] ?? 'Staff')
 
   const [soundMuted, setSoundMutedState] = useState<boolean>(false)
 
@@ -88,9 +98,11 @@ export function Header() {
             {/* AWS Root Control Plane Pill */}
             <div className="flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-800 dark:text-amber-300">
               <Shield className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-              <span className="font-bold tracking-tight">AWS ROOT CONTROL PLANE</span>
+              <span className="font-bold tracking-tight">
+                {isAr ? 'لوحة تحكم النظام الفيدرالي' : 'AWS ROOT CONTROL PLANE'}
+              </span>
               <Badge variant="outline" className="font-mono text-[9px] px-1 py-0 uppercase bg-background/80 border-amber-500/40 text-amber-700 dark:text-amber-300">
-                GLOBAL
+                {isAr ? 'عالمي' : 'GLOBAL'}
               </Badge>
             </div>
 
@@ -98,15 +110,17 @@ export function Header() {
               <Globe className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400" />
               <span className="font-semibold text-foreground/90">ap-south-1</span>
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[11px] text-muted-foreground">5 Parallel Threads</span>
+              <span className="text-[11px] text-muted-foreground">
+                {isAr ? '5 مسارات متوازية' : '5 Parallel Threads'}
+              </span>
             </div>
 
             <div className="hidden sm:flex items-center gap-2" suppressHydrationWarning>
               <Badge variant="outline" className="text-[11px] font-semibold border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300" suppressHydrationWarning>
-                Root Admin
+                {isAr ? 'المسؤول العام' : 'Root Admin'}
               </Badge>
               <span className="text-xs text-muted-foreground" suppressHydrationWarning>
-                Operator: <span className="font-medium text-foreground" suppressHydrationWarning>{session?.user?.name ?? 'SuperAdmin'}</span>
+                {isAr ? 'المشغّل: ' : 'Operator: '}<span className="font-medium text-foreground" suppressHydrationWarning>{session?.user?.name ?? (isAr ? 'المشرف' : 'SuperAdmin')}</span>
               </span>
             </div>
           </>
@@ -127,9 +141,13 @@ export function Header() {
 
             <div className="hidden lg:flex items-center gap-2 rounded-lg border border-border/70 bg-muted/40 px-2.5 py-1 text-xs">
               <Monitor className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400" />
-              <span className="font-semibold text-foreground/90">Terminal 01</span>
+              <span className="font-semibold text-foreground/90">
+                {isAr ? 'نقطة بيع 01' : 'Terminal 01'}
+              </span>
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[11px] text-muted-foreground">Dispensary</span>
+              <span className="text-[11px] text-muted-foreground">
+                {isAr ? 'صيدلية الصرف' : 'Dispensary'}
+              </span>
             </div>
 
             <div className="hidden sm:flex items-center gap-2" suppressHydrationWarning>
@@ -137,7 +155,7 @@ export function Header() {
                 {roleLabel}
               </Badge>
               <span className="text-xs text-muted-foreground" suppressHydrationWarning>
-                Operator: <span className="font-medium text-foreground" suppressHydrationWarning>{session?.user?.name ?? 'Staff'}</span>
+                {isAr ? 'المشغّل: ' : 'Operator: '}<span className="font-medium text-foreground" suppressHydrationWarning>{session?.user?.name ?? (isAr ? 'الصيدلي' : 'Staff')}</span>
               </span>
             </div>
           </>
@@ -163,7 +181,7 @@ export function Header() {
           >
             <Link href="/platform?tab=monitoring">
               <Cpu className="h-3.5 w-3.5" />
-              <span>Telemetry & Threads</span>
+              <span>{isAr ? 'المراقبة والمسارات' : 'Telemetry & Threads'}</span>
             </Link>
           </Button>
         ) : (
@@ -174,7 +192,7 @@ export function Header() {
           >
             <Link href={ROUTES.POS}>
               <ShoppingCart className="h-3.5 w-3.5" />
-              <span>Open POS / Billing</span>
+              <span>{isAr ? 'نقطة البيع / الصرف' : 'Open POS / Billing'}</span>
               <kbd className="hidden sm:inline-block rounded bg-teal-950/40 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-teal-200">
                 F2
               </kbd>
@@ -188,10 +206,10 @@ export function Header() {
           size="sm"
           onClick={openShortcuts}
           className="gap-1.5 text-xs font-semibold h-8.5 rounded-lg border-border/70 hover:border-teal-500/50 hover:bg-teal-500/10 text-slate-700 dark:text-slate-300"
-          title="Chemist Fast Keyboard Shortcuts Cheat Sheet (Press F1 anytime)"
+          title={isAr ? 'قائمة اختصارات لوحة المفاتيح السريعة (اضغط F1 في أي وقت)' : 'Chemist Fast Keyboard Shortcuts Cheat Sheet (Press F1 anytime)'}
         >
           <Keyboard className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400" />
-          <span className="hidden sm:inline">{t('nav.shortcuts', 'Shortcuts')}</span>
+          <span className="hidden sm:inline">{isAr ? 'الاختصارات' : t('nav.shortcuts', 'Shortcuts')}</span>
           <kbd className="rounded bg-muted px-1.5 py-0.5 text-[9px] font-mono font-bold text-muted-foreground border">
             F1
           </kbd>
@@ -203,10 +221,10 @@ export function Header() {
           size="sm"
           onClick={openBackup}
           className="gap-1.5 text-xs font-semibold h-8.5 rounded-lg border-border/70 hover:border-teal-500/50 hover:bg-teal-500/10 text-slate-700 dark:text-slate-300"
-          title="Download Multi-Thread Database Backup in Excel (.xlsx) or Send to Email"
+          title={isAr ? 'تحميل نسخة احتياطية إكسل للمخزون والبيانات' : 'Download Multi-Thread Database Backup in Excel (.xlsx) or Send to Email'}
         >
           <Database className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-          <span className="hidden sm:inline">{t('nav.backup', 'Backup')}</span>
+          <span className="hidden sm:inline">{isAr ? 'نسخ احتياطي' : t('nav.backup', 'Backup')}</span>
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
         </Button>
 

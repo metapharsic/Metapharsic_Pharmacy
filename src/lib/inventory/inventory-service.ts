@@ -35,6 +35,9 @@ export interface InventoryRow {
   product: {
     id: string
     name: string
+    nameAr?: string | null
+    genericName?: string | null
+    genericNameAr?: string | null
     sku: string
     barcode?: string | null
     rack?: string | null
@@ -223,6 +226,9 @@ export async function getInventory(
     if (search) {
       productWhere.OR = [
         { name: { contains: search, mode: 'insensitive' } },
+        { nameAr: { contains: search, mode: 'insensitive' } },
+        { genericName: { contains: search, mode: 'insensitive' } },
+        { genericNameAr: { contains: search, mode: 'insensitive' } },
         { sku: { contains: search, mode: 'insensitive' } },
         { barcode: { contains: search, mode: 'insensitive' } },
         { barcodes: { some: { barcode: { contains: search, mode: 'insensitive' } } } },
@@ -247,6 +253,9 @@ export async function getInventory(
       select: {
         id: true,
         name: true,
+        nameAr: true,
+        genericName: true,
+        genericNameAr: true,
         sku: true,
         barcode: true,
         rack: true,

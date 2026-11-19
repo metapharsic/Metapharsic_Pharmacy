@@ -43,6 +43,7 @@ import { useToast } from '@/lib/hooks/use-toast'
 import { playBarcodeBeep } from '@/lib/scanner/barcode-sound'
 import { addPosCartItem, type PosCartLine } from '@/lib/stores/pos-cart-store'
 import { formatDateTime } from '@/lib/utils/date'
+import { useI18n } from '@/lib/i18n/i18n-context'
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -60,6 +61,9 @@ export interface InventoryRow {
   product: {
     id: string
     name: string
+    nameAr?: string | null
+    genericName?: string | null
+    genericNameAr?: string | null
     sku: string
     barcode?: string | null
     rack?: string | null
@@ -120,6 +124,16 @@ export function InventoryTable({
   onDeleteItem,
 }: InventoryTableProps) {
   const toast = useToast()
+  const {
+    locale,
+    isPureArabic,
+    translateDrug,
+    translateGeneric,
+    translateUnit,
+    translateLocation,
+    translateStatus,
+    translateCategory,
+  } = useI18n()
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null)
 
   const toggleRow = (id: string) => {
@@ -128,13 +142,14 @@ export function InventoryTable({
 
   const handleDispenseBatchToPos = (row: InventoryRow, batch: BatchItem) => {
     const mrp = Number(batch.mrp) || 0
+    const localizedName = translateDrug(row.product.name, row.product.nameAr)
     const cartItem: PosCartLine = {
       productId: row.productId,
       sku: row.product.sku,
       barcode: row.product.barcode ?? null,
-      name: row.product.name,
-      genericName: null,
-      unitOfMeasure: row.product.unitOfMeasure || 'Strip',
+      name: localizedName,
+      genericName: translateGeneric(row.product.genericName, row.product.genericNameAr),
+      unitOfMeasure: translateUnit(row.product.unitOfMeasure) || 'Strip',
       mrp,
       gstRate: 12,
       cgstRate: 6,
@@ -155,8 +170,10 @@ export function InventoryTable({
     addPosCartItem(cartItem)
     playBarcodeBeep()
     toast.success(
-      `Dispensed to POS: ${row.product.name}`,
-      `Batch #${batch.batchNumber} · Available: ${batch.availableQuantity} units`
+      locale === 'ar' ? `تمت الإضافة للصرف: ${localizedName}` : `Dispensed to POS: ${row.product.name}`,
+      locale === 'ar'
+        ? `تشغيلة #${batch.batchNumber} · المتاح: ${batch.availableQuantity} وحدة`
+        : `Batch #${batch.batchNumber} · Available: ${batch.availableQuantity} units`
     )
   }
 
@@ -167,13 +184,13 @@ export function InventoryTable({
           <TableHeader>
             <TableRow className="bg-muted/40 text-xs">
               <TableHead className="w-10"></TableHead>
-              <TableHead>Product & SKU</TableHead>
-              <TableHead>Branch</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead className="text-right">Reserved</TableHead>
-              <TableHead className="text-right">Available</TableHead>
-              <TableHead className="text-center">Status</TableHead>
-              <TableHead className="text-right pr-4">Actions</TableHead>
+              <TableHead>{locale === 'ar' ? 'الدواء والرمز' : 'Product & SKU'}</TableHead>
+              <TableHead>{locale === 'ar' ? 'الفرع' : 'Branch'}</TableHead>
+              <TableHead className="text-right">{locale === 'ar' ? 'الإجمالي' : 'Total'}</TableHead>
+              <TableHead className="text-right">{locale === 'ar' ? 'المحجوز' : 'Reserved'}</TableHead>
+              <TableHead className="text-right">{locale === 'ar' ? 'المتاح' : 'Available'}</TableHead>
+              <TableHead className="text-center">{locale === 'ar' ? 'الحالة' : 'Status'}</TableHead>
+              <TableHead className="text-right pr-4">{locale === 'ar' ? 'إجراءات' : 'Actions'}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -199,9 +216,13 @@ export function InventoryTable({
     return (
       <div className="rounded-xl border border-dashed border-border/80 bg-muted/20 p-8 text-center space-y-2">
         <Package className="h-8 w-8 text-muted-foreground/60 mx-auto" />
-        <p className="text-sm font-semibold text-foreground">No stock records found</p>
+        <p className="text-sm font-semibold text-foreground">
+          {locale === 'ar' ? 'لا توجد سجلات مخزون مطابقة' : 'No stock records found'}
+        </p>
         <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-          No inventory items matched your active search or filter criteria. Try clearing filters or scanning a new medicine strip.
+          {locale === 'ar'
+            ? 'لم يتم العثور على أدوية تطابق معايير البحث أو التصفية الحالية. جرب مسح باركود جديد.'
+            : 'No inventory items matched your active search or filter criteria. Try clearing filters or scanning a new medicine strip.'}
         </p>
       </div>
     )
@@ -213,13 +234,13 @@ export function InventoryTable({
         <TableHeader>
           <TableRow className="bg-muted/40 text-xs">
             <TableHead className="w-8 px-2"></TableHead>
-            <TableHead className="font-semibold">Product, SKU & Rack</TableHead>
-            <TableHead className="font-semibold">Branch</TableHead>
-            <TableHead className="font-semibold text-right">Total</TableHead>
-            <TableHead className="font-semibold text-right">Reserved</TableHead>
-            <TableHead className="font-semibold text-right">Available</TableHead>
-            <TableHead className="font-semibold text-center">Status</TableHead>
-            <TableHead className="font-semibold text-right pr-4">Quick Dispense / Adjust</TableHead>
+            <TableHead className="font-semibold">{locale === 'ar' ? 'الدواء، الكود والرف' : 'Product, SKU & Rack'}</TableHead>
+            <TableHead className="font-semibold">{locale === 'ar' ? 'الفرع' : 'Branch'}</TableHead>
+            <TableHead className="font-semibold text-right">{locale === 'ar' ? 'الإجمالي' : 'Total'}</TableHead>
+            <TableHead className="font-semibold text-right">{locale === 'ar' ? 'المحجوز' : 'Reserved'}</TableHead>
+            <TableHead className="font-semibold text-right">{locale === 'ar' ? 'المتاح للصرف' : 'Available'}</TableHead>
+            <TableHead className="font-semibold text-center">{locale === 'ar' ? 'الحالة' : 'Status'}</TableHead>
+            <TableHead className="font-semibold text-right pr-4">{locale === 'ar' ? 'صرف سريع / تسوية' : 'Quick Dispense / Adjust'}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -230,6 +251,7 @@ export function InventoryTable({
               row.availableQuantity > 0 &&
               row.availableQuantity <= row.product.reorderLevel
             const meta = STATUS_META[row.stockStatus]
+            const localizedDrugName = translateDrug(row.product.name, row.product.nameAr)
 
             return (
               <React.Fragment key={row.id}>
@@ -251,7 +273,7 @@ export function InventoryTable({
                       size="sm"
                       onClick={() => toggleRow(row.id)}
                       className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                      title={isExpanded ? 'Collapse Batches' : 'View FEFO Batches'}
+                      title={isExpanded ? (locale === 'ar' ? 'طي التشغيلات' : 'Collapse Batches') : (locale === 'ar' ? 'عرض تشغيلات FEFO' : 'View FEFO Batches')}
                     >
                       {isExpanded ? (
                         <ChevronDown className="h-4 w-4 text-primary" />
@@ -264,13 +286,18 @@ export function InventoryTable({
                   {/* Product Details */}
                   <TableCell className="py-3">
                     <div className="space-y-0.5">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-semibold text-foreground text-xs">
-                          {row.product.name}
+                          {localizedDrugName}
                         </span>
+                        {!isPureArabic && row.product.nameAr && (
+                          <span className="text-[10px] text-muted-foreground font-sans">
+                            ({row.product.name})
+                          </span>
+                        )}
                         {isLowStock && (
                           <span
-                            title="Below reorder threshold"
+                            title={locale === 'ar' ? 'أقل من حد إعادة الطلب' : 'Below reorder threshold'}
                             className="inline-flex text-amber-500"
                           >
                             <AlertTriangle className="h-3 w-3" />
@@ -283,17 +310,17 @@ export function InventoryTable({
                           {row.product.sku}
                         </span>
                         {row.product.unitOfMeasure && (
-                          <span>· {row.product.unitOfMeasure}</span>
+                          <span>· {translateUnit(row.product.unitOfMeasure)}</span>
                         )}
                         {(row.product.rack || row.product.box) ? (
                           <span
                             onClick={() => onEditLocation?.(row)}
                             className="cursor-pointer inline-flex items-center gap-1 font-mono text-[10px] bg-amber-500/10 text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30 hover:border-amber-500 transition-colors"
-                            title="Click to relocate Rack, Shelf & Box"
+                            title={locale === 'ar' ? 'انقر لتغيير موقع الرف والخزينة' : 'Click to relocate Rack, Shelf & Box'}
                           >
                             <MapPin className="h-2.5 w-2.5 text-amber-600 dark:text-amber-400" />
-                            <span>{formatRack(row.product.rack) || 'No Rack'}</span>
-                            {formatShelf(row.product.shelf) && <span>&gt; {formatShelf(row.product.shelf)}</span>}
+                            <span>{locale === 'ar' ? `رف ${row.product.rack || 'بدون رف'}` : (formatRack(row.product.rack) || 'No Rack')}</span>
+                            {row.product.shelf && <span>&gt; {locale === 'ar' ? `خانة ${row.product.shelf}` : `Shelf ${row.product.shelf}`}</span>}
                             {row.product.box && (
                               <span className="font-bold underline decoration-amber-500/50">
                                 [{row.product.box}]
@@ -304,10 +331,10 @@ export function InventoryTable({
                           <span
                             onClick={() => onEditLocation?.(row)}
                             className="cursor-pointer inline-flex items-center gap-1 font-mono text-[10px] bg-muted/50 text-muted-foreground hover:text-primary px-1.5 py-0.5 rounded border border-dashed border-border hover:border-primary transition-colors"
-                            title="Click to assign Rack, Shelf & Box location"
+                            title={locale === 'ar' ? 'انقر لتحديد موقع الرف والصندوق' : 'Click to assign Rack, Shelf & Box location'}
                           >
                             <MapPin className="h-2.5 w-2.5" />
-                            <span>+ Box</span>
+                            <span>{locale === 'ar' ? '+ صندوق' : '+ Box'}</span>
                           </span>
                         )}
                         {row.product.barcode && (
@@ -333,7 +360,7 @@ export function InventoryTable({
                                     : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
                                 }`}
                               >
-                                {cat.name}
+                                {translateCategory(cat.name)}
                               </Badge>
                             )
                           })}
@@ -384,7 +411,7 @@ export function InventoryTable({
                   {/* Status Badge */}
                   <TableCell className="py-3 text-center">
                     <Badge variant={meta.variant} className="text-[10px]">
-                      {meta.label}
+                      {translateStatus(row.stockStatus)}
                     </Badge>
                   </TableCell>
 
@@ -401,10 +428,10 @@ export function InventoryTable({
                             ? 'bg-primary/10 text-primary font-medium'
                             : 'text-muted-foreground hover:text-foreground'
                         }`}
-                        title="View FEFO Batch breakdown"
+                        title={locale === 'ar' ? 'عرض تفاصيل تشغيلات FEFO' : 'View FEFO Batch breakdown'}
                       >
                         <Layers className="h-3 w-3" />
-                        <span className="hidden md:inline">Batches</span>
+                        <span className="hidden md:inline">{locale === 'ar' ? 'التشغيلات' : 'Batches'}</span>
                       </Button>
 
                       {/* Edit Location (Rack > Shelf > Box) */}
@@ -457,7 +484,7 @@ export function InventoryTable({
                           title="Instant 1-Tablet Dispense / Sales Pattern Auto-Bill"
                         >
                           <Zap className="h-3 w-3 text-amber-500 fill-amber-500/20" />
-                          <span className="hidden sm:inline">1-Tab Sale</span>
+                          <span className="hidden sm:inline">{locale === 'ar' ? 'صرف قرص' : '1-Tab Sale'}</span>
                         </Button>
                       )}
 
@@ -475,7 +502,7 @@ export function InventoryTable({
                           title="Find equivalent generic salt or therapeutic alternatives"
                         >
                           <Sparkles className="h-3 w-3 text-amber-500" />
-                          <span className="hidden xl:inline">Substitutes</span>
+                          <span className="hidden xl:inline">{locale === 'ar' ? 'البدائل' : 'Substitutes'}</span>
                         </Button>
                       )}
 
@@ -487,12 +514,12 @@ export function InventoryTable({
                         onClick={() => onQuickAddToPos?.(row)}
                         className="h-7 gap-1 px-2 text-xs border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground font-medium transition-all shadow-xs"
                         title={
-                          isOutOfStock ? 'Item is out of stock' : 'Add 1 unit to POS cart'
+                          isOutOfStock ? (locale === 'ar' ? 'الصنف نافد من المخزون' : 'Item is out of stock') : (locale === 'ar' ? 'إضافة وحدة واحدة إلى سلة الصرف' : 'Add 1 unit to POS cart')
                         }
                       >
                         <Plus className="h-3 w-3" />
                         <ShoppingCart className="h-3 w-3" />
-                        <span className="hidden sm:inline">Add to POS</span>
+                        <span className="hidden sm:inline">{locale === 'ar' ? 'إضافة للصرف' : 'Add to POS'}</span>
                       </Button>
 
                       {/* Admin-only separator */}

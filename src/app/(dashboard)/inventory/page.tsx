@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 
 import { InventoryOverview } from '@/components/inventory/inventory-overview'
+import { InventoryPageHeader } from '@/components/inventory/inventory-page-header'
 import type { InventoryRow } from '@/components/inventory/inventory-table'
 import { can, getSession } from '@/lib/auth/auth-helpers'
 import { getTenantContext } from '@/lib/auth/tenant-context'
@@ -77,6 +78,9 @@ export default async function InventoryManagementPage({
     product: {
       id: p.product.id,
       name: p.product.name,
+      nameAr: (p.product as any).nameAr || null,
+      genericName: (p.product as any).genericName || null,
+      genericNameAr: (p.product as any).genericNameAr || null,
       sku: p.product.sku,
       barcode: p.product.barcode,
       rack: p.product.rack || null,
@@ -91,12 +95,7 @@ export default async function InventoryManagementPage({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Inventory Management</h1>
-        <p className="text-muted-foreground">
-          Real-time enterprise stock tracking, valuation, FEFO expiry radar &amp; AI packaging ingest
-        </p>
-      </div>
+      <InventoryPageHeader />
       <InventoryOverview
         initialRows={initialRows}
         initialPagination={firstPage.pagination}

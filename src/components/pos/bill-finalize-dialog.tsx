@@ -91,18 +91,22 @@ export function BillFinalizeDialog({
 
   // Dynamic Sovereign Territory & Currency Formatter
   let formatPrice = (n: number) => `₹${n.toFixed(2)}`
-  let territoryCode = 'IN'
+  let territoryCode = 'SA'
   let territoryTaxName = 'GST Tax Amount'
   let denominations = [100, 200, 500, 1000, 2000]
+  let isAr = false
 
   try {
     const i18n = useI18n()
     formatPrice = i18n.formatPrice
     territoryCode = i18n.territory
+    isAr = i18n.locale === 'ar'
     territoryTaxName =
       i18n.territoryDef.tax.regime === 'GST'
-        ? 'GST Tax Amount'
-        : `${i18n.territoryDef.tax.taxAuthorityNameEn} (${i18n.territoryDef.tax.standardVatRate}%)`
+        ? (isAr ? 'ضريبة السلع والخدمات GST' : 'GST Tax Amount')
+        : (isAr
+            ? `${i18n.territoryDef.tax.taxAuthorityNameAr} (${i18n.territoryDef.tax.standardVatRate}%)`
+            : `${i18n.territoryDef.tax.taxAuthorityNameEn} (${i18n.territoryDef.tax.standardVatRate}%)`)
 
     if (territoryCode === 'SA') denominations = [10, 20, 50, 100, 200, 500]
     else if (territoryCode === 'OM' || territoryCode === 'BH') denominations = [1, 5, 10, 20, 50]
@@ -221,14 +225,16 @@ export function BillFinalizeDialog({
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
               <FileCheck className="h-5 w-5 text-emerald-600" />
-              Finalize & Save Bill
+              {isAr ? 'اعتماد وصرف الفاتورة' : 'Finalize & Save Bill'}
             </DialogTitle>
             <Badge className="bg-emerald-600 font-mono text-xs text-white">
-              Fast Finalize (Ctrl+W)
+              {isAr ? 'صرف فوري (Ctrl+W)' : 'Fast Finalize (Ctrl+W)'}
             </Badge>
           </div>
           <DialogDescription className="text-xs">
-            Tag doctor commission, apply bill-level discount, and record payment.
+            {isAr
+              ? 'تسجيل الطبيب المعالج، تطبيق الخصم واختيار طريقة السداد'
+              : 'Tag doctor commission, apply bill-level discount, and record payment.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -238,7 +244,7 @@ export function BillFinalizeDialog({
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-1.5 text-xs font-bold text-blue-900 dark:text-blue-300">
                 <Stethoscope className="h-3.5 w-3.5" />
-                Referring Doctor Tagging
+                {isAr ? 'تسجيل الطبيب المعالج' : 'Referring Doctor Tagging'}
               </Label>
               <Button
                 type="button"
@@ -247,16 +253,16 @@ export function BillFinalizeDialog({
                 className="h-6 p-0 text-[11px] text-blue-600 dark:text-blue-400"
                 onClick={() => setAddDoctorOpen(true)}
               >
-                <Plus className="mr-0.5 h-3 w-3" /> New Doctor
+                <Plus className="mr-0.5 h-3 w-3" /> {isAr ? 'طبيب جديد' : 'New Doctor'}
               </Button>
             </div>
 
             <Select value={selectedDoctorId} onValueChange={setSelectedDoctorId}>
               <SelectTrigger className="h-9 bg-background">
-                <SelectValue placeholder="Select Prescribing Doctor (Optional)" />
+                <SelectValue placeholder={isAr ? 'اختر الطبيب المعالج (اختياري)' : 'Select Prescribing Doctor (Optional)'} />
               </SelectTrigger>
               <SelectContent className="max-h-56">
-                <SelectItem value="NONE">None / Over-the-counter</SelectItem>
+                <SelectItem value="NONE">{isAr ? 'بدون وصفة / صرف مباشر' : 'None / Over-the-counter'}</SelectItem>
                 {doctors.map((d) => (
                   <SelectItem key={d.id} value={d.id}>
                     <span className="font-semibold">{d.name}</span>
@@ -265,7 +271,7 @@ export function BillFinalizeDialog({
                     )}
                     {d.commissionPercent > 0 && (
                       <span className="ml-2 font-mono text-emerald-600">
-                        [{d.commissionPercent}% Comm.]
+                        [{d.commissionPercent}% {isAr ? 'عمولة' : 'Comm.'}]
                       </span>
                     )}
                   </SelectItem>
@@ -275,9 +281,9 @@ export function BillFinalizeDialog({
 
             {selectedDoctor && selectedDoctor.commissionPercent > 0 && (
               <div className="flex items-center justify-between pt-1 font-mono text-[11px] text-emerald-700 dark:text-emerald-400">
-                <span>Commission Rate: {selectedDoctor.commissionPercent}%</span>
+                <span>{isAr ? `نسبة العمولة: ${selectedDoctor.commissionPercent}%` : `Commission Rate: ${selectedDoctor.commissionPercent}%`}</span>
                 <span className="font-bold">
-                  Estimated Commission: ₹{commissionAmount.toFixed(2)}
+                  {isAr ? `العمولة المقدرة: ${formatPrice(commissionAmount)}` : `Estimated Commission: ${formatPrice(commissionAmount)}`}
                 </span>
               </div>
             )}
@@ -289,11 +295,11 @@ export function BillFinalizeDialog({
               <div className="flex items-center justify-between">
                 <Label className="flex items-center gap-1 text-xs font-semibold text-muted-foreground">
                   <Percent className="h-3 w-3" />
-                  Overall Bill Discount (%)
+                  {isAr ? 'خصم إجمالي على الفاتورة (%)' : 'Overall Bill Discount (%)'}
                 </Label>
                 {billDiscountPercent > 0 && intelligentDiscount.billDiscountAmount > 0 && (
                   <span className="font-mono text-[11px] font-bold text-emerald-600">
-                    -₹{intelligentDiscount.billDiscountAmount.toFixed(2)}
+                    -{formatPrice(intelligentDiscount.billDiscountAmount)}
                   </span>
                 )}
               </div>
@@ -314,17 +320,17 @@ export function BillFinalizeDialog({
             <div className="space-y-1">
               <Label className="flex items-center gap-1 text-xs font-semibold text-muted-foreground">
                 <CreditCard className="h-3 w-3" />
-                Payment Method
+                {isAr ? 'طريقة السداد' : 'Payment Method'}
               </Label>
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="CASH">Cash</SelectItem>
-                  <SelectItem value="UPI">UPI / QR Code</SelectItem>
-                  <SelectItem value="CARD">Debit / Credit Card</SelectItem>
-                  <SelectItem value="CREDIT">Customer Credit</SelectItem>
+                  <SelectItem value="CASH">{isAr ? 'نقداً (كاش)' : 'Cash'}</SelectItem>
+                  <SelectItem value="UPI">{isAr ? 'دفع إلكتروني سريع / تحويل' : 'UPI / QR Code'}</SelectItem>
+                  <SelectItem value="CARD">{isAr ? 'بطاقة بنكية / مدى' : 'Debit / Credit Card'}</SelectItem>
+                  <SelectItem value="CREDIT">{isAr ? 'حساب آجل (ذمم مدينة)' : 'Customer Credit'}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -334,7 +340,7 @@ export function BillFinalizeDialog({
               <div className="col-span-2 flex items-center gap-2 p-2 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs">
                 <ShieldAlert className="h-4 w-4 shrink-0 text-amber-600" />
                 <div className="leading-tight">
-                  <span className="font-semibold">Statutory DPCO Exemption:</span> {intelligentDiscount.exemptCount} medicine(s) (₹{intelligentDiscount.exemptGrossAmount.toFixed(2)}) are statutory price-controlled. Discount applies strictly to ₹{intelligentDiscount.eligibleGrossAmount.toFixed(2)} eligible medicines.
+                  <span className="font-semibold">{isAr ? 'إعفاء سعري نظامي:' : 'Statutory DPCO Exemption:'}</span> {isAr ? `${intelligentDiscount.exemptCount} أدوية تخضع لتسعيرة جبرية (${formatPrice(intelligentDiscount.exemptGrossAmount)}). يطبق الخصم فقط على الأصناف المؤهلة (${formatPrice(intelligentDiscount.eligibleGrossAmount)}).` : `${intelligentDiscount.exemptCount} medicine(s) (${formatPrice(intelligentDiscount.exemptGrossAmount)}) are statutory price-controlled. Discount applies strictly to ${formatPrice(intelligentDiscount.eligibleGrossAmount)} eligible medicines.`}
                 </div>
               </div>
             )}
@@ -345,10 +351,10 @@ export function BillFinalizeDialog({
               <div className="flex items-center justify-between">
                 <Label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
                   <DollarSign className="h-3.5 w-3.5 text-teal-600" />
-                  Cash Received / Tendered (₹)
+                  {isAr ? 'المبلغ المستلم نقداً' : 'Cash Received / Tendered'}
                 </Label>
                 <span className="font-mono text-[11px] text-muted-foreground">
-                  Net Due: ₹{netPayable.toFixed(2)}
+                  {isAr ? 'الصافي المستحق: ' : 'Net Due: '}{formatPrice(netPayable)}
                 </span>
               </div>
               <Input
@@ -368,7 +374,7 @@ export function BillFinalizeDialog({
                   className="h-6 px-2 text-[10px]"
                   onClick={() => setCashTendered(netPayable)}
                 >
-                  Exact ({formatPrice(netPayable)})
+                  {isAr ? `المبلغ بالضبط (${formatPrice(netPayable)})` : `Exact (${formatPrice(netPayable)})`}
                 </Button>
                 {denominations
                   .filter((d) => d >= netPayable)
@@ -387,7 +393,7 @@ export function BillFinalizeDialog({
                   ))}
               </div>
               <div className="flex items-center justify-between rounded-md border border-emerald-500/20 bg-emerald-500/10 p-2 text-xs font-medium">
-                <span className="text-emerald-800 dark:text-emerald-300">💵 Change to Return:</span>
+                <span className="text-emerald-800 dark:text-emerald-300">{isAr ? '💵 المبلغ المتبقي (الباقي):' : '💵 Change to Return:'}</span>
                 <span className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-400">
                   {formatPrice(changeToReturn)}
                 </span>
@@ -399,16 +405,15 @@ export function BillFinalizeDialog({
             <div className="space-y-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs">
               {!selectedCustomer && !customerName ? (
                 <div className="flex items-center gap-1.5 font-medium text-amber-800 dark:text-amber-300">
-                  ⚠️ Khata / Udhaar requires a customer to be selected. Please tag customer before
-                  credit finalization.
+                  {isAr ? '⚠️ يتطلب البيع الآجل تحديد ملف العميل مسبقاً.' : '⚠️ Khata / Udhaar requires a customer to be selected. Please tag customer before credit finalization.'}
                 </div>
               ) : (
                 <div className="flex items-center justify-between">
                   <span className="text-amber-900 dark:text-amber-200">
-                    Patient Khata Ledger: <strong>{selectedCustomer?.name || customerName}</strong>
+                    {isAr ? 'حساب العميل: ' : 'Patient Khata Ledger: '}<strong>{selectedCustomer?.name || customerName}</strong>
                   </span>
                   <span className="font-mono font-bold text-amber-800 dark:text-amber-300">
-                    Current Udhaar: {formatPrice(selectedCustomer?.outstandingBalance || 0)}
+                    {isAr ? 'الرصيد الآجل السابق: ' : 'Current Udhaar: '}{formatPrice(selectedCustomer?.outstandingBalance || 0)}
                   </span>
                 </div>
               )}
@@ -419,18 +424,17 @@ export function BillFinalizeDialog({
             <div className="space-y-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 text-xs">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-emerald-800 dark:text-emerald-300">
-                  📲 Dynamic Payment QR
+                  {isAr ? '📲 رمز الاستجابة السريعة QR للدفع اللحظي' : '📲 Dynamic Payment QR'}
                 </span>
                 <Badge
                   variant="outline"
                   className="border-emerald-500/30 text-[10px] text-emerald-600"
                 >
-                  Sovereign Instant Pay
+                  {isAr ? 'دفع لحظي سيادي' : 'Sovereign Instant Pay'}
                 </Badge>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Customer scans the dynamic QR code displayed on screen or printed thermal receipt
-                for {formatPrice(netPayable)}.
+                {isAr ? `يمسح العميل رمز الاستجابة السريعة للدفع الفوري بمبلغ ${formatPrice(netPayable)}.` : `Customer scans the dynamic QR code displayed on screen or printed thermal receipt for ${formatPrice(netPayable)}.`}
               </p>
             </div>
           )}
@@ -438,10 +442,10 @@ export function BillFinalizeDialog({
           {paymentMethod !== 'CASH' && (
             <div className="space-y-1">
               <Label className="text-xs font-semibold text-muted-foreground">
-                Payment Reference / Transaction ID
+                {isAr ? 'رقم الحوالة / المرجع البنكي للعملية' : 'Payment Reference / Transaction ID'}
               </Label>
               <Input
-                placeholder="UPI UTR, Card Auth Code, or Cheque Ref"
+                placeholder={isAr ? 'رقم العملية، كود التفويض أو رقم الشيك' : 'UPI UTR, Card Auth Code, or Cheque Ref'}
                 value={paymentReference}
                 onChange={(e) => setPaymentReference(e.target.value)}
                 className="h-9 font-mono"
@@ -452,18 +456,18 @@ export function BillFinalizeDialog({
           {/* Financial Totals Summary Card */}
           <div className="space-y-1.5 rounded-lg border bg-muted/50 p-3 text-xs">
             <div className="flex justify-between text-muted-foreground">
-              <span>Gross Subtotal:</span>
+              <span>{isAr ? 'إجمالي المنتجات:' : 'Gross Subtotal:'}</span>
               <span className="font-mono">{formatPrice(subtotal)}</span>
             </div>
             {itemDiscountTotal > 0 && (
               <div className="flex justify-between text-emerald-600">
-                <span>Item Discounts:</span>
+                <span>{isAr ? 'خصم الأصناف:' : 'Item Discounts:'}</span>
                 <span className="font-mono">-{formatPrice(itemDiscountTotal)}</span>
               </div>
             )}
             {billDiscountAmount > 0 && (
               <div className="flex justify-between font-medium text-emerald-600">
-                <span>Bill Discount ({billDiscountPercent}%):</span>
+                <span>{isAr ? `خصم الفاتورة (${billDiscountPercent}%):` : `Bill Discount (${billDiscountPercent}%):`}</span>
                 <span className="font-mono">-{formatPrice(billDiscountAmount)}</span>
               </div>
             )}
@@ -473,14 +477,14 @@ export function BillFinalizeDialog({
             </div>
             {roundOff !== 0 && (
               <div className="flex justify-between text-muted-foreground">
-                <span>Round-off:</span>
+                <span>{isAr ? 'جبر الكسور:' : 'Round-off:'}</span>
                 <span className="font-mono">
                   {roundOff > 0 ? `+${formatPrice(roundOff)}` : `-${formatPrice(Math.abs(roundOff))}`}
                 </span>
               </div>
             )}
             <div className="flex justify-between border-t pt-2 text-sm font-bold text-foreground">
-              <span>Net Amount Payable:</span>
+              <span>{isAr ? 'الصافي المستحق للدفع:' : 'Net Amount Payable:'}</span>
               <span className="font-mono text-base text-emerald-600">{formatPrice(netPayable)}</span>
             </div>
           </div>
@@ -488,7 +492,7 @@ export function BillFinalizeDialog({
 
         <DialogFooter className="gap-2">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Back to Cart
+            {isAr ? 'الرجوع إلى السلة' : 'Back to Cart'}
           </Button>
           <Button
             type="button"
@@ -496,7 +500,9 @@ export function BillFinalizeDialog({
             onClick={handleConfirm}
             className="min-w-[160px] bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
           >
-            {saving ? 'Saving Bill...' : 'Accept & Print Bill'}
+            {saving
+              ? (isAr ? 'جاري حفظ الفاتورة...' : 'Saving Bill...')
+              : (isAr ? 'اعتماد وصرف الفاتورة والطباعة' : 'Accept & Print Bill')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -507,40 +513,40 @@ export function BillFinalizeDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-1.5 text-sm font-bold">
               <Stethoscope className="h-4 w-4 text-blue-600" />
-              Add Prescribing Doctor
+              {isAr ? 'إضافة طبيب معالج' : 'Add Prescribing Doctor'}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-3 py-2 text-xs">
             <div className="space-y-1">
-              <Label className="text-xs">Doctor Name *</Label>
+              <Label className="text-xs">{isAr ? 'اسم الطبيب *' : 'Doctor Name *'}</Label>
               <Input
-                placeholder="Dr. Rajesh Sharma"
+                placeholder={isAr ? 'د. أحمد الكعبي' : 'Dr. Rajesh Sharma'}
                 value={newDocName}
                 onChange={(e) => setNewDocName(e.target.value)}
                 className="h-8 text-xs"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Medical Council Reg. No</Label>
+              <Label className="text-xs">{isAr ? 'رقم ترخيص مزاولة المهنة' : 'Medical Council Reg. No'}</Label>
               <Input
-                placeholder="MCI-12345"
+                placeholder={isAr ? 'ترخيص-12345' : 'MCI-12345'}
                 value={newDocReg}
                 onChange={(e) => setNewDocReg(e.target.value)}
                 className="h-8 font-mono text-xs"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Clinic / Hospital</Label>
+              <Label className="text-xs">{isAr ? 'المستشفى / المجمع الطبي' : 'Clinic / Hospital'}</Label>
               <Input
-                placeholder="City Care Hospital"
+                placeholder={isAr ? 'مستشفى الشفاء' : 'City Care Hospital'}
                 value={newDocClinic}
                 onChange={(e) => setNewDocClinic(e.target.value)}
                 className="h-8 text-xs"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Commission Rate (%)</Label>
+              <Label className="text-xs">{isAr ? 'نسبة العمولة (%)' : 'Commission Rate (%)'}</Label>
               <Input
                 type="number"
                 min="0"
@@ -559,7 +565,7 @@ export function BillFinalizeDialog({
               size="sm"
               onClick={() => setAddDoctorOpen(false)}
             >
-              Cancel
+              {isAr ? 'إلغاء' : 'Cancel'}
             </Button>
             <Button
               type="button"
@@ -568,7 +574,7 @@ export function BillFinalizeDialog({
               onClick={handleSaveDoctor}
               className="bg-blue-600 text-white hover:bg-blue-700"
             >
-              Save Doctor
+              {isAr ? 'حفظ الطبيب' : 'Save Doctor'}
             </Button>
           </DialogFooter>
         </DialogContent>

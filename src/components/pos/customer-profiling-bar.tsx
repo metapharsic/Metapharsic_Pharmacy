@@ -39,6 +39,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/lib/hooks/use-toast'
+import { useI18n } from '@/lib/i18n/i18n-context'
 
 export interface CustomerProfileData {
   id: string
@@ -71,6 +72,7 @@ export function CustomerProfilingBar({
   onApplyPatientDiscount,
 }: CustomerProfilingBarProps) {
   const toast = useToast()
+  const { isAr, formatPrice } = useI18n()
   const [phoneQuery, setPhoneQuery] = useState('')
   const [debouncedPhone, setDebouncedPhone] = useState('')
   const [isSearching, setIsSearching] = useState(false)
@@ -188,7 +190,7 @@ export function CustomerProfilingBar({
               <Input
                 ref={phoneInputRef}
                 type="tel"
-                placeholder="Enter Patient Mobile Number (Alt + N to start)..."
+                placeholder={isAr ? 'أدخل رقم جوال العميل أو المريض (Alt + N للبدء)...' : 'Enter Patient Mobile Number (Alt + N to start)...'}
                 value={phoneQuery}
                 onChange={(e) => setPhoneQuery(e.target.value)}
                 className="pl-9 h-9 text-xs font-mono font-medium"
@@ -224,7 +226,7 @@ export function CustomerProfilingBar({
               <div className="flex items-center gap-3">
                 {selectedCustomer.outstandingBalance > 0 && (
                   <span className="text-rose-600 font-bold font-mono">
-                    Balance: ₹{selectedCustomer.outstandingBalance.toFixed(2)} Dr
+                    {isAr ? 'الرصيد الآجل: ' : 'Balance: '}{formatPrice(selectedCustomer.outstandingBalance)}
                   </span>
                 )}
 
@@ -234,12 +236,12 @@ export function CustomerProfilingBar({
                     <PopoverTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
                         <History className="h-3.5 w-3.5 text-primary" />
-                        Past Visits ({selectedCustomer.recentPurchases.length})
+                        {isAr ? `الزيارات السابقة (${selectedCustomer.recentPurchases.length})` : `Past Visits (${selectedCustomer.recentPurchases.length})`}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-80 p-3 text-xs" align="end">
                       <div className="font-semibold pb-2 border-b flex items-center justify-between">
-                        <span>Past Billing History</span>
+                        <span>{isAr ? 'سجل الفواتير والمشتريات السابقة' : 'Past Billing History'}</span>
                         <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                       </div>
                       <div className="divide-y max-h-56 overflow-y-auto mt-2 space-y-2">
@@ -247,11 +249,11 @@ export function CustomerProfilingBar({
                           <div key={sale.id} className="pt-2 text-[11px]">
                             <div className="flex justify-between font-mono font-medium">
                               <span>{sale.invoiceNumber}</span>
-                              <span>₹{sale.totalAmount.toFixed(2)}</span>
+                              <span>{formatPrice(sale.totalAmount)}</span>
                             </div>
                             <div className="text-muted-foreground">
-                              {new Date(sale.date).toLocaleDateString()}
-                              {sale.doctorName && ` • Dr. ${sale.doctorName}`}
+                              {new Date(sale.date).toLocaleDateString(isAr ? 'ar-SA' : undefined)}
+                              {sale.doctorName && ` • ${isAr ? 'د.' : 'Dr.'} ${sale.doctorName}`}
                             </div>
                             <div className="text-[10px] text-muted-foreground mt-0.5 truncate">
                               {sale.items.map((i) => `${i.name} (x${i.quantity})`).join(', ')}
@@ -269,7 +271,7 @@ export function CustomerProfilingBar({
                   size="icon"
                   className="h-6 w-6 text-muted-foreground hover:text-foreground"
                   onClick={handleClear}
-                  title="Remove patient / Change"
+                  title={isAr ? 'إلغاء تحديد العميل' : 'Remove patient / Change'}
                 >
                   <X className="h-3.5 w-3.5" />
                 </Button>
@@ -291,7 +293,7 @@ export function CustomerProfilingBar({
             className="h-9 text-xs gap-1.5 shrink-0"
           >
             <UserPlus className="h-3.5 w-3.5 text-primary" />
-            Quick Add Patient
+            {isAr ? 'إضافة مريض جديد' : 'Quick Add Patient'}
           </Button>
         )}
       </div>
@@ -302,18 +304,18 @@ export function CustomerProfilingBar({
           <DialogHeader>
             <DialogTitle className="text-base font-bold flex items-center gap-2">
               <UserPlus className="h-4 w-4 text-primary" />
-              Quick Register Patient
+              {isAr ? 'تسجيل مريض جديد' : 'Quick Register Patient'}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Instantly create a patient profile with custom discount tier.
+              {isAr ? 'إنشاء ملف مريض فوري مع تحديد فئة الخصم.' : 'Instantly create a patient profile with custom discount tier.'}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 py-2 text-xs">
             <div className="space-y-1">
-              <Label className="text-xs">Patient Full Name *</Label>
+              <Label className="text-xs">{isAr ? 'اسم المريض بالكامل *' : 'Patient Full Name *'}</Label>
               <Input
-                placeholder="e.g. Ramesh Kumar"
+                placeholder={isAr ? 'مثال: محمد العمري' : 'e.g. Ramesh Kumar'}
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 className="h-9"
@@ -321,9 +323,9 @@ export function CustomerProfilingBar({
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs">Mobile Number *</Label>
+              <Label className="text-xs">{isAr ? 'رقم الجوال *' : 'Mobile Number *'}</Label>
               <Input
-                placeholder="10-digit mobile number"
+                placeholder={isAr ? 'رقم الجوال المكون من 9-10 أرقام' : '10-digit mobile number'}
                 value={newPhone}
                 onChange={(e) => setNewPhone(e.target.value)}
                 className="h-9 font-mono"
@@ -332,7 +334,7 @@ export function CustomerProfilingBar({
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs">Patient Pricing Tier</Label>
+                <Label className="text-xs">{isAr ? 'فئة المريض والتسعير' : 'Patient Pricing Tier'}</Label>
                 <Select
                   value={newTier}
                   onValueChange={(val) => {
@@ -347,16 +349,16 @@ export function CustomerProfilingBar({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="REGULAR">Regular (0%)</SelectItem>
-                    <SelectItem value="CHRONIC_PATIENT">Chronic Patient (10%)</SelectItem>
-                    <SelectItem value="SENIOR_CITIZEN">Senior Citizen (5%)</SelectItem>
-                    <SelectItem value="WHOLESALE">Wholesale (15%)</SelectItem>
+                    <SelectItem value="REGULAR">{isAr ? 'عادي (0%)' : 'Regular (0%)'}</SelectItem>
+                    <SelectItem value="CHRONIC_PATIENT">{isAr ? 'أمراض مزمنة (10%)' : 'Chronic Patient (10%)'}</SelectItem>
+                    <SelectItem value="SENIOR_CITIZEN">{isAr ? 'كبار السن (5%)' : 'Senior Citizen (5%)'}</SelectItem>
+                    <SelectItem value="WHOLESALE">{isAr ? 'جملة (15%)' : 'Wholesale (15%)'}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs">Discount %</Label>
+                <Label className="text-xs">{isAr ? 'نسبة الخصم %' : 'Discount %'}</Label>
                 <Input
                   type="number"
                   min="0"
@@ -371,7 +373,7 @@ export function CustomerProfilingBar({
 
           <DialogFooter className="gap-2">
             <Button type="button" variant="outline" size="sm" onClick={() => setQuickAddOpen(false)}>
-              Cancel
+              {isAr ? 'إلغاء' : 'Cancel'}
             </Button>
             <Button
               type="button"
@@ -380,7 +382,7 @@ export function CustomerProfilingBar({
               disabled={savingNewCustomer || !newName.trim() || !newPhone.trim()}
               className="bg-emerald-600 hover:bg-emerald-700 text-white"
             >
-              Save & Attach
+              {isAr ? 'حفظ وتثبيت' : 'Save & Attach'}
             </Button>
           </DialogFooter>
         </DialogContent>

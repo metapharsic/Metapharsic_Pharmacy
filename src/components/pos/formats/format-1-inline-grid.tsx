@@ -37,6 +37,7 @@ import type { PosBatchItem, PosProductRow } from '../pos-client'
 import { computeCartTotals, type BillingFormatComponentProps } from './billing-types'
 import { TouchscreenScanDispenserModal } from '../touchscreen-scan-dispenser-modal'
 import { BarcodeScannerModal } from '@/components/scanner/barcode-scanner-modal'
+import { useI18n } from '@/lib/i18n/i18n-context'
 
 function formatExpDate(d: string | Date | null | undefined): string {
   if (!d) return '-'
@@ -62,6 +63,7 @@ export function Format1InlineGrid({
   onFinalizeBill,
   onOpenSalesPatterns,
 }: BillingFormatComponentProps) {
+  const { isAr, isPureArabic, formatPrice, translateDrug, translateGeneric, translateUnit } = useI18n()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedProduct, setSelectedProduct] = useState<PosProductRow | null>(null)
   const [selectedBatch, setSelectedBatch] = useState<PosBatchItem | null>(null)
@@ -402,7 +404,7 @@ export function Format1InlineGrid({
             onClick={() => setStripScannerOpen(true)}
             className="rounded bg-teal-500/10 text-teal-700 dark:text-teal-300 font-bold px-1.5 py-0.5 border border-teal-500/30 hover:bg-teal-500/20 flex items-center gap-1"
           >
-            <Scissors className="h-3 w-3" /> F9: Strip Counter
+            <Scissors className="h-3 w-3" /> {isAr ? 'F9: قارئ الأشرطة' : 'F9: Strip Counter'}
           </button>
           {onOpenSalesPatterns && (
             <button
@@ -410,11 +412,11 @@ export function Format1InlineGrid({
               onClick={onOpenSalesPatterns}
               className="rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 font-bold px-1.5 py-0.5 border border-amber-500/30 hover:bg-amber-500/20 flex items-center gap-1"
             >
-              <Zap className="h-3 w-3" /> Sales Patterns
+              <Zap className="h-3 w-3" /> {isAr ? 'أنماط المبيعات' : 'Sales Patterns'}
             </button>
           )}
           <span className="rounded bg-teal-500/10 text-teal-700 dark:text-teal-300 font-bold px-1.5 py-0.5 border border-teal-500/30">
-            F4 / End: Finalize Bill
+            {isAr ? 'F4 / End: إنهاء وصرف الفاتورة' : 'F4 / End: Finalize Bill'}
           </span>
         </div>
       </div>
@@ -427,16 +429,16 @@ export function Format1InlineGrid({
               <tr className="border-b border-border/70 bg-muted/40 font-semibold text-muted-foreground">
                 <th className="py-2.5 px-3 w-10 text-center">#</th>
                 <th className="py-2.5 px-3 w-[30%] min-w-[220px]">
-                  Item Name (Search Salt / Brand)
+                  {isAr ? 'اسم الصنف والدواء (التجاري / العلمي)' : 'Item Name (Search Salt / Brand)'}
                 </th>
-                <th className="py-2.5 px-3 w-[10%]">Batch</th>
-                <th className="py-2.5 px-3 w-[9%]">Expiry</th>
+                <th className="py-2.5 px-3 w-[10%]">{isAr ? 'التشغيلة' : 'Batch'}</th>
+                <th className="py-2.5 px-3 w-[9%]">{isAr ? 'الصلاحية' : 'Expiry'}</th>
                 <th className="py-2.5 px-3 w-[25%] min-w-[200px] text-center font-bold text-foreground">
-                  Qty & Unit (Strip / Tablet)
+                  {isAr ? 'الكمية والوحدة (شريط / قرص)' : 'Qty & Unit (Strip / Tablet)'}
                 </th>
-                <th className="py-2.5 px-3 w-[10%] text-right">MRP (₹)</th>
-                <th className="py-2.5 px-3 w-[7%] text-right">Disc%</th>
-                <th className="py-2.5 px-3 w-[11%] text-right">Net (₹)</th>
+                <th className="py-2.5 px-3 w-[10%] text-right">{isAr ? 'سعر الجمهور' : 'MRP (₹)'}</th>
+                <th className="py-2.5 px-3 w-[7%] text-right">{isAr ? 'خصم%' : 'Disc%'}</th>
+                <th className="py-2.5 px-3 w-[11%] text-right">{isAr ? 'الصافي' : 'Net (₹)'}</th>
                 <th className="py-2.5 px-3 w-10 text-center"></th>
               </tr>
             </thead>
@@ -640,7 +642,7 @@ export function Format1InlineGrid({
                           setSelectedIndex(0)
                         }}
                         onKeyDown={handleSearchKeyDown}
-                        placeholder="Type brand, salt or scan barcode (e.g. dolo)..."
+                        placeholder={isAr ? 'ابحث بالاسم التجاري، العلمي أو امسح الباركود...' : 'Type brand, salt or scan barcode (e.g. dolo)...'}
                         className="h-8 border-primary/60 bg-background text-xs font-medium focus-visible:ring-1 focus-visible:ring-primary shadow-xs pr-14"
                       />
                       <div className="absolute right-1.5 top-1.5 flex items-center gap-1">
@@ -997,14 +999,14 @@ export function Format1InlineGrid({
           <div className="flex items-center gap-6">
             <div>
               <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Line Items
+                {isAr ? 'عدد البنود' : 'Line Items'}
               </span>
               <div className="font-mono text-lg font-bold text-foreground">{cart.length}</div>
             </div>
             <div className="h-8 w-px bg-border/60" />
             <div>
               <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Total Units
+                {isAr ? 'إجمالي الوحدات' : 'Total Units'}
               </span>
               <div className="font-mono text-lg font-bold text-foreground">
                 {cart.reduce((acc, c) => acc + c.quantity, 0)}
@@ -1013,19 +1015,19 @@ export function Format1InlineGrid({
             <div className="h-8 w-px bg-border/60" />
             <div>
               <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Pre-Tax Subtotal
+                {isAr ? 'المجموع قبل الضريبة' : 'Pre-Tax Subtotal'}
               </span>
               <div className="font-mono text-lg font-semibold text-foreground">
-                {formatCurrency(billTotals.subtotal)}
+                {formatPrice(billTotals.subtotal)}
               </div>
             </div>
             <div className="h-8 w-px bg-border/60" />
             <div>
               <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Total GST
+                {isAr ? 'إجمالي الضريبة' : 'Total Tax'}
               </span>
               <div className="font-mono text-lg font-semibold text-muted-foreground">
-                {formatCurrency(billTotals.taxAmount)}
+                {formatPrice(billTotals.taxAmount)}
               </div>
             </div>
           </div>
@@ -1033,10 +1035,10 @@ export function Format1InlineGrid({
           <div className="flex items-center gap-4">
             <div className="text-right">
               <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Net Payable Amount
+                {isAr ? 'صافي المبلغ المستحق' : 'Net Payable Amount'}
               </span>
               <div className="font-mono text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                {formatCurrency(billTotals.totalAmount)}
+                {formatPrice(billTotals.totalAmount)}
               </div>
             </div>
 
@@ -1046,7 +1048,7 @@ export function Format1InlineGrid({
               onClick={onFinalizeBill}
               className="h-11 px-6 font-bold shadow-md gap-2 text-sm bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
             >
-              <span>Complete Sale</span>
+              <span>{isAr ? 'إتمام وصرف الفاتورة' : 'Complete Sale'}</span>
               <kbd className="rounded bg-white/20 px-1.5 py-0.5 font-mono text-[10px] font-normal">
                 F8 / Ctrl+↵
               </kbd>

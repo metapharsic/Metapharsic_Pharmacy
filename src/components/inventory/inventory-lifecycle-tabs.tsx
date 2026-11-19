@@ -9,6 +9,7 @@ import {
   TrendingDown,
   Truck,
 } from 'lucide-react'
+import { useI18n } from '@/lib/i18n/i18n-context'
 
 export type InventoryTab =
   | 'stock'
@@ -35,6 +36,8 @@ export function InventoryLifecycleTabs({
   onSelectTab,
   counts = {},
 }: InventoryLifecycleTabsProps) {
+  const { isAr } = useI18n()
+
   const tabs: {
     id: InventoryTab
     label: string
@@ -45,52 +48,52 @@ export function InventoryLifecycleTabs({
   }[] = [
     {
       id: 'stock',
-      label: 'Live Stock',
-      sublabel: 'Real-Time Balance',
+      label: isAr ? 'المخزون الفعلي' : 'Live Stock',
+      sublabel: isAr ? 'الأرصدة اللحظية' : 'Real-Time Balance',
       icon: Boxes,
       badge: counts.totalSkus,
       badgeColor: 'bg-primary/10 text-primary border-primary/20',
     },
     {
       id: 'locations',
-      label: 'Rack & Boxes',
-      sublabel: 'Storage Map & Bins',
+      label: isAr ? 'الأرفف والصناديق' : 'Rack & Boxes',
+      sublabel: isAr ? 'خريطة التخزين والحاويات' : 'Storage Map & Bins',
       icon: LayoutGrid,
     },
     {
       id: 'dead_stock',
-      label: 'Dead Stock Radar',
-      sublabel: 'Capital Lockup & Aging',
+      label: isAr ? 'رادار الرواكد' : 'Dead Stock Radar',
+      sublabel: isAr ? 'الأموال المجمدة والتقادم' : 'Capital Lockup & Aging',
       icon: TrendingDown,
       badge: counts.deadStockCount,
       badgeColor: 'bg-destructive/15 text-destructive border-destructive/30',
     },
     {
       id: 'vendors',
-      label: 'Vendor Inventory',
-      sublabel: 'Distributor Stocks',
+      label: isAr ? 'مخزون الموردين' : 'Vendor Inventory',
+      sublabel: isAr ? 'أرصدة الموزعين' : 'Distributor Stocks',
       icon: Truck,
     },
     {
       id: 'fefo',
-      label: 'FEFO Expiry',
-      sublabel: 'Near-Expiry Radar',
+      label: isAr ? 'صلاحيات FEFO' : 'FEFO Expiry',
+      sublabel: isAr ? 'رادار قرب الانتهاء' : 'Near-Expiry Radar',
       icon: Clock,
       badge: counts.nearExpiryCount,
       badgeColor: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30 font-bold animate-pulse',
     },
     {
       id: 'adjustments',
-      label: 'Adjustments',
-      sublabel: 'Variance & Approvals',
+      label: isAr ? 'التسويات المخزنية' : 'Adjustments',
+      sublabel: isAr ? 'الفروقات والموافقات' : 'Variance & Approvals',
       icon: SlidersHorizontal,
       badge: counts.pendingAdjustmentsCount,
       badgeColor: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 font-bold',
     },
     {
       id: 'movements',
-      label: 'Audit Ledger',
-      sublabel: 'Immutable History',
+      label: isAr ? 'سجل العمليات' : 'Audit Ledger',
+      sublabel: isAr ? 'سجل تدقيق غير قابل للتعديل' : 'Immutable History',
       icon: FileSpreadsheet,
     },
   ]

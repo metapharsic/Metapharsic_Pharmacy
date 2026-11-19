@@ -385,34 +385,74 @@ const STATIC_NAV_SECTIONS: NavSection[] = [
 function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
 
   const translateLabel = (label: string): string => {
+    if (locale !== 'ar') return label
+
     const map: Record<string, string> = {
-      'Overview': t('nav.dashboard', 'Overview'),
-      'POS Billing': t('nav.pos', 'POS Billing'),
-      'Products': t('nav.products', 'Products'),
-      'All Products': t('nav.products', 'All Products'),
-      'Categories': t('nav.categories', 'Categories'),
-      'Inventory': t('nav.inventory', 'Inventory'),
-      'Stock Overview': t('nav.inventory', 'Stock Overview'),
-      'Batches': t('nav.batches', 'Batches'),
-      'Purchases': t('nav.purchases', 'Purchases'),
-      'All Purchases': t('nav.purchases', 'All Purchases'),
-      'Suppliers': t('nav.suppliers', 'Suppliers'),
-      'Sales & Rx': t('nav.sales', 'Sales & Rx'),
-      'Sales History': t('nav.sales', 'Sales History'),
-      'Prescriptions': t('nav.prescriptions', 'Prescriptions'),
-      'Expiry Watch': t('nav.expiry', 'Expiry Watch'),
-      'Batch Expiry': t('nav.expiry', 'Batch Expiry'),
-      'Customers': t('nav.customers', 'Customers'),
-      'Doctors': t('nav.doctors', 'Doctors'),
-      'Reports': t('nav.reports', 'Reports'),
-      'Settings': t('nav.settings', 'Settings'),
-      'Keyboard Shortcuts': t('nav.shortcuts', 'Keyboard Shortcuts'),
-      'Database Backup': t('nav.backup', 'Database Backup'),
-      'Telemetry & Health': t('nav.telemetry', 'Telemetry & Health'),
-      'Platform Overview': t('nav.superadmin', 'Platform Overview'),
+      // Core & Dispensing
+      'Dashboard': 'لوحة القيادة',
+      'Overview': 'نظرة عامة',
+      'POS / Billing': 'نقطة البيع والصرف',
+      'POS Billing': 'نقطة البيع والصرف',
+      'POS 2 (Feature Lab)': 'نقطة البيع المتقدمة',
+      'Products': 'الأدوية والمستحضرات',
+      'All Products': 'دليل الأدوية الشامل',
+      'Categories': 'التصنيفات الدوائية',
+      'HSN & Tax Codes': 'الأكواد الضريبية والتعريفة',
+      'Inventory': 'المخزون الدوائي',
+      'Stock Overview': 'نظرة عامة على الرصيد',
+      'Adjustments': 'تسويات الجرد والمخزون',
+      'Movements': 'حركة الأصناف وسجل التتبع',
+      'Inventory Audit': 'التدقيق الداخلي للمخزون',
+      'Batches': 'سجل التشغيلات (الباتشات)',
+      'Purchases': 'أوامر الشراء والتوريد',
+      'All Purchases': 'سجل المشتريات',
+      'Scan Bill (OCR)': 'المسح الذكي لفواتير الموردين',
+      'Agency Bills': 'فواتير الوكالات والموزعين',
+      'Suppliers': 'الموردون وشركات التوزيع',
+      'Sales & Rx': 'المبيعات والوصفات الطبية',
+      'Sales History': 'سجل فواتير المبيعات',
+      'Prescriptions': 'الوصفات الطبية المعتمدة',
+      'Customers': 'سجل المرضى والعملاء',
+      'Doctor Masters': 'دليل الأطباء المعالجين',
+      'Doctors': 'دليل الأطباء المعالجين',
+      'Returns': 'مرتجعات المبيعات',
+      'Batch Expiry': 'مراقبة تواريخ الصلاحية (FEFO)',
+      'Expiry Watch': 'مراقبة تواريخ الصلاحية',
+      'Financials': 'الحسابات والمالية',
+      'Receipt Voucher': 'سند قبض',
+      'Payment Voucher': 'سند صرف',
+      'Expense Voucher': 'سند مصروفات',
+      'GST Reports': 'تقارير الضرائب والزكاة',
+      'Ledger & Accounts Sync': 'دفتر الأستاذ والمزامنة المحاسبية',
+      'Reports & Audits': 'التقارير وسجلات التدقيق',
+      'Reports': 'التقارير والتحليلات',
+      'Compliance Registers': 'سجلات الامتثال والرقابة',
+      'Settings & Users': 'الإعدادات والمستخدمين',
+      'Users': 'المستخدمون والموظفون',
+      'Roles': 'الأدوار والصلاحيات',
+      'Audit Logs': 'سجلات تدقيق العمليات',
+      'Settings': 'إعدادات المنظومة',
+      'Database Backup (Excel)': 'النسخ الاحتياطي لقاعدة البيانات',
+      'Database Backup': 'النسخ الاحتياطي لقاعدة البيانات',
+      'Keyboard Shortcuts': 'اختصارات لوحة المفاتيح',
+      'Telemetry & Health': 'القياس الأمني المباشر',
+      
+      // SuperAdmin Navigation
+      'Platform Overview': 'نظرة عامة على المنصة السحابية',
+      'Live Telemetry & Metrics': 'القياس الأمني المباشر (5 خيوط)',
+      'Geo-Political Zones & IPs': 'النطاقات الجيوسياسية وعناوين IP',
+      'IAM Security Rules': 'سياسات الوصول وأمان IAM',
+      'All Staff Entities & Lockout': 'إدارة الموظفين والحسابات المقفلة',
+      'Sidebar Module Access': 'صلاحيات الوصول لوحدات النظام',
+      'Tenant Chemist Shops': 'الصيدليات والمتاجر المشتركة',
+      '30-Day Subscriptions': 'التراخيص والاشتراكات الشهرية',
+      'Platform Financials': 'إيرادات المنصة والاشتراكات',
+      'Global Drug Directory': 'الدليل الدوائي الموحد',
+      'Security Audit Logs': 'سجلات أمان النظام السحابي',
+      'System Diagnostics': 'الفحص والتشخيص الفني',
     }
     return map[label] || label
   }
@@ -512,7 +552,34 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
 
 export function Sidebar() {
   const { data: session, status } = useSession()
+  const { t, locale } = useI18n()
   const [stats, setStats] = useState<SidebarStatsData | null>(null)
+
+  const translateSectionTitle = (title: string): string => {
+    if (locale !== 'ar') return title
+    const map: Record<string, string> = {
+      'Dispensary & Inventory': 'الصرف والمخزون الدوائي',
+      'Finance & Compliance': 'المالية والامتثال الضريبي',
+      'System': 'إعدادات المنظومة والنظام',
+      'AWS-Style Control Plane': 'لوحة التحكم السحابية السيادية',
+      'IAM & Security Governance': 'إدارة الهوية والحوكمة الأمنية',
+      'Tenant Orgs & Licensing': 'المنشآت الصيدلانية والتراخيص',
+      'Platform Audit & Diagnostics': 'سجلات التدقيق وتشخيص النظام',
+    }
+    return map[title] || title
+  }
+
+  const translateRole = (role: string): string => {
+    if (locale !== 'ar') return role
+    const map: Record<string, string> = {
+      'Admin': 'مدير المنظومة',
+      'Store Manager': 'مدير الصيدلية',
+      'Pharmacist': 'الصيدلي المسؤول',
+      'Cashier': 'أمين الصندوق / صراف',
+      'Staff': 'موظف صيدلية',
+    }
+    return map[role] || role
+  }
 
   useEffect(() => {
     // Only fetch when authenticated — avoids 307 redirect waste
@@ -709,7 +776,7 @@ export function Sidebar() {
             <div key={idx} className="space-y-1">
               {section.title && (
                 <div className="px-2.5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                  {section.title}
+                  {translateSectionTitle(section.title)}
                 </div>
               )}
               {filteredItems.map((item) => (
@@ -727,10 +794,10 @@ export function Sidebar() {
             <Shield className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
             <div className="min-w-0">
               <div className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
-                AWS Root Control Plane
+                {locale === 'ar' ? 'لوحة التحكم السحابية السيادية' : 'AWS Root Control Plane'}
               </div>
               <div className="text-[10px] text-amber-600/90 dark:text-amber-400/90 truncate">
-                Multi-Tenant Global Governance
+                {locale === 'ar' ? 'الحوكمة العالمية متعددة المنشآت' : 'Multi-Tenant Global Governance'}
               </div>
             </div>
           </div>
@@ -749,12 +816,14 @@ export function Sidebar() {
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between">
-              <p className="truncate text-xs font-semibold text-foreground">{session?.user?.name ?? 'Staff User'}</p>
+              <p className="truncate text-xs font-semibold text-foreground">
+                {session?.user?.name ?? (locale === 'ar' ? 'موظف الصيدلية' : 'Staff User')}
+              </p>
             </div>
             <p className="truncate text-[10px] text-muted-foreground">
               {session?.user?.isSuperAdmin
-                ? 'Global Root Administrator'
-                : `${roleLabel} • ${session?.user?.organization?.name ?? 'Main Dispensary'}`}
+                ? (locale === 'ar' ? 'المشرف العام السيادي' : 'Global Root Administrator')
+                : `${translateRole(roleLabel)} • ${session?.user?.organization?.name ?? (locale === 'ar' ? 'المستودع الرئيسي' : 'Main Dispensary')}`}
             </p>
           </div>
         </div>
@@ -765,7 +834,7 @@ export function Sidebar() {
           onClick={handleLogout}
         >
           <LogOut className="h-3.5 w-3.5" />
-          End Session
+          {locale === 'ar' ? 'تسجيل الخروج' : 'End Session'}
         </Button>
       </div>
     </aside>
