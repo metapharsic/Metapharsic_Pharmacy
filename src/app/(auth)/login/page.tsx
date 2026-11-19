@@ -28,14 +28,39 @@ export default function LoginPage() {
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 rounded-full border border-teal-400/30 bg-teal-500/10 px-3 py-1 text-xs font-medium text-teal-200">
               <Sparkles className="h-3.5 w-3.5 text-teal-300" />
-              <span>Pharmaceutical Precision & Compliance Suite</span>
+              <span>Sovereign Healthcare &amp; Dual-Script Dispensing Suite</span>
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-white leading-tight">
               Enterprise Pharmacy Management, Engineered for Safety.
+              <span className="block text-xl font-normal text-teal-200 mt-1 font-arabic">
+                منظومة إدارة الصيدليات الإكلينيكية السيادية
+              </span>
             </h1>
             <p className="text-sm text-slate-300 leading-relaxed">
-              Real-time POS dispensing, Schedule H1 narcotic governance, automated batch tracking, and synchronized Tally ERP ledgers.
+              Multi-country sovereign compliance across 🇸🇦 Saudi Arabia (ZATCA/SFDA), 🇴🇲 Oman (OTA 3-dec/MoH), 🇧🇭 Bahrain (NBR/NHRA), 🇶🇦 Qatar (MoPH), 🇲🇻 Maldives (MIRA/Aasandha), and 🇮🇳 India (CDSCO/GST). Real-time POS, GS1 DataMatrix serialization, and dual Arabic/English interface.
             </p>
+          </div>
+
+          {/* Sovereign Country Compliance Chips */}
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            <span className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-[11px] font-medium text-emerald-300 flex items-center gap-1">
+              <span>🇸🇦</span> KSA ZATCA 15% / 0%
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-[11px] font-medium text-red-300 flex items-center gap-1">
+              <span>🇴🇲</span> Oman OTA 5% (3 Dec)
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-[11px] font-medium text-rose-300 flex items-center gap-1">
+              <span>🇧🇭</span> Bahrain NBR 10% (3 Dec)
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-[11px] font-medium text-purple-300 flex items-center gap-1">
+              <span>🇶🇦</span> Qatar MoPH 0%
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-[11px] font-medium text-teal-300 flex items-center gap-1">
+              <span>🇲🇻</span> Maldives Aasandha
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-[11px] font-medium text-amber-300 flex items-center gap-1">
+              <span>🇮🇳</span> India GST / DPCO
+            </span>
           </div>
 
           {/* Feature Badges */}

@@ -142,6 +142,18 @@ export const authOptions: NextAuthOptions = {
         )
         const roles = user.userRoles.map((ur) => ur.role.name)
 
+        const resolveTerritoryCode = (country?: string | null): string => {
+          if (!country) return 'SA'
+          const c = country.toLowerCase()
+          if (c.includes('saudi') || c === 'sa') return 'SA'
+          if (c.includes('oman') || c === 'om') return 'OM'
+          if (c.includes('bahrain') || c === 'bh') return 'BH'
+          if (c.includes('qatar') || c === 'qa') return 'QA'
+          if (c.includes('maldives') || c === 'mv') return 'MV'
+          if (c.includes('india') || c === 'in') return 'IN'
+          return 'SA'
+        }
+
         const orgPayload = org
           ? {
               id: org.id,
@@ -156,9 +168,23 @@ export const authOptions: NextAuthOptions = {
               address: org.address,
               city: org.city,
               state: org.state,
+              country: org.country,
+              currency: org.currency,
+              timezone: org.timezone,
+              territoryCode: resolveTerritoryCode(org.country),
               status: org.status,
               subscriptionPlan: org.subscriptionPlan,
               subscriptionExpiresAt: org.subscriptionExpiresAt ? org.subscriptionExpiresAt.toISOString() : null,
+            }
+          : null
+
+        const branchPayload = user.branch
+          ? {
+              id: user.branch.id,
+              name: user.branch.name,
+              code: user.branch.code,
+              invoicePrefix: user.branch.invoicePrefix,
+              city: user.branch.city,
             }
           : null
 
@@ -170,6 +196,8 @@ export const authOptions: NextAuthOptions = {
           permissions: [...new Set(permissions)],
           roles,
           branchId: user.branchId,
+          branch: branchPayload,
+          territoryCode: resolveTerritoryCode(org?.country),
           organizationId: user.organizationId || org?.id || null,
           organization: orgPayload,
           isSuperAdmin: Boolean(user.isSuperAdmin),
@@ -184,6 +212,8 @@ export const authOptions: NextAuthOptions = {
         token.permissions = (user as { permissions?: string[] }).permissions ?? []
         token.roles = (user as { roles?: string[] }).roles ?? []
         token.branchId = (user as { branchId?: string | null }).branchId ?? null
+        token.branch = (user as any).branch ?? null
+        token.territoryCode = (user as any).territoryCode ?? 'SA'
         token.organizationId = (user as { organizationId?: string | null }).organizationId ?? null
         token.organization = (user as { organization?: any }).organization ?? null
         token.isSuperAdmin = Boolean((user as { isSuperAdmin?: boolean }).isSuperAdmin)
@@ -196,6 +226,8 @@ export const authOptions: NextAuthOptions = {
         session.user.permissions = token.permissions
         session.user.roles = token.roles
         session.user.branchId = token.branchId
+        session.user.branch = token.branch as any
+        session.user.territoryCode = token.territoryCode as any
         session.user.organizationId = token.organizationId
         session.user.organization = token.organization
         session.user.isSuperAdmin = token.isSuperAdmin

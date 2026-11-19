@@ -8,6 +8,7 @@ import React, {
   useCallback,
   useMemo,
 } from 'react'
+import { useSession } from 'next-auth/react'
 import enDict from './dictionaries/en.json'
 import arDict from './dictionaries/ar.json'
 import {
@@ -86,6 +87,32 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     // Synchronize document direction and lang attributes
     applyDocumentAttributes(initialLocale)
   }, [])
+
+  const { data: session } = useSession()
+
+  // Automatically adapt territory and language when a user logs into a sovereign store
+  useEffect(() => {
+    const userTerritory =
+      (session?.user as any)?.territoryCode ||
+      (session?.user as any)?.organization?.territoryCode
+
+    if (userTerritory && ['SA', 'OM', 'BH', 'QA', 'MV', 'IN'].includes(userTerritory)) {
+      const code = userTerritory as TerritoryCode
+      setTerritoryState(code)
+      try {
+        localStorage.setItem(STORAGE_TERRITORY_KEY, code)
+      } catch {}
+
+      // If territory is an Arabic sovereign state, flip to Arabic
+      if (['SA', 'OM', 'BH', 'QA'].includes(code)) {
+        setLocaleState('ar')
+        applyDocumentAttributes('ar')
+      } else if (['IN', 'MV'].includes(code)) {
+        setLocaleState('en')
+        applyDocumentAttributes('en')
+      }
+    }
+  }, [session])
 
   const applyDocumentAttributes = (activeLocale: SupportedLanguage) => {
     if (typeof document !== 'undefined') {

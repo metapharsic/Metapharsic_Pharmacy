@@ -57,25 +57,42 @@ export async function GET(req: NextRequest) {
 
     // Action: Return live onboarded chemist staff (excluding superadmins)
     if (action === 'staff') {
+      const territory = searchParams.get('territory')
+      let orgCountryFilter: any = undefined
+      if (territory) {
+        const t = territory.toUpperCase()
+        if (t === 'SA') orgCountryFilter = { contains: 'Saudi', mode: 'insensitive' }
+        else if (t === 'OM') orgCountryFilter = { contains: 'Oman', mode: 'insensitive' }
+        else if (t === 'BH') orgCountryFilter = { contains: 'Bahrain', mode: 'insensitive' }
+        else if (t === 'QA') orgCountryFilter = { contains: 'Qatar', mode: 'insensitive' }
+        else if (t === 'MV') orgCountryFilter = { contains: 'Maldives', mode: 'insensitive' }
+        else if (t === 'IN') orgCountryFilter = { contains: 'India', mode: 'insensitive' }
+      }
+
+      const whereClause: any = {
+        isActive: true,
+        isSuperAdmin: false,
+      }
+      if (orgCountryFilter) {
+        whereClause.organization = { country: orgCountryFilter }
+      }
+
       const staffUsers = await prisma.user.findMany({
-        where: {
-          isActive: true,
-          isSuperAdmin: false,
-        },
+        where: whereClause,
         select: {
           id: true,
           name: true,
           email: true,
-          organization: { select: { name: true, code: true } },
-          branch: { select: { name: true } },
+          organization: { select: { name: true, code: true, country: true, currency: true } },
+          branch: { select: { name: true, code: true } },
           userRoles: {
             include: {
               role: { select: { id: true, name: true, displayName: true } },
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
-        take: 8,
+        orderBy: { createdAt: 'asc' },
+        take: 12,
       })
 
       const formattedStaff = staffUsers.map((u) => {
@@ -89,12 +106,33 @@ export async function GET(req: NextRequest) {
         )
         const isManager = u.userRoles?.some((r) => r.role.name === 'manager')
 
+        let defaultPin = 'Admin@123'
+        if (u.email.startsWith('saudi.admin')) defaultPin = 'Ksa@123456'
+        else if (u.email.startsWith('saudi.cashier')) defaultPin = 'Cashier@123'
+        else if (u.email.startsWith('saudi.')) defaultPin = 'Pharma@123'
+        else if (u.email.startsWith('oman.admin')) defaultPin = 'Oman@123456'
+        else if (u.email.startsWith('oman.')) defaultPin = 'Pharma@123'
+        else if (u.email.startsWith('bahrain.admin')) defaultPin = 'Bahrain@123456'
+        else if (u.email.startsWith('bahrain.')) defaultPin = 'Pharma@123'
+        else if (u.email.startsWith('qatar.admin')) defaultPin = 'Qatar@123456'
+        else if (u.email.startsWith('qatar.')) defaultPin = 'Pharma@123'
+        else if (u.email.startsWith('maldives.admin')) defaultPin = 'Maldives@123456'
+        else if (u.email.startsWith('maldives.')) defaultPin = 'Pharma@123'
+        else if (u.email.startsWith('india.admin')) defaultPin = 'India@123456'
+        else if (u.email.startsWith('india.')) defaultPin = 'Pharma@123'
+        else if (isOwner) defaultPin = 'Admin@123'
+        else if (isManager) defaultPin = 'Manager@123'
+        else defaultPin = 'Staff@123'
+
         return {
           id: u.id,
           name: u.name || u.email.split('@')[0],
           email: u.email,
           role: primaryRole,
           shopName: u.organization?.name || u.branch?.name || 'Metapharsic Pharmacy',
+          country: u.organization?.country || 'Saudi Arabia',
+          currency: u.organization?.currency || 'SAR',
+          defaultPin,
           avatarIcon: isOwner ? '🏪' : isManager ? '📋' : '💊',
           avatarColor: isOwner
             ? 'from-teal-600 to-teal-800'

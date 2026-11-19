@@ -15,9 +15,21 @@ export interface SessionOrganization {
   address?: string | null
   city?: string | null
   state?: string | null
+  country?: string | null
+  currency?: string | null
+  timezone?: string | null
+  territoryCode?: string | null
   status?: string
   subscriptionPlan?: string
   subscriptionExpiresAt?: string | null
+}
+
+export interface SessionBranch {
+  id: string
+  name: string
+  code?: string | null
+  invoicePrefix?: string | null
+  city?: string | null
 }
 
 declare module 'next-auth' {
@@ -27,6 +39,8 @@ declare module 'next-auth' {
       permissions: string[]
       roles: string[]
       branchId: string | null
+      branch?: SessionBranch | null
+      territoryCode?: string | null
       organizationId: string | null
       organization?: SessionOrganization | null
       isSuperAdmin?: boolean
@@ -37,6 +51,8 @@ declare module 'next-auth' {
     permissions: string[]
     roles: string[]
     branchId: string | null
+    branch?: SessionBranch | null
+    territoryCode?: string | null
     organizationId: string | null
     organization?: SessionOrganization | null
     isSuperAdmin?: boolean
@@ -49,6 +65,8 @@ declare module 'next-auth/jwt' {
     permissions: string[]
     roles: string[]
     branchId: string | null
+    branch?: SessionBranch | null
+    territoryCode?: string | null
     organizationId: string | null
     organization?: SessionOrganization | null
     isSuperAdmin?: boolean
