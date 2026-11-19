@@ -19,14 +19,9 @@ const onboardSchema = z.object({
   city: z.string().optional(),
   state: z.string().optional(),
   pincode: z.string().optional(),
-  zone: z.enum([
-    'South Zone',
-    'North Zone',
-    'West Zone',
-    'East Zone',
-    'Central Zone',
-    'On-Premises / LAN',
-  ]).default('South Zone'),
+  zone: z.string().default('KSA - Central Region (Riyadh)'),
+  territoryCode: z.enum(['SA', 'OM', 'BH', 'QA', 'MV', 'IN']).optional(),
+  privateCloudVpcId: z.string().optional(),
   subscriptionPlan: z.enum(['TRIAL', 'STARTER', 'GROWTH', 'ENTERPRISE']).default('GROWTH'),
   subscriptionDurationDays: z.number().int().min(1).default(365),
 })
@@ -47,7 +42,7 @@ export async function GET() {
   }
 }
 
-// POST /api/platform/organizations - 1-Click Onboard Chemist Shop
+// POST /api/platform/organizations - 1-Click Onboard & Sovereign Provision Chemist Shop
 export async function POST(req: NextRequest) {
   try {
     const superAdmin = await requireSuperAdmin()
@@ -61,7 +56,7 @@ export async function POST(req: NextRequest) {
     try {
       await prisma.auditLog.create({
         data: {
-          action: 'ONBOARD_ORGANIZATION',
+          action: 'ONBOARD_SOVEREIGN_ORGANIZATION',
           entity: 'Organization',
           entityId: result.organization.id,
           userId: superAdmin.id,
@@ -70,6 +65,10 @@ export async function POST(req: NextRequest) {
             organizationName: result.organization.name,
             adminEmail: result.adminUser.email,
             plan: result.organization.subscriptionPlan,
+            territoryCode: result.sovereignReport?.territoryCode,
+            phase1ProductsCreated: result.sovereignReport?.phase1ProductsCreated,
+            phase2BatchesCreated: result.sovereignReport?.phase2BatchesCreated,
+            phase5VpcPod: result.sovereignReport?.phase5VpcPod,
           },
         },
       })
@@ -81,7 +80,7 @@ export async function POST(req: NextRequest) {
       {
         success: true,
         data: result,
-        message: `Chemist Shop ${result.organization.name} (${result.organization.code}) onboarded successfully!`,
+        message: `Chemist Shop ${result.organization.name} (${result.organization.code}) onboarded & provisioned across all 5 sovereign phases!`,
       },
       { status: 201 }
     )
@@ -97,4 +96,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: { code: 'ERROR', message } }, { status })
   }
 }
-

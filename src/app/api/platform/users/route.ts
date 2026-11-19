@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import prisma from '@/lib/db/prisma'
 import { requireSuperAdmin } from '@/lib/auth/auth-helpers'
+import {
+  provisionMainDispensary,
+  provisionSovereignTenant,
+  getTerritoryGeoZoneName,
+} from '@/lib/cloud/sovereign-tenant-provisioner'
+import { TerritoryCode } from '@/lib/territory/territory-config'
 
 // System roles mapping for auto-provisioning
 const SOVEREIGN_SYSTEM_ROLES = [
@@ -119,6 +125,222 @@ export async function POST(req: Request) {
     const adminUser = await requireSuperAdmin()
     const body = await req.json()
     const { action, userId } = body
+
+    // ─────────────────────────────────────────────────────────────
+    // ACTION: PROVISION "THE MAIN" (DEFAULT-ORG) TO SOVEREIGN TERRITORY
+    // ─────────────────────────────────────────────────────────────
+    if (action === 'provision-main-organization') {
+      const territoryCode: TerritoryCode = (body.territoryCode as TerritoryCode) || 'SA'
+      const privateCloudVpcId = body.privateCloudVpcId
+
+      const report = await provisionMainDispensary(territoryCode, privateCloudVpcId)
+
+      return NextResponse.json({
+        success: true,
+        message: `Main Dispensary successfully provisioned to Sovereign Territory ${territoryCode} across all 5 phases.`,
+        report,
+      })
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // ACTION: CREATE NEW SOVEREIGN USER & AUTO-PROVISION 5 PHASES
+    // ─────────────────────────────────────────────────────────────
+    if (action === 'create-and-provision' || action === 'create-user') {
+      const {
+        name,
+        email,
+        phone,
+        password,
+        organizationId,
+        branchId,
+        territoryCode = 'SA',
+        assignedPrivateNode = 'SA',
+        roleNames = ['pharmacist'],
+        isSuperAdmin = false,
+        mfaEnabled = false,
+        mustChangePassword = false,
+        ipRestrictionEnabled = false,
+        autoProvision5Phases = true,
+        privateCloudVpcId,
+      } = body
+
+      if (!name || !email) {
+        return NextResponse.json({ error: 'Name and Email are required' }, { status: 400 })
+      }
+
+      const cleanEmail = email.trim().toLowerCase()
+      const existingUser = await prisma.user.findUnique({
+        where: { email: cleanEmail },
+      })
+      if (existingUser) {
+        return NextResponse.json({ error: `User with email "${cleanEmail}" already exists` }, { status: 400 })
+      }
+
+      // Determine organization and branch
+      let targetOrgId = organizationId
+      let targetBranchId = branchId
+
+      if (!targetOrgId) {
+        // Default to the main organization if none specified
+        const mainOrg = await prisma.organization.findFirst({
+          where: { OR: [{ code: 'DEFAULT' }, { id: 'default-org' }] },
+          orderBy: { createdAt: 'asc' },
+        })
+        if (mainOrg) {
+          targetOrgId = mainOrg.id
+        }
+      }
+
+      if (targetOrgId && !targetBranchId) {
+        const br = await prisma.branch.findFirst({
+          where: { organizationId: targetOrgId },
+          orderBy: { isHeadOffice: 'desc' },
+        })
+        if (br) {
+          targetBranchId = br.id
+        }
+      }
+
+      const rawPassword = password || 'Sovereign@2026'
+      const hashedPassword = await bcrypt.hash(rawPassword, 12)
+
+      // Ensure system roles exist
+      const targetRoleNames: string[] = Array.isArray(roleNames) && roleNames.length > 0 ? roleNames : ['pharmacist']
+      for (const roleDef of SOVEREIGN_SYSTEM_ROLES) {
+        if (targetRoleNames.includes(roleDef.name)) {
+          await prisma.role.upsert({
+            where: { name: roleDef.name },
+            create: {
+              name: roleDef.name,
+              displayName: roleDef.displayName,
+              description: roleDef.description,
+              isSystem: true,
+            },
+            update: {
+              displayName: roleDef.displayName,
+              description: roleDef.description,
+            },
+          })
+        }
+      }
+
+      const dbRoles = await prisma.role.findMany({
+        where: { name: { in: targetRoleNames } },
+      })
+
+      const finalIsSuperAdmin = Boolean(isSuperAdmin || targetRoleNames.includes('super_admin'))
+
+      // Create the user
+      const newUser = await prisma.user.create({
+        data: {
+          name: name.trim(),
+          email: cleanEmail,
+          phone: phone ? phone.trim() : null,
+          password: hashedPassword,
+          organizationId: targetOrgId || null,
+          branchId: targetBranchId || null,
+          isSuperAdmin: finalIsSuperAdmin,
+          mfaEnabled: Boolean(mfaEnabled),
+          mustChangePassword: Boolean(mustChangePassword),
+          isActive: true,
+          userRoles: {
+            create: dbRoles.map((r) => ({ roleId: r.id })),
+          },
+        },
+        include: {
+          organization: true,
+          branch: true,
+          userRoles: { include: { role: true } },
+        },
+      })
+
+      // Store sovereign territory matrix in SystemSetting
+      const terrCode = (territoryCode as TerritoryCode) || 'SA'
+      const govPayload = {
+        territories: [terrCode],
+        assignedPrivateNode: assignedPrivateNode || terrCode,
+        ipRestrictionEnabled: Boolean(ipRestrictionEnabled),
+        assignedBy: adminUser.email,
+        assignedAt: new Date().toISOString(),
+      }
+
+      await prisma.systemSetting.upsert({
+        where: {
+          category_key: {
+            category: 'USER_GOVERNANCE',
+            key: newUser.id,
+          },
+        },
+        create: {
+          category: 'USER_GOVERNANCE',
+          key: newUser.id,
+          value: JSON.stringify(govPayload),
+          dataType: 'json',
+          label: `Sovereign Matrix for ${newUser.email}`,
+        },
+        update: {
+          value: JSON.stringify(govPayload),
+          updatedAt: new Date(),
+        },
+      })
+
+      // Execute 5-Phase sovereign pipeline if requested and targetOrgId exists
+      let sovereignReport = null
+      if (autoProvision5Phases && targetOrgId && targetBranchId) {
+        const orgRecord = await prisma.organization.findUnique({ where: { id: targetOrgId } })
+        if (orgRecord) {
+          sovereignReport = await provisionSovereignTenant({
+            organizationId: targetOrgId,
+            branchId: targetBranchId,
+            adminUserId: newUser.id,
+            territoryCode: terrCode,
+            geoZoneName: getTerritoryGeoZoneName(terrCode),
+            storeCode: orgRecord.code || 'MAIN',
+            storeName: orgRecord.name,
+            privateCloudVpcId,
+          })
+        }
+      }
+
+      await prisma.auditLog.create({
+        data: {
+          userId: adminUser.id,
+          action: 'SOVEREIGN_USER_CREATED_AND_PROVISIONED',
+          entity: 'User',
+          entityId: newUser.id,
+          newData: {
+            userName: newUser.name,
+            userEmail: newUser.email,
+            territoryCode: terrCode,
+            assignedPrivateNode,
+            roles: targetRoleNames,
+            organizationId: targetOrgId,
+            autoProvisioned5Phases: Boolean(sovereignReport),
+            adminEmail: adminUser.email,
+            timestamp: new Date().toISOString(),
+          },
+        },
+      })
+
+      return NextResponse.json({
+        success: true,
+        message: `Sovereign personnel ${newUser.name} (${newUser.email}) created and linked to ${terrCode} 5-phase sovereign cloud.`,
+        user: {
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          phone: newUser.phone,
+          isActive: newUser.isActive,
+          isSuperAdmin: newUser.isSuperAdmin,
+          organization: newUser.organization,
+          branch: newUser.branch,
+          roles: newUser.userRoles.map((ur) => ({ name: ur.role.name, displayName: ur.role.displayName })),
+          territories: govPayload.territories,
+          assignedPrivateNode: govPayload.assignedPrivateNode,
+        },
+        sovereignReport,
+      })
+    }
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })

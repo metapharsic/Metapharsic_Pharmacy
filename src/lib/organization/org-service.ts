@@ -5,6 +5,12 @@ import type { Organization, Branch, OrganizationSetting, Prisma } from '@prisma/
 import bcrypt from 'bcryptjs'
 
 import prisma from '@/lib/db/prisma'
+import { TerritoryCode, TERRITORIES } from '@/lib/territory/territory-config'
+import {
+  provisionSovereignTenant,
+  resolveTerritoryFromZone,
+  SovereignProvisioningReport,
+} from '@/lib/cloud/sovereign-tenant-provisioner'
 
 // ── Organization ──────────────────────────────────────────────
 
@@ -101,6 +107,8 @@ export interface OnboardChemistShopInput {
   state?: string
   pincode?: string
   zone?: string
+  territoryCode?: TerritoryCode
+  privateCloudVpcId?: string
   subscriptionPlan?: string
   validityDays?: number
   adminName: string
@@ -110,7 +118,8 @@ export interface OnboardChemistShopInput {
 
 /**
  * 1-Click Chemist Shop Onboarding Service:
- * Provisions Organization, default Branch, and Shop Admin user atomically.
+ * Provisions Organization, default Branch, and Shop Admin user atomically,
+ * then executes the 5-Phase Sovereign Provisioning Pipeline.
  */
 export async function onboardChemistShop(input: OnboardChemistShopInput) {
   const cleanCode = input.code.trim().toUpperCase()
@@ -137,7 +146,13 @@ export async function onboardChemistShop(input: OnboardChemistShopInput) {
   const validityDays = input.validityDays || 365
   const expiresAt = new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000)
 
-  // 1. Create Organization
+  // Resolve sovereign territory from explicit territoryCode or zone string
+  const resolvedTerritory: TerritoryCode =
+    input.territoryCode ||
+    resolveTerritoryFromZone(input.zone || input.state || input.city || 'KSA - Central Region (Riyadh)')
+  const terr = TERRITORIES[resolvedTerritory] || TERRITORIES.SA
+
+  // 1. Create Organization with Sovereign Country, Currency & Timezone
   const org = await prisma.organization.create({
     data: {
       name: input.name.trim(),
@@ -152,6 +167,9 @@ export async function onboardChemistShop(input: OnboardChemistShopInput) {
       city: input.city?.trim() || null,
       state: input.state?.trim() || null,
       pincode: input.pincode?.trim() || null,
+      country: terr.nameEn,
+      currency: terr.currency.code,
+      timezone: terr.timezone,
       status: 'ACTIVE',
       subscriptionPlan: input.subscriptionPlan || 'PRO',
       subscriptionExpiresAt: expiresAt,
@@ -273,6 +291,23 @@ export async function onboardChemistShop(input: OnboardChemistShopInput) {
 
   await upsertSettings(org.id, defaultSettings)
 
+  // 5. Execute 5-Phase Sovereign Provisioning Pipeline
+  let sovereignReport: SovereignProvisioningReport | null = null
+  try {
+    sovereignReport = await provisionSovereignTenant({
+      organizationId: org.id,
+      branchId: branch.id,
+      adminUserId: adminUser.id,
+      territoryCode: resolvedTerritory,
+      geoZoneName: input.zone || 'KSA - Central Region (Riyadh)',
+      storeCode: cleanCode,
+      storeName: org.name,
+      privateCloudVpcId: input.privateCloudVpcId,
+    })
+  } catch (err) {
+    console.error('Failed to auto-provision sovereign pipeline', err)
+  }
+
   return {
     success: true,
     organization: org,
@@ -288,6 +323,7 @@ export async function onboardChemistShop(input: OnboardChemistShopInput) {
       initialPassword: rawPassword,
       loginUrl: '/login',
     },
+    sovereignReport,
   }
 }
 

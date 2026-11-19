@@ -4,7 +4,9 @@ import React, { useEffect, useState } from 'react'
 import {
   AlertCircle,
   AlertTriangle,
+  Building2,
   CheckCircle2,
+  CheckSquare,
   Filter,
   KeyRound,
   Lock,
@@ -15,6 +17,7 @@ import {
   ShieldCheck,
   Unlock,
   UserCheck,
+  UserPlus,
   UserX,
   Users,
   Globe,
@@ -22,6 +25,7 @@ import {
   Cloud,
   Layers,
   Settings2,
+  Sparkles,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -94,6 +98,34 @@ export function UserGovernancePanel() {
   const [filterStatus, setFilterStatus] = useState<string>('ALL')
   const [actionInProgress, setActionInProgress] = useState<string | null>(null)
 
+  // Organizations list for personnel assignment
+  const [orgList, setOrgList] = useState<Array<{ id: string; name: string; code: string; country?: string }>>([])
+
+  // Create Sovereign Staff Dialog State
+  const [createUserOpen, setCreateUserOpen] = useState(false)
+  const [creatingUser, setCreatingUser] = useState(false)
+  const [createForm, setCreateForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: 'Sovereign@2026',
+    organizationId: '',
+    territoryCode: 'SA' as TerritoryCode,
+    assignedPrivateNode: 'SA',
+    roleNames: ['pharmacist'],
+    isSuperAdmin: false,
+    mfaEnabled: false,
+    ipRestrictionEnabled: false,
+    autoProvision5Phases: true,
+    privateCloudVpcId: 'vpc-sa-sovereign-pod-999-prod',
+  })
+
+  // Provision Main Dispensary Dialog State
+  const [provisionMainOpen, setProvisionMainOpen] = useState(false)
+  const [provisionMainTerritory, setProvisionMainTerritory] = useState<TerritoryCode>('SA')
+  const [provisionMainVpc, setProvisionMainVpc] = useState('vpc-sa-sovereign-pod-999-prod')
+  const [provisioningMain, setProvisioningMain] = useState(false)
+
   // Password reset dialog state
   const [resetDialogOpen, setResetDialogOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<UserItem | null>(null)
@@ -128,9 +160,126 @@ export function UserGovernancePanel() {
     }
   }
 
+  const fetchOrganizations = async () => {
+    try {
+      const res = await fetch('/api/platform/organizations')
+      const json = await res.json()
+      if (json.organizations && Array.isArray(json.organizations)) {
+        setOrgList(json.organizations)
+        // Auto-select main organization if none selected
+        const main = json.organizations.find((o: any) => o.code === 'DEFAULT' || o.id === 'default-org') || json.organizations[0]
+        if (main) {
+          setCreateForm((prev) => ({ ...prev, organizationId: prev.organizationId || main.id }))
+        }
+      }
+    } catch {
+      // Non-blocking fallback
+    }
+  }
+
   useEffect(() => {
     fetchUsers()
+    fetchOrganizations()
   }, [])
+
+  const handleCreateTerritoryChange = (terr: TerritoryCode) => {
+    const vpcMap: Record<TerritoryCode, string> = {
+      SA: 'vpc-sa-sovereign-pod-999-prod',
+      OM: 'vpc-om-muscat-odp-412',
+      BH: 'vpc-bh-manama-pri-303',
+      QA: 'vpc-qa-doha-pri-882',
+      MV: 'vpc-mv-male-dhiraagu-554',
+      IN: 'vpc-in-mumbai-pri-108',
+    }
+    setCreateForm((prev) => ({
+      ...prev,
+      territoryCode: terr,
+      assignedPrivateNode: terr,
+      privateCloudVpcId: vpcMap[terr] || 'vpc-sa-sovereign-pod-999-prod',
+    }))
+  }
+
+  const handleProvisionMainTerritoryChange = (terr: TerritoryCode) => {
+    setProvisionMainTerritory(terr)
+    const vpcMap: Record<TerritoryCode, string> = {
+      SA: 'vpc-sa-sovereign-pod-999-prod',
+      OM: 'vpc-om-muscat-odp-412',
+      BH: 'vpc-bh-manama-pri-303',
+      QA: 'vpc-qa-doha-pri-882',
+      MV: 'vpc-mv-male-dhiraagu-554',
+      IN: 'vpc-in-mumbai-pri-108',
+    }
+    setProvisionMainVpc(vpcMap[terr] || 'vpc-sa-sovereign-pod-999-prod')
+  }
+
+  const handleCreateSovereignUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!createForm.name || !createForm.email) {
+      toast.error('Name and Email are required')
+      return
+    }
+
+    try {
+      setCreatingUser(true)
+      const res = await fetch('/api/platform/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create-and-provision',
+          ...createForm,
+        }),
+      })
+
+      const data = await res.json()
+      if (res.ok && data.success) {
+        toast.success('🛡️ Sovereign Personnel Created & Provisioned', {
+          description: data.message,
+        })
+        setCreateUserOpen(false)
+        fetchUsers()
+      } else {
+        toast.error('Creation Failed', {
+          description: data.error || 'Server rejected creation request',
+        })
+      }
+    } catch (err: any) {
+      toast.error('Network Error', { description: err.message })
+    } finally {
+      setCreatingUser(false)
+    }
+  }
+
+  const handleProvisionMainDispensary = async () => {
+    try {
+      setProvisioningMain(true)
+      const res = await fetch('/api/platform/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'provision-main-organization',
+          territoryCode: provisionMainTerritory,
+          privateCloudVpcId: provisionMainVpc,
+        }),
+      })
+
+      const data = await res.json()
+      if (res.ok && data.success) {
+        toast.success('🏛️ Main Dispensary 5-Phases Provisioned!', {
+          description: `${data.report.phase1ProductsCreated} medicines, ${data.report.phase2BatchesCreated} batches, ${data.report.phase3TaxRegime} tax rules deployed to ${data.report.phase5VpcPod}.`,
+        })
+        setProvisionMainOpen(false)
+        fetchUsers()
+      } else {
+        toast.error('Provisioning Failed', {
+          description: data.error || 'Server error provisioning main dispensary',
+        })
+      }
+    } catch (err: any) {
+      toast.error('Network Error', { description: err.message })
+    } finally {
+      setProvisioningMain(false)
+    }
+  }
 
   const handleUnlockUser = async (user: UserItem) => {
     try {
@@ -427,6 +576,16 @@ export function UserGovernancePanel() {
                 ))}
               </div>
 
+              <Button onClick={() => setProvisionMainOpen(true)} variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-50/20 hover:bg-amber-50/50">
+                <Building2 className="h-3.5 w-3.5 text-amber-600" />
+                <span>🏛️ Provision Main Store</span>
+              </Button>
+
+              <Button onClick={() => setCreateUserOpen(true)} size="sm" className="h-8 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs font-semibold">
+                <UserPlus className="h-3.5 w-3.5" />
+                <span>➕ Create Sovereign Staff</span>
+              </Button>
+
               <Button onClick={fetchUsers} variant="outline" size="sm" className="h-8 text-xs gap-1.5">
                 <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin text-sky-600' : ''}`} />
                 <span>Refresh</span>
@@ -508,7 +667,14 @@ export function UserGovernancePanel() {
 
                         {/* Organization & Branch */}
                         <td className="py-3 px-3">
-                          <div className="font-medium text-foreground">{u.organization?.name || 'Metapharsic Core System'}</div>
+                          <div className="flex items-center gap-1.5 font-medium text-foreground">
+                            <span>{u.organization?.name || 'Metapharsic Core System'}</span>
+                            {(u.organization?.code === 'DEFAULT' || u.organization?.id === 'default-org') && (
+                              <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 text-[9px] font-bold">
+                                MAIN
+                              </Badge>
+                            )}
+                          </div>
                           <div className="text-[11px] text-muted-foreground">{u.branch?.name || 'Main Sovereign Dispensary'}</div>
                         </td>
 
@@ -903,6 +1069,344 @@ export function UserGovernancePanel() {
               className="bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold"
             >
               Confirm &amp; Unlock
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── CREATE SOVEREIGN STAFF & 5-PHASE PROVISIONING DIALOG ─── */}
+      <Dialog open={createUserOpen} onOpenChange={setCreateUserOpen}>
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-emerald-600" />
+              <span>Create Sovereign Personnel &amp; Deploy 5 Phases</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Creates a dispensary staff account in a designated sovereign territory, assigns authoritative roles, and auto-provisions the 5-phase sovereign clinical pipeline.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateSovereignUser} className="space-y-4 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="create-name" className="text-xs font-semibold">
+                  Personnel Full Name *
+                </Label>
+                <Input
+                  id="create-name"
+                  placeholder="e.g. د. فيصل الشمري (Dr. Faisal Al-Shammari)"
+                  value={createForm.name}
+                  onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                  required
+                  className="text-xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="create-email" className="text-xs font-semibold">
+                  Login Email *
+                </Label>
+                <Input
+                  id="create-email"
+                  type="email"
+                  placeholder="e.g. faisal.pharmacist@alhikma.sa"
+                  value={createForm.email}
+                  onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                  required
+                  className="text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="create-phone" className="text-xs font-semibold">
+                  Phone Number
+                </Label>
+                <Input
+                  id="create-phone"
+                  placeholder="e.g. +966 50 123 4567"
+                  value={createForm.phone}
+                  onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
+                  className="text-xs font-mono"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="create-password" className="text-xs font-semibold">
+                  Initial Password *
+                </Label>
+                <Input
+                  id="create-password"
+                  type="text"
+                  placeholder="Sovereign@2026"
+                  value={createForm.password}
+                  onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                  required
+                  className="text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Target Pharmacy Organization */}
+            <div className="space-y-1">
+              <Label htmlFor="create-org" className="text-xs font-semibold">
+                Assigned Pharmacy Organization &amp; Dispensary Branch
+              </Label>
+              <Select
+                value={createForm.organizationId}
+                onValueChange={(val) => setCreateForm({ ...createForm, organizationId: val })}
+              >
+                <SelectTrigger id="create-org" className="text-xs h-9">
+                  <SelectValue placeholder="Select pharmacy organization..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {orgList.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name} ({org.code}) {org.code === 'DEFAULT' || org.id === 'default-org' ? '⭐ [MAIN DISPENSARY]' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Sovereign Territory & VPC Node */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="create-terr" className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                  Designated Sovereign Territory *
+                </Label>
+                <Select
+                  value={createForm.territoryCode}
+                  onValueChange={(val) => handleCreateTerritoryChange(val as TerritoryCode)}
+                >
+                  <SelectTrigger id="create-terr" className="text-xs h-9 border-emerald-500/40 bg-emerald-50/10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SOVEREIGN_NATIONS.map((nat) => (
+                      <SelectItem key={nat.code} value={nat.code}>
+                        {nat.flag} {nat.name} ({nat.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="create-vpc" className="text-xs font-semibold text-sky-700 dark:text-sky-400">
+                  Private Cloud VPC Pod Binding *
+                </Label>
+                <Select
+                  value={createForm.privateCloudVpcId}
+                  onValueChange={(val) => setCreateForm({ ...createForm, privateCloudVpcId: val })}
+                >
+                  <SelectTrigger id="create-vpc" className="text-xs h-9 border-sky-500/40 bg-sky-50/10 font-mono">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="vpc-sa-sovereign-pod-999-prod">🇸🇦 SA: Oracle Dedicated Pod (vpc-sa-sovereign-pod-999-prod)</SelectItem>
+                    <SelectItem value="vpc-om-muscat-odp-412">🇴🇲 OM: Oman Data Park Pod (vpc-om-muscat-odp-412)</SelectItem>
+                    <SelectItem value="vpc-bh-manama-pri-303">🇧🇭 BH: AWS Middle East Pod (vpc-bh-manama-pri-303)</SelectItem>
+                    <SelectItem value="vpc-qa-doha-pri-882">🇶🇦 QA: AWS Qatar Pod (vpc-qa-doha-pri-882)</SelectItem>
+                    <SelectItem value="vpc-mv-male-dhiraagu-554">🇲🇻 MV: Dhiraagu Edge Pod (vpc-mv-male-dhiraagu-554)</SelectItem>
+                    <SelectItem value="vpc-in-mumbai-pri-108">🇮🇳 IN: AWS India Pod (vpc-in-mumbai-pri-108)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Sovereign IAM Role Selection */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Authoritative Roles &amp; Responsibilities</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {AVAILABLE_ROLES.map((r) => {
+                  const isChecked = createForm.roleNames.includes(r.name)
+                  return (
+                    <button
+                      key={r.name}
+                      type="button"
+                      onClick={() => {
+                        const exists = createForm.roleNames.includes(r.name)
+                        const next = exists
+                          ? createForm.roleNames.filter((rn) => rn !== r.name)
+                          : [...createForm.roleNames, r.name]
+                        setCreateForm({
+                          ...createForm,
+                          roleNames: next.length > 0 ? next : ['pharmacist'],
+                          isSuperAdmin: r.name === 'super_admin' ? !exists : createForm.isSuperAdmin,
+                        })
+                      }}
+                      className={`p-2 rounded border text-left transition-all ${
+                        isChecked
+                          ? 'border-primary bg-primary/10 text-primary font-semibold'
+                          : 'border-border/60 hover:bg-muted/40 text-muted-foreground'
+                      }`}
+                    >
+                      <div className="text-[11px] font-bold">{r.label}</div>
+                      <div className="text-[9px] line-clamp-1 opacity-80">{r.name}</div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* 5-Phase Auto-Provisioning Callout */}
+            <div className="rounded-lg border border-emerald-500/30 bg-emerald-50/30 dark:bg-emerald-950/20 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                  <Sparkles className="h-4 w-4 text-emerald-600" />
+                  Auto-Provision Sovereign 5 Phases for Organization &amp; User
+                </span>
+                <Switch
+                  checked={createForm.autoProvision5Phases}
+                  onCheckedChange={(val) => setCreateForm({ ...createForm, autoProvision5Phases: val })}
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Atomically provisions: <strong>[1]</strong> 14+ Bilingual Arabic/English Formularies, <strong>[2]</strong> Active In-Country Batches &amp; Racks, <strong>[3]</strong> ZATCA Phase 2 / ODP Tax Regime &amp; Local Currency, <strong>[4]</strong> IAM &amp; Sovereign Matrix, and <strong>[5]</strong> Private Cloud VPC Pod residency lock.
+              </p>
+            </div>
+
+            {/* Security Toggles */}
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <label className="flex items-center gap-2 text-xs border rounded p-2.5 cursor-pointer hover:bg-muted/30">
+                <Switch
+                  checked={createForm.mfaEnabled}
+                  onCheckedChange={(val) => setCreateForm({ ...createForm, mfaEnabled: val })}
+                />
+                <span className="font-medium text-foreground">Enforce Hardware MFA</span>
+              </label>
+
+              <label className="flex items-center gap-2 text-xs border rounded p-2.5 cursor-pointer hover:bg-muted/30">
+                <Switch
+                  checked={createForm.ipRestrictionEnabled}
+                  onCheckedChange={(val) => setCreateForm({ ...createForm, ipRestrictionEnabled: val })}
+                />
+                <span className="font-medium text-foreground">In-Country IP Whitelist</span>
+              </label>
+            </div>
+
+            <DialogFooter className="flex justify-end gap-2 pt-3 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setCreateUserOpen(false)}
+                className="text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={creatingUser}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold gap-1.5"
+              >
+                {creatingUser ? (
+                  <>
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    <span>Provisioning Sovereign Personnel...</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-3.5 w-3.5" />
+                    <span>Create &amp; Auto-Provision Sovereign User</span>
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── PROVISION MAIN DISPENSARY DIALOG ─── */}
+      <Dialog open={provisionMainOpen} onOpenChange={setProvisionMainOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold flex items-center gap-2 text-amber-600 dark:text-amber-400">
+              <Building2 className="h-5 w-5" />
+              <span>Provision Main Dispensary (الفرع الرئيسي)</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Directly binds the platform's primary organization (PharmaCare Medical Store / Main Branch) to a dedicated sovereign geopolitical private cloud topology across all 5 phases.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Select Target Sovereign Jurisdiction</Label>
+              <Select
+                value={provisionMainTerritory}
+                onValueChange={(val) => handleProvisionMainTerritoryChange(val as TerritoryCode)}
+              >
+                <SelectTrigger className="text-xs h-9 border-amber-500/40 bg-amber-50/15">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SOVEREIGN_NATIONS.map((nat) => (
+                    <SelectItem key={nat.code} value={nat.code}>
+                      {nat.flag} {nat.name} ({nat.code}) &bull; {nat.regulator}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Private Cloud VPC Pod Binding</Label>
+              <Input
+                value={provisionMainVpc}
+                onChange={(e) => setProvisionMainVpc(e.target.value)}
+                className="font-mono text-xs"
+              />
+            </div>
+
+            {/* Visual 5-Phase Checklist */}
+            <div className="rounded-lg border border-border/80 bg-muted/40 p-3 space-y-2 text-xs">
+              <div className="font-bold text-foreground flex items-center gap-1.5 text-xs">
+                <Layers className="h-4 w-4 text-sky-600" />
+                <span>5-Phase Sovereign Pipeline Deployment Manifest:</span>
+              </div>
+              <ul className="space-y-1 text-[11px] text-muted-foreground list-disc list-inside">
+                <li><strong className="text-foreground">Phase 1:</strong> 14+ Bilingual Arabic/English clinical formulations &amp; GTIN barcodes</li>
+                <li><strong className="text-foreground">Phase 2:</strong> In-country active batches (150-250 units), expiry ledger &amp; racks</li>
+                <li><strong className="text-foreground">Phase 3:</strong> Sovereign tax regime, local currency &amp; bilingual invoice headers</li>
+                <li><strong className="text-foreground">Phase 4:</strong> Roles &amp; sovereign territory access matrix for all store staff</li>
+                <li><strong className="text-foreground">Phase 5:</strong> Private Cloud VPC Pod binding &amp; 100% in-country data residency</li>
+              </ul>
+            </div>
+          </div>
+
+          <DialogFooter className="flex justify-end gap-2 pt-3 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setProvisionMainOpen(false)}
+              className="text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={provisioningMain}
+              onClick={handleProvisionMainDispensary}
+              className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold gap-1.5"
+            >
+              {provisioningMain ? (
+                <>
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  <span>Deploying 5 Phases to Main...</span>
+                </>
+              ) : (
+                <>
+                  <Building2 className="h-3.5 w-3.5" />
+                  <span>1-Click Provision Main Dispensary</span>
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

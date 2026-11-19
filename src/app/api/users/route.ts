@@ -127,14 +127,60 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    // Auto-provision user sovereign territory matrix and private node binding
+    const userOrg = actor.organizationId
+      ? await prisma.organization.findUnique({ where: { id: actor.organizationId } })
+      : null
+    const orgTerritory =
+      userOrg?.currency === 'SAR' || userOrg?.country === 'Saudi Arabia'
+        ? 'SA'
+        : userOrg?.currency === 'OMR'
+        ? 'OM'
+        : userOrg?.currency === 'BHD'
+        ? 'BH'
+        : userOrg?.currency === 'QAR'
+        ? 'QA'
+        : userOrg?.currency === 'MVR'
+        ? 'MV'
+        : 'IN'
+
+    const userGovPayload = {
+      territories: [orgTerritory],
+      assignedPrivateNode: orgTerritory,
+      ipRestrictionEnabled: false,
+      mfaEnabled: false,
+      assignedBy: actor.email,
+      assignedAt: new Date().toISOString(),
+    }
+
+    await prisma.systemSetting.upsert({
+      where: {
+        category_key: {
+          category: 'USER_GOVERNANCE',
+          key: user.id,
+        },
+      },
+      create: {
+        category: 'USER_GOVERNANCE',
+        key: user.id,
+        value: JSON.stringify(userGovPayload),
+        dataType: 'json',
+        label: `Sovereign Matrix for ${user.email}`,
+      },
+      update: {
+        value: JSON.stringify(userGovPayload),
+        updatedAt: new Date(),
+      },
+    })
+
     // Audit
     await prisma.auditLog.create({
       data: {
         userId: actor.id,
-        action: 'CREATE',
+        action: 'CREATE_SOVEREIGN_USER',
         entity: 'User',
         entityId: user.id,
-        newData: { email: user.email, name: user.name, branchId: user.branchId },
+        newData: { email: user.email, name: user.name, branchId: user.branchId, territory: orgTerritory },
       },
     })
 
