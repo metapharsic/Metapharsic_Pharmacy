@@ -488,9 +488,18 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
 
     return (
       <Collapsible defaultOpen={isAdmin ? true : isActiveParent}>
-        <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-100">
-          <span className="flex items-center gap-2">
-            <item.icon className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
+        <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/60 dark:hover:text-slate-100">
+          <span className="flex items-center gap-2.5">
+            <div
+              className={cn(
+                'flex h-6 w-6 shrink-0 items-center justify-center rounded-lg transition-all duration-150',
+                isActiveParent
+                  ? 'bg-teal-100 text-teal-800 dark:bg-teal-950/80 dark:text-teal-300'
+                  : 'bg-muted/80 text-muted-foreground group-hover:bg-teal-50 group-hover:text-teal-700 dark:group-hover:bg-slate-800'
+              )}
+            >
+              <item.icon className="h-3.5 w-3.5" />
+            </div>
             <span>{translateLabel(item.label)}</span>
             {item.badge && (
               <span
@@ -528,19 +537,23 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
     <Link
       href={item.href!}
       className={cn(
-        'group flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150',
+        'group flex items-center justify-between rounded-xl px-2.5 py-1.5 text-xs font-semibold transition-all duration-150',
         isActive
-          ? 'bg-teal-50 text-teal-950 font-semibold border-l-2 rtl:border-r-2 rtl:border-l-0 border-teal-600 pl-[8px] rtl:pr-[8px] rtl:pl-[8px] dark:bg-teal-950/40 dark:text-teal-200 dark:border-teal-400'
-          : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-100'
+          ? 'bg-teal-50 text-teal-950 font-bold border-l-2 rtl:border-r-2 rtl:border-l-0 border-teal-600 pl-[8px] rtl:pr-[8px] rtl:pl-[8px] dark:bg-teal-950/50 dark:text-teal-200 dark:border-teal-400 shadow-2xs'
+          : 'text-slate-600 hover:bg-slate-100/90 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-100'
       )}
     >
-      <span className="flex items-center gap-2">
-        <item.icon
+      <span className="flex items-center gap-2.5">
+        <div
           className={cn(
-            'h-3.5 w-3.5 transition-colors',
-            isActive ? 'text-teal-700 dark:text-teal-400' : 'text-slate-500 group-hover:text-slate-700 dark:text-slate-400'
+            'flex h-6 w-6 shrink-0 items-center justify-center rounded-lg transition-all duration-150',
+            isActive
+              ? 'bg-teal-600 text-white shadow-2xs scale-105'
+              : 'bg-muted/70 text-muted-foreground group-hover:bg-teal-50 group-hover:text-teal-700 dark:group-hover:bg-teal-950/40 dark:group-hover:text-teal-300'
           )}
-        />
+        >
+          <item.icon className="h-3.5 w-3.5" />
+        </div>
         <span>{translateLabel(item.label)}</span>
       </span>
       {item.badge && (

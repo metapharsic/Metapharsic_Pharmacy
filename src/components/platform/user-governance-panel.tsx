@@ -29,6 +29,7 @@ import {
   Copy,
   Eye,
   EyeOff,
+  Rocket,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -131,6 +132,7 @@ export function UserGovernancePanel() {
   const [provisionMainTerritory, setProvisionMainTerritory] = useState<TerritoryCode>('SA')
   const [provisionMainVpc, setProvisionMainVpc] = useState('vpc-sa-sovereign-pod-999-prod')
   const [provisioningMain, setProvisioningMain] = useState(false)
+  const [provisioningAll, setProvisioningAll] = useState(false)
 
   // Password reset dialog state
   const [resetDialogOpen, setResetDialogOpen] = useState(false)
@@ -481,6 +483,34 @@ export function UserGovernancePanel() {
     }
   }
 
+  // Provision All Admins Automatically in Database
+  const handleProvisionAllAdmins = async () => {
+    try {
+      setProvisioningAll(true)
+      toast.info('⚡ Executing Sovereign Bulk Provisioning...', {
+        description: 'Auto-provisioning features, racks, cameras, vault credentials & governance across all organizations.',
+      })
+      const res = await fetch('/api/platform/provision-all-admins', {
+        method: 'POST',
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        toast.success('🚀 Sovereign Bulk Provisioning Complete', {
+          description: `${data.report.totalOrgs} Organizations, ${data.report.totalAdmins} Admin Accounts, ${data.report.settingsUpserted} Settings, and ${data.report.camerasMapped} Cameras provisioned in DB!`,
+        })
+        fetchUsers()
+      } else {
+        toast.error('Bulk Provisioning Failed', {
+          description: data.error || 'Server rejected bulk provisioning',
+        })
+      }
+    } catch (err: any) {
+      toast.error('Error running bulk provisioning', { description: err.message })
+    } finally {
+      setProvisioningAll(false)
+    }
+  }
+
   const filteredUsers = React.useMemo(() => {
     return users.filter((u) => {
       const matchStatus = filterStatus === 'ALL' || u.accountStatus === filterStatus
@@ -584,6 +614,16 @@ export function UserGovernancePanel() {
                   </button>
                 ))}
               </div>
+
+              <Button
+                onClick={handleProvisionAllAdmins}
+                disabled={provisioningAll}
+                size="sm"
+                className="h-8 text-xs gap-1.5 bg-gradient-to-r from-sky-600 via-indigo-600 to-purple-600 hover:from-sky-500 hover:to-purple-500 text-white shadow-xs font-bold"
+              >
+                <Rocket className={`h-3.5 w-3.5 ${provisioningAll ? 'animate-spin' : ''}`} />
+                <span>{provisioningAll ? 'Provisioning All...' : '⚡ Auto-Provision All Admins'}</span>
+              </Button>
 
               <Button onClick={() => setProvisionMainOpen(true)} variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-50/20 hover:bg-amber-50/50">
                 <Building2 className="h-3.5 w-3.5 text-amber-600" />
