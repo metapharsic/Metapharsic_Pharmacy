@@ -78,6 +78,7 @@ import { SidebarAssignmentPanel } from '@/components/platform/sidebar-assignment
 import { GeoPoliticalZonePanel } from '@/components/platform/geo-political-zone-panel'
 import { IAMPolicyPanel } from '@/components/platform/iam-policy-panel'
 import { SovereignCloudPilotPanel } from '@/components/platform/sovereign-cloud-pilot-panel'
+import { WhatsAppProvisioningPanel } from '@/components/platform/whatsapp-provisioning-panel'
 import { cn } from '@/lib/utils/cn'
 import { maskEmail, maskPhone } from '@/lib/utils/masking'
 
@@ -141,15 +142,15 @@ export default function PlatformSuperAdminPage() {
     }
   }, [session, status, isSuperAdmin, router])
 
-  // Tab State: Monitoring, Dispensary, IAM, GeoZones, Cloud, Sidebar Delegation, Users, Subscriptions, Financials, Shops, Catalog
+  // Tab State: Monitoring, Dispensary, WhatsApp, IAM, GeoZones, Cloud, Sidebar Delegation, Users, Subscriptions, Financials, Shops, Catalog
   const searchParams = useSearchParams()
   const tabFromUrl = searchParams?.get('tab') as any
-  const [activeTab, setActiveTab] = useState<'monitoring' | 'dispensary' | 'iam' | 'geozones' | 'cloud' | 'sidebar' | 'users' | 'subscriptions' | 'financials' | 'shops' | 'catalog'>('monitoring')
+  const [activeTab, setActiveTab] = useState<'monitoring' | 'dispensary' | 'whatsapp' | 'iam' | 'geozones' | 'cloud' | 'sidebar' | 'users' | 'subscriptions' | 'financials' | 'shops' | 'catalog'>('monitoring')
 
   useEffect(() => {
     if (
       tabFromUrl &&
-      ['monitoring', 'dispensary', 'iam', 'geozones', 'cloud', 'sidebar', 'users', 'subscriptions', 'financials', 'shops', 'catalog'].includes(
+      ['monitoring', 'dispensary', 'whatsapp', 'iam', 'geozones', 'cloud', 'sidebar', 'users', 'subscriptions', 'financials', 'shops', 'catalog'].includes(
         tabFromUrl
       )
     ) {
@@ -697,6 +698,23 @@ export default function PlatformSuperAdminPage() {
 
         <button
           type="button"
+          onClick={() => setActiveTab('whatsapp')}
+          className={cn(
+            'pb-2.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap',
+            activeTab === 'whatsapp'
+              ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 font-bold'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <span className="text-base">📲</span>
+          <span>Sovereign WhatsApp &amp; Refill Hub</span>
+          <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 text-[10px] py-0 px-1.5 font-bold">
+            16 TENANTS
+          </Badge>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveTab('monitoring')}
           className={cn(
             'pb-2.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap',
@@ -859,6 +877,9 @@ export default function PlatformSuperAdminPage() {
           />
         </div>
       )}
+
+      {/* ─── TAB: SOVEREIGN WHATSAPP & REFILL HUB ─── */}
+      {activeTab === 'whatsapp' && <WhatsAppProvisioningPanel />}
 
       {/* ─── TAB: SYSTEM & ACTIVITY MONITORING ─── */}
       {activeTab === 'monitoring' && <SystemMonitoringPanel />}

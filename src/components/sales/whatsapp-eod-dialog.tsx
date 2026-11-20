@@ -104,6 +104,9 @@ export function WhatsAppEodDialog({
         throw new Error(json.error || 'Failed to load closing digest')
       }
       setDigest(json.data)
+      if (json.data?.ownerPhone) {
+        setPhone(json.data.ownerPhone)
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error fetching report'
       toast.error('Digest Load Failed', msg)

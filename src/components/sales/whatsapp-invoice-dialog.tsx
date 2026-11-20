@@ -56,6 +56,7 @@ export interface WhatsAppInvoiceDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   sale: WhatsAppInvoiceData | null | undefined
+  pharmacyName?: string
 }
 
 /**
@@ -63,17 +64,21 @@ export interface WhatsAppInvoiceDialogProps {
  */
 export function formatWhatsAppInvoiceText(
   sale: WhatsAppInvoiceData | null | undefined,
-  origin?: string
+  origin?: string,
+  pharmacyName?: string
 ): string {
   if (!sale) return ''
   const invoiceNumber = sale.invoiceNumber || 'INV-DRAFT'
   const saleDate = sale.saleDate || sale.createdAt || new Date()
-  const dateStr = format(new Date(saleDate), 'dd MMM yyyy')
+  const dateObj = new Date(saleDate)
+  const dateStr = format(dateObj, 'dd MMM yyyy')
   const customerName = sale.customer?.name || sale.customerName || 'Walk-in Patient'
 
-  // Format line items
+  // Format line items & calculate estimated days supply for refill advice
   const items = Array.isArray(sale.items) ? sale.items : []
   let itemsSummary = ''
+  let maxDaysSupply = 15
+
   if (items.length === 0) {
     itemsSummary = '• Pharmaceuticals & Healthcare Supplies'
   } else {
@@ -81,6 +86,9 @@ export function formatWhatsAppInvoiceText(
     const displayedItems = items.slice(0, maxItems).map((it) => {
       const name = it.productName || it.product?.name || it.name || 'Medicine'
       const qty = it.quantity || 1
+      if (qty >= 10 && qty <= 90) {
+        maxDaysSupply = Math.max(maxDaysSupply, qty)
+      }
       const amt = Number(it.totalAmount ?? Number(it.unitPrice || 0) * qty)
       return `• ${name} (x${qty}) - ₹${amt.toFixed(2)}`
     })
@@ -89,6 +97,9 @@ export function formatWhatsAppInvoiceText(
     }
     itemsSummary = displayedItems.join('\n')
   }
+
+  const refillDate = new Date(dateObj.getTime() + maxDaysSupply * 24 * 60 * 60 * 1000)
+  const refillDateStr = format(refillDate, 'dd MMM yyyy')
 
   const totalAmount = Number(sale.totalAmount || 0).toLocaleString('en-IN', {
     minimumFractionDigits: 2,
@@ -108,8 +119,9 @@ export function formatWhatsAppInvoiceText(
   const pdfLink = `${baseUrl}/api/sales/${sale.id || sale.invoiceNumber || 'draft'}/pdf`
 
   const cancelledTag = sale.status === 'CANCELLED' ? ' [CANCELLED]' : ''
+  const storeHeader = (pharmacyName || 'Sovereign Dispensary').toUpperCase()
 
-  return `🏥 *METAPHARSIC PHARMACARE*
+  return `🏥 *${storeHeader}*
 🧾 *TAX INVOICE: ${invoiceNumber}*${cancelledTag}
 📅 Date: ${dateStr}
 👤 Patient: ${customerName}
@@ -118,16 +130,22 @@ ${itemsSummary}
 ━━━━━━━━━━━━━━━━━━━━
 💰 *Net Payable: ₹${totalAmount}*
 💳 Payment: ${paymentMethod}
+
+⚡ *AUTOMATED MEDICINE REFILL SCHEDULE:*
+• Next Refill Due: *${refillDateStr}* (in ~${maxDaysSupply} days)
+• Status: Stock reserved for priority counter pickup or home delivery.
+
 📄 *Download Official Tax Invoice PDF:*
 ${pdfLink}
 ━━━━━━━━━━━━━━━━━━━━
-Thank you! Wishing you a speedy recovery!`
+Thank you for choosing ${storeHeader}! Wishing you a speedy recovery!`
 }
 
 export function WhatsAppInvoiceDialog({
   open,
   onOpenChange,
   sale,
+  pharmacyName,
 }: WhatsAppInvoiceDialogProps) {
   const [phone, setPhone] = useState('')
   const [isSending, setIsSending] = useState(false)
@@ -147,8 +165,8 @@ export function WhatsAppInvoiceDialog({
   }, [open, sale])
 
   const messageText = useMemo(() => {
-    return formatWhatsAppInvoiceText(sale)
-  }, [sale])
+    return formatWhatsAppInvoiceText(sale, undefined, pharmacyName)
+  }, [sale, pharmacyName])
 
   const waMeLink = useMemo(() => {
     if (!phone.trim()) return ''

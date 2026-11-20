@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 
 import { getSession } from '@/lib/auth/auth-helpers'
 import { PERMISSIONS } from '@/lib/constants/permissions'
+import { prisma } from '@/lib/db/prisma'
 import { resolveBranchScope } from '@/lib/inventory/branch-access'
 import { DailyClosingDigestService } from '@/lib/reports/daily-closing-digest-service'
 import { ExecutiveDigestService } from '@/lib/reports/executive-digest-service'
@@ -86,16 +87,18 @@ export async function GET(req: NextRequest) {
     const targetDate = dateParam ? new Date(dateParam) : new Date()
 
     const periodParam = (searchParams.get('period') || 'daily').toLowerCase()
+    const organizationId = session.user.organizationId || undefined
 
     let digest
     if (periodParam === 'weekly' || periodParam === 'monthly') {
       digest = await ExecutiveDigestService.generateExecutiveDigest(
         periodParam,
         branchId,
-        targetDate
+        targetDate,
+        organizationId
       )
     } else {
-      digest = await DailyClosingDigestService.generateDigest(branchId, targetDate)
+      digest = await DailyClosingDigestService.generateDigest(branchId, targetDate, organizationId)
     }
 
     return NextResponse.json({
@@ -148,13 +151,32 @@ export async function POST(req: NextRequest) {
       typeof body.phone === 'string' && body.phone.trim() ? body.phone.trim() : undefined
     const dateParam = typeof body.date === 'string' ? body.date : undefined
     const targetDate = dateParam ? new Date(dateParam) : new Date()
+    const organizationId = session.user.organizationId || undefined
 
     // 1. Direct message dispatch (e.g. from WhatsApp invoice sharing dialog)
     if (typeof body.message === 'string' && body.message.trim()) {
-      const targetPhone = phone || process.env.WHATSAPP_OWNER_PHONE || '+919876543210'
+      let targetPhone = phone
+      if (!targetPhone && organizationId) {
+        const orgSetting = await prisma.organizationSetting.findUnique({
+          where: {
+            organizationId_key: {
+              organizationId,
+              key: 'WHATSAPP_OWNER_PHONE',
+            },
+          },
+        })
+        if (orgSetting?.value) {
+          targetPhone = orgSetting.value
+        }
+      }
+      if (!targetPhone) {
+        targetPhone = process.env.WHATSAPP_OWNER_PHONE || '+919876543210'
+      }
+
       const sendResult = await WhatsAppService.sendMessage({
         toPhone: targetPhone,
         message: body.message.trim(),
+        organizationId,
       })
       return NextResponse.json({
         success: true,
@@ -170,6 +192,7 @@ export async function POST(req: NextRequest) {
         branchId,
         recipientPhone: phone,
         date: targetDate,
+        organizationId,
       })
 
       return NextResponse.json({
@@ -180,7 +203,12 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Default Daily Closing Digest dispatch
-    const result = await DailyClosingDigestService.sendClosingDigest(branchId, phone, targetDate)
+    const result = await DailyClosingDigestService.sendClosingDigest(
+      branchId,
+      phone,
+      targetDate,
+      organizationId
+    )
 
     return NextResponse.json({
       success: true,

@@ -93,33 +93,60 @@ export interface DailyClosingDigestData {
 
 export class DailyClosingDigestService {
   /**
-   * Aggregate all owner-priority metrics for end-of-day closing
+   * Aggregate all owner-priority metrics for end-of-day closing strictly within tenant scope
    */
   static async generateDigest(
     branchId?: string,
-    targetDate: Date = new Date()
+    targetDate: Date = new Date(),
+    organizationId?: string
   ): Promise<DailyClosingDigestData> {
-    // 1. Resolve branch & organization
-    const branch = branchId
-      ? await prisma.branch.findUnique({
-          where: { id: branchId },
+    // 1. Resolve branch & organization strictly within tenant scope
+    let branch = null
+    if (branchId) {
+      branch = await prisma.branch.findFirst({
+        where: {
+          id: branchId,
+          ...(organizationId ? { organizationId } : {}),
+        },
+        include: { organization: true },
+      })
+    }
+    if (!branch && organizationId) {
+      branch =
+        (await prisma.branch.findFirst({
+          where: { organizationId, isHeadOffice: true },
           include: { organization: true },
-        })
-      : await prisma.branch.findFirst({
+        })) ||
+        (await prisma.branch.findFirst({
+          where: { organizationId },
           include: { organization: true },
-        })
+        }))
+    }
+    if (!branch && !organizationId) {
+      branch = await prisma.branch.findFirst({
+        where: { isHeadOffice: true },
+        include: { organization: true },
+      })
+    }
 
     const resolvedBranchId = branch?.id ?? ''
+    const effectiveOrgId = organizationId || branch?.organizationId || branch?.organization?.id || ''
     const branchName = branch?.name ?? 'Main Dispensary'
     const organizationName = branch?.organization?.name ?? 'PharmaCare Medical'
 
     const dayStart = startOfDay(targetDate)
     const dayEnd = endOfDay(targetDate)
 
+    const branchScope = resolvedBranchId
+      ? { branchId: resolvedBranchId }
+      : effectiveOrgId
+        ? { branch: { organizationId: effectiveOrgId } }
+        : {}
+
     // 2. Query today's sales
     const sales = await prisma.sale.findMany({
       where: {
-        ...(resolvedBranchId ? { branchId: resolvedBranchId } : {}),
+        ...branchScope,
         saleDate: {
           gte: dayStart,
           lte: dayEnd,
@@ -152,7 +179,7 @@ export class DailyClosingDigestService {
 
     if (sales.length === 0) {
       const latestSale = await prisma.sale.findFirst({
-        where: resolvedBranchId ? { branchId: resolvedBranchId } : {},
+        where: branchScope,
         orderBy: { saleDate: 'desc' },
       })
       if (latestSale) {
@@ -160,7 +187,7 @@ export class DailyClosingDigestService {
         const fallbackEnd = endOfDay(latestSale.saleDate)
         effectiveSales = await prisma.sale.findMany({
           where: {
-            ...(resolvedBranchId ? { branchId: resolvedBranchId } : {}),
+            ...branchScope,
             saleDate: { gte: fallbackStart, lte: fallbackEnd },
             status: 'COMPLETED',
           },
@@ -254,7 +281,7 @@ export class DailyClosingDigestService {
     const thirtyDaysOut = addDays(new Date(), 30)
     const urgentExpiringBatches = await prisma.batch.findMany({
       where: {
-        ...(resolvedBranchId ? { branchId: resolvedBranchId } : {}),
+        ...branchScope,
         quantity: { gt: 0 },
         expiryDate: { lte: thirtyDaysOut },
       },
@@ -283,7 +310,7 @@ export class DailyClosingDigestService {
     // 6. Out of Stock / Critical Low Stock Items
     const outOfStockInventory = await prisma.inventory.findMany({
       where: {
-        ...(resolvedBranchId ? { branchId: resolvedBranchId } : {}),
+        ...branchScope,
         availableQuantity: { lte: 0 },
       },
       include: { product: true },
@@ -311,8 +338,9 @@ export class DailyClosingDigestService {
       }
     }
 
-    // 8. Khata & Supplier Payables
+    // 8. Khata & Supplier Payables (Strictly isolated by organization)
     const customers = await prisma.customer.aggregate({
+      where: effectiveOrgId ? { organizationId: effectiveOrgId } : undefined,
       _sum: { outstandingBalance: true },
     })
     const totalCustomerKhataOutstanding = roundCurrency(
@@ -320,6 +348,7 @@ export class DailyClosingDigestService {
     )
 
     const suppliers = await prisma.supplier.aggregate({
+      where: effectiveOrgId ? { organizationId: effectiveOrgId } : undefined,
       _sum: { outstandingBalance: true },
     })
     const totalSupplierPayables = roundCurrency(Number(suppliers._sum.outstandingBalance || 0))
@@ -423,7 +452,31 @@ ${
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 _Generated automatically at 11:30 PM by PharmaCare Operations Platform_${noteSuffix}`
 
-    const ownerPhone = process.env.WHATSAPP_OWNER_PHONE || branch?.phone || '+919876543210'
+    // Resolve owner WhatsApp phone strictly from tenant settings or owner profile
+    let ownerPhone = ''
+    if (effectiveOrgId) {
+      const orgSetting = await prisma.organizationSetting.findUnique({
+        where: {
+          organizationId_key: {
+            organizationId: effectiveOrgId,
+            key: 'WHATSAPP_OWNER_PHONE',
+          },
+        },
+      })
+      if (orgSetting?.value) {
+        ownerPhone = orgSetting.value
+      }
+    }
+    if (!ownerPhone && branch?.phone) {
+      ownerPhone = branch.phone
+    }
+    if (!ownerPhone && branch?.organization?.phone) {
+      ownerPhone = branch.organization.phone
+    }
+    if (!ownerPhone) {
+      ownerPhone = process.env.WHATSAPP_OWNER_PHONE || '+919876543210'
+    }
+
     const waMeLink = generateWaMeLink(ownerPhone, formattedWhatsAppText)
 
     return {
@@ -477,20 +530,21 @@ _Generated automatically at 11:30 PM by PharmaCare Operations Platform_${noteSuf
   }
 
   /**
-   * Dispatch the 11:30 PM report via WhatsApp
+   * Dispatch the 11:30 PM report via WhatsApp strictly within tenant isolation
    */
   static async sendClosingDigest(
     branchId?: string,
     recipientPhone?: string,
-    targetDate?: Date
+    targetDate?: Date,
+    organizationId?: string
   ): Promise<{ digest: DailyClosingDigestData; sendResult: WhatsAppSendResult }> {
-    const digest = await this.generateDigest(branchId, targetDate)
-    const phoneToUse =
-      recipientPhone || digest.ownerPhone || process.env.WHATSAPP_OWNER_PHONE || '+919876543210'
+    const digest = await this.generateDigest(branchId, targetDate, organizationId)
+    const phoneToUse = recipientPhone || digest.ownerPhone || '+919876543210'
 
     const sendResult = await WhatsAppService.sendMessage({
       toPhone: phoneToUse,
       message: digest.formattedWhatsAppText,
+      organizationId: organizationId || digest.branchId,
     })
 
     return { digest, sendResult }

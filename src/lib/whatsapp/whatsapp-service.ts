@@ -3,17 +3,23 @@
  * WhatsApp Messaging Service for PharmaCare
  *
  * Supports multiple delivery channels:
- * 1. Twilio Programmable Messaging (WhatsApp)
- * 2. Meta WhatsApp Business Cloud API (Direct Graph API)
+ * 1. Meta WhatsApp Business Cloud API (Direct Graph API per tenant)
+ * 2. Twilio Programmable Messaging (WhatsApp)
  * 3. UltraMsg / Generic HTTP Webhook Gateway
  * 4. Browser/Desktop One-Click Link (wa.me / Web WhatsApp)
- * 5. Simulation & Audit Log (Dev / Offline fallback)
+ * 5. Simulation & Audit Log (Dev / Offline fallback with tenant isolation)
  */
+
+import { prisma } from '@/lib/db/prisma'
 
 export interface WhatsAppSendOptions {
   toPhone: string
   message: string
-  provider?: 'auto' | 'meta' | 'twilio' | 'ultramsg' | 'simulation'
+  provider?: 'auto' | 'meta' | 'twilio' | 'ultramsg' | 'simulation' | 'simulation-and-wa-link'
+  organizationId?: string
+  senderName?: string
+  apiToken?: string
+  phoneNumberId?: string
 }
 
 export interface WhatsAppSendResult {
@@ -25,6 +31,8 @@ export interface WhatsAppSendResult {
   waMeLink: string
   errorMessage?: string
   timestamp: string
+  organizationId?: string
+  senderName?: string
 }
 
 /**
@@ -59,7 +67,7 @@ export function generateWaMeLink(phone: string, text: string): string {
 
 export class WhatsAppService {
   /**
-   * Send WhatsApp Message using configured provider
+   * Send WhatsApp Message using tenant-isolated settings or configured provider
    */
   static async sendMessage(options: WhatsAppSendOptions): Promise<WhatsAppSendResult> {
     const { toPhone, message } = options
@@ -67,21 +75,71 @@ export class WhatsAppService {
     const waMeLink = generateWaMeLink(toPhone, message)
     const timestamp = new Date().toISOString()
 
-    const chosenProvider = options.provider || process.env.WHATSAPP_PROVIDER || 'auto'
+    let chosenProvider = options.provider || process.env.WHATSAPP_PROVIDER || 'auto'
+    let apiToken = options.apiToken || process.env.WHATSAPP_API_TOKEN
+    let phoneNumberId = options.phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID
+    let senderName = options.senderName
+
+    // Load tenant-isolated configuration if organizationId is present
+    if (options.organizationId) {
+      try {
+        const orgSettings = await prisma.organizationSetting.findMany({
+          where: {
+            organizationId: options.organizationId,
+            key: {
+              in: [
+                'WHATSAPP_PROVIDER',
+                'WHATSAPP_API_TOKEN',
+                'WHATSAPP_PHONE_NUMBER_ID',
+                'WHATSAPP_SENDER_NAME',
+                'WHATSAPP_STORE_PHONE',
+                'pharmacy_name',
+              ],
+            },
+          },
+        })
+
+        const settingsMap = new Map(orgSettings.map((s) => [s.key, s.value]))
+
+        if (!options.provider && settingsMap.get('WHATSAPP_PROVIDER')) {
+          chosenProvider = settingsMap.get('WHATSAPP_PROVIDER') as typeof chosenProvider
+        }
+
+        const tenantToken = settingsMap.get('WHATSAPP_API_TOKEN')
+        if (tenantToken && !tenantToken.startsWith('wa_tok_') && !options.apiToken) {
+          apiToken = tenantToken
+        }
+
+        const tenantPhoneId = settingsMap.get('WHATSAPP_PHONE_NUMBER_ID')
+        if (tenantPhoneId && !tenantPhoneId.startsWith('wa_id_') && !options.phoneNumberId) {
+          phoneNumberId = tenantPhoneId
+        }
+
+        if (!senderName) {
+          senderName =
+            settingsMap.get('WHATSAPP_SENDER_NAME') ||
+            settingsMap.get('pharmacy_name') ||
+            undefined
+        }
+      } catch (err) {
+        console.warn('[WhatsAppService] Could not load tenant settings:', err)
+      }
+    }
 
     // 1. Meta WhatsApp Business Cloud API
     if (
       (chosenProvider === 'meta' || chosenProvider === 'auto') &&
-      process.env.WHATSAPP_API_TOKEN &&
-      process.env.WHATSAPP_PHONE_NUMBER_ID
+      apiToken &&
+      phoneNumberId &&
+      !apiToken.startsWith('wa_tok_')
     ) {
       try {
         const response = await fetch(
-          `https://graph.facebook.com/v19.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
+          `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`,
           {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${process.env.WHATSAPP_API_TOKEN}`,
+              Authorization: `Bearer ${apiToken}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
@@ -104,6 +162,8 @@ export class WhatsAppService {
             status: 'SENT',
             waMeLink,
             timestamp,
+            organizationId: options.organizationId,
+            senderName,
           }
         }
       } catch (err: unknown) {
@@ -151,6 +211,8 @@ export class WhatsAppService {
             status: 'SENT',
             waMeLink,
             timestamp,
+            organizationId: options.organizationId,
+            senderName,
           }
         }
       } catch (err: unknown) {
@@ -188,6 +250,8 @@ export class WhatsAppService {
             status: 'SENT',
             waMeLink,
             timestamp,
+            organizationId: options.organizationId,
+            senderName,
           }
         }
       } catch (err: unknown) {
@@ -196,10 +260,9 @@ export class WhatsAppService {
       }
     }
 
-    // 4. Default / Simulation Mode (Always reliable for local dev & instant testing)
-    // Logs dispatch, formats wa.me URL for instant one-click delivery from browser
+    // 4. Default / Simulation Mode (Isolated per Tenant with wa.me link generation)
     console.log(`\n======================================================================`)
-    console.log(`[WHATSAPP DISPATCH] Automated 11:30 PM Owner Report`)
+    console.log(`[WHATSAPP DISPATCH] Tenant: ${senderName || 'PharmaCare Sovereign'} (Org: ${options.organizationId || 'System'})`)
     console.log(`Recipient: ${e164}`)
     console.log(`Timestamp: ${timestamp}`)
     console.log(`One-Click Open Link: ${waMeLink}`)
@@ -215,6 +278,8 @@ export class WhatsAppService {
       status: 'SIMULATED',
       waMeLink,
       timestamp,
+      organizationId: options.organizationId,
+      senderName,
     }
   }
 }

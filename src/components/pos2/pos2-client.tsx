@@ -22,6 +22,7 @@ import {
   FlaskConical,
   Loader2,
   MapPin,
+  MessageSquare,
   Minus,
   Package,
   Pill,
@@ -83,6 +84,7 @@ import { Format2SplitScreen } from './formats/format-2-split-screen'
 import { Format3TreeSelect } from './formats/format-3-tree-select'
 import { Format4AccordionWarning } from './formats/format-4-accordion-warning'
 import { ReceiptInvoice, type ReceiptData } from './receipt-invoice'
+import { WhatsAppInvoiceDialog } from '@/components/sales/whatsapp-invoice-dialog'
 import { BarcodeScannerModal } from '@/components/scanner/barcode-scanner-modal'
 import { AiStripCounterModal } from './ai-strip-counter-modal'
 import { playBarcodeBeep } from '@/lib/scanner/barcode-sound'
@@ -420,6 +422,7 @@ export function Pos2Client({ user, branches, initialConfig }: Pos2ClientProps) {
     message?: string
   } | null>(null)
   const [syncingTally, setSyncingTally] = useState(false)
+  const [whatsAppInvoiceOpen, setWhatsAppInvoiceOpen] = useState(false)
 
   // Permissions
   const canDiscount = user.permissions.includes('sales:discount')
@@ -1585,6 +1588,12 @@ export function Pos2Client({ user, branches, initialConfig }: Pos2ClientProps) {
           e.preventDefault()
           window.print()
         }
+      }
+
+      // Alt + W: Share WhatsApp Bill & schedule refill if receipt dialog is open
+      if (completedSale && e.altKey && e.key.toLowerCase() === 'w') {
+        e.preventDefault()
+        setWhatsAppInvoiceOpen(true)
       }
     }
 
@@ -2785,12 +2794,31 @@ export function Pos2Client({ user, branches, initialConfig }: Pos2ClientProps) {
             <Button variant="outline" size="sm" onClick={() => setCompletedSale(null)}>
               New Transaction
             </Button>
-            <Button size="sm" onClick={() => window.print()} className="gap-1.5">
-              <Printer className="h-4 w-4" /> Print Bill / Invoice
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setWhatsAppInvoiceOpen(true)}
+                className="gap-1.5 border-emerald-600/40 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500/40 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+              >
+                <MessageSquare className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                WhatsApp Bill & Refill (Alt+W)
+              </Button>
+              <Button size="sm" onClick={() => window.print()} className="gap-1.5">
+                <Printer className="h-4 w-4" /> Print Bill / Invoice
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ─── WhatsApp Invoice & Refill Sharing Dialog ─────── */}
+      <WhatsAppInvoiceDialog
+        open={whatsAppInvoiceOpen}
+        onOpenChange={setWhatsAppInvoiceOpen}
+        sale={completedSale as any}
+        pharmacyName={(config as any)?.pharmacyName}
+      />
 
       {/* ─── Batch Selection Modal (FEFO / Batch details) ───── */}
       {selectedProductForBatch && (

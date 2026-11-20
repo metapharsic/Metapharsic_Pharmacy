@@ -75,19 +75,40 @@ export class ExecutiveDigestService {
   static async generateExecutiveDigest(
     period: 'daily' | 'weekly' | 'monthly' = 'daily',
     branchId?: string,
-    targetDate: Date = new Date()
+    targetDate: Date = new Date(),
+    organizationId?: string
   ): Promise<ExecutiveDigestData> {
-    // 1. Resolve branch & organization
-    const branch = branchId
-      ? await prisma.branch.findUnique({
-          where: { id: branchId },
+    // 1. Resolve branch & organization strictly within tenant scope
+    let branch = null
+    if (branchId) {
+      branch = await prisma.branch.findFirst({
+        where: {
+          id: branchId,
+          ...(organizationId ? { organizationId } : {}),
+        },
+        include: { organization: true },
+      })
+    }
+    if (!branch && organizationId) {
+      branch =
+        (await prisma.branch.findFirst({
+          where: { organizationId, isHeadOffice: true },
           include: { organization: true },
-        })
-      : await prisma.branch.findFirst({
+        })) ||
+        (await prisma.branch.findFirst({
+          where: { organizationId },
           include: { organization: true },
-        })
+        }))
+    }
+    if (!branch && !organizationId) {
+      branch = await prisma.branch.findFirst({
+        where: { isHeadOffice: true },
+        include: { organization: true },
+      })
+    }
 
     const resolvedBranchId = branch?.id ?? ''
+    const effectiveOrgId = organizationId || branch?.organizationId || branch?.organization?.id || ''
     const branchName = branch?.name ?? 'Main Dispensary'
     const organizationName = branch?.organization?.name ?? 'Metapharsic Pharmacare'
 
@@ -110,10 +131,16 @@ export class ExecutiveDigestService {
       periodLabel = `Monthly Executive Audit (${format(targetDate, 'MMMM yyyy')})`
     }
 
+    const branchScope = resolvedBranchId
+      ? { branchId: resolvedBranchId }
+      : effectiveOrgId
+        ? { branch: { organizationId: effectiveOrgId } }
+        : {}
+
     // 3. Query sales in period
     const sales = await prisma.sale.findMany({
       where: {
-        ...(resolvedBranchId ? { branchId: resolvedBranchId } : {}),
+        ...branchScope,
         saleDate: {
           gte: periodStart,
           lte: periodEnd,
@@ -143,7 +170,7 @@ export class ExecutiveDigestService {
 
     if (sales.length === 0) {
       const latestSale = await prisma.sale.findFirst({
-        where: resolvedBranchId ? { branchId: resolvedBranchId } : {},
+        where: branchScope,
         orderBy: { saleDate: 'desc' },
       })
       if (latestSale) {
@@ -162,7 +189,7 @@ export class ExecutiveDigestService {
 
         effectiveSales = await prisma.sale.findMany({
           where: {
-            ...(resolvedBranchId ? { branchId: resolvedBranchId } : {}),
+            ...branchScope,
             saleDate: { gte: fallbackStart, lte: fallbackEnd },
             status: 'COMPLETED',
           },
@@ -281,8 +308,9 @@ export class ExecutiveDigestService {
       .sort((a, b) => b.quantity - a.quantity || b.revenue - a.revenue)
       .slice(0, 5)
 
-    // 5. Khata & Supplier Payables
+    // 5. Khata & Supplier Payables (Strictly isolated by organization)
     const customers = await prisma.customer.aggregate({
+      where: effectiveOrgId ? { organizationId: effectiveOrgId } : undefined,
       _sum: { outstandingBalance: true },
     })
     const totalCustomerKhataOutstanding = roundCurrency(
@@ -290,6 +318,7 @@ export class ExecutiveDigestService {
     )
 
     const suppliers = await prisma.supplier.aggregate({
+      where: effectiveOrgId ? { organizationId: effectiveOrgId } : undefined,
       _sum: { outstandingBalance: true },
     })
     const totalSupplierPayables = roundCurrency(Number(suppliers._sum.outstandingBalance || 0))
@@ -395,7 +424,31 @@ ${topMedicinesFormatted}
 _PharmaCare Executive Intelligence Platform_${noteSuffix}`
     }
 
-    const ownerPhone = process.env.WHATSAPP_OWNER_PHONE || branch?.phone || '+919876543210'
+    // Resolve owner WhatsApp phone strictly from tenant settings or owner profile
+    let ownerPhone = ''
+    if (effectiveOrgId) {
+      const orgSetting = await prisma.organizationSetting.findUnique({
+        where: {
+          organizationId_key: {
+            organizationId: effectiveOrgId,
+            key: 'WHATSAPP_OWNER_PHONE',
+          },
+        },
+      })
+      if (orgSetting?.value) {
+        ownerPhone = orgSetting.value
+      }
+    }
+    if (!ownerPhone && branch?.phone) {
+      ownerPhone = branch.phone
+    }
+    if (!ownerPhone && branch?.organization?.phone) {
+      ownerPhone = branch.organization.phone
+    }
+    if (!ownerPhone) {
+      ownerPhone = process.env.WHATSAPP_OWNER_PHONE || '+919876543210'
+    }
+
     const waMeLink = generateWaMeLink(ownerPhone, formattedWhatsAppText)
 
     return {
@@ -440,18 +493,30 @@ _PharmaCare Executive Intelligence Platform_${noteSuffix}`
     }
   }
 
-  static async generateDailyDigestText(branchId?: string, date?: Date): Promise<string> {
-    const digest = await this.generateExecutiveDigest('daily', branchId, date)
+  static async generateDailyDigestText(
+    branchId?: string,
+    date?: Date,
+    organizationId?: string
+  ): Promise<string> {
+    const digest = await this.generateExecutiveDigest('daily', branchId, date, organizationId)
     return digest.formattedWhatsAppText
   }
 
-  static async generateWeeklyDigestText(branchId?: string, date?: Date): Promise<string> {
-    const digest = await this.generateExecutiveDigest('weekly', branchId, date)
+  static async generateWeeklyDigestText(
+    branchId?: string,
+    date?: Date,
+    organizationId?: string
+  ): Promise<string> {
+    const digest = await this.generateExecutiveDigest('weekly', branchId, date, organizationId)
     return digest.formattedWhatsAppText
   }
 
-  static async generateMonthlyDigestText(branchId?: string, date?: Date): Promise<string> {
-    const digest = await this.generateExecutiveDigest('monthly', branchId, date)
+  static async generateMonthlyDigestText(
+    branchId?: string,
+    date?: Date,
+    organizationId?: string
+  ): Promise<string> {
+    const digest = await this.generateExecutiveDigest('monthly', branchId, date, organizationId)
     return digest.formattedWhatsAppText
   }
 
@@ -460,14 +525,16 @@ _PharmaCare Executive Intelligence Platform_${noteSuffix}`
     branchId?: string
     recipientPhone?: string
     date?: Date
+    organizationId?: string
   }): Promise<{ digest: ExecutiveDigestData; sendResult: WhatsAppSendResult }> {
-    const { period = 'daily', branchId, recipientPhone, date } = options
-    const digest = await this.generateExecutiveDigest(period, branchId, date)
-    const phoneToUse = recipientPhone || digest.ownerPhone || '+919876543210'
+    const { period = 'daily', branchId, recipientPhone, date, organizationId } = options
+    const digest = await this.generateExecutiveDigest(period, branchId, date, organizationId)
+    const phoneToUse = recipientPhone || digest.ownerPhone
 
     const sendResult = await WhatsAppService.sendMessage({
       toPhone: phoneToUse,
       message: digest.formattedWhatsAppText,
+      organizationId: organizationId || digest.branchId,
     })
 
     return { digest, sendResult }
@@ -477,31 +544,35 @@ _PharmaCare Executive Intelligence Platform_${noteSuffix}`
 // Direct functional exports
 export async function generateDailyDigestText(
   branchId?: string,
-  date?: Date
+  date?: Date,
+  organizationId?: string
 ): Promise<string> {
-  return ExecutiveDigestService.generateDailyDigestText(branchId, date)
+  return ExecutiveDigestService.generateDailyDigestText(branchId, date, organizationId)
 }
 
 export async function generateWeeklyDigestText(
   branchId?: string,
-  date?: Date
+  date?: Date,
+  organizationId?: string
 ): Promise<string> {
-  return ExecutiveDigestService.generateWeeklyDigestText(branchId, date)
+  return ExecutiveDigestService.generateWeeklyDigestText(branchId, date, organizationId)
 }
 
 export async function generateMonthlyDigestText(
   branchId?: string,
-  date?: Date
+  date?: Date,
+  organizationId?: string
 ): Promise<string> {
-  return ExecutiveDigestService.generateMonthlyDigestText(branchId, date)
+  return ExecutiveDigestService.generateMonthlyDigestText(branchId, date, organizationId)
 }
 
 export async function generateExecutiveDigest(
   period: 'daily' | 'weekly' | 'monthly' = 'daily',
   branchId?: string,
-  targetDate?: Date
+  targetDate?: Date,
+  organizationId?: string
 ): Promise<ExecutiveDigestData> {
-  return ExecutiveDigestService.generateExecutiveDigest(period, branchId, targetDate)
+  return ExecutiveDigestService.generateExecutiveDigest(period, branchId, targetDate, organizationId)
 }
 
 export async function sendExecutiveDigest(options: {
@@ -509,6 +580,7 @@ export async function sendExecutiveDigest(options: {
   branchId?: string
   recipientPhone?: string
   date?: Date
+  organizationId?: string
 }): Promise<{ digest: ExecutiveDigestData; sendResult: WhatsAppSendResult }> {
   return ExecutiveDigestService.sendExecutiveDigest(options)
 }
