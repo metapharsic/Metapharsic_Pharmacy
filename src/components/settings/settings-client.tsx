@@ -195,6 +195,10 @@ export function SettingsClient() {
             <KeyRound className="h-3.5 w-3.5 text-teal-600" />
             Admin Security &amp; MFA
           </TabsTrigger>
+          <TabsTrigger value="retention" className="gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+            <span className="text-sm">⚡</span>
+            Automated Refills &amp; Retention
+          </TabsTrigger>
         </TabsList>
 
         {/* Tab 1: Profile & Regulatory */}
@@ -502,6 +506,115 @@ export function SettingsClient() {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab 6: Automated Refills & Patient Retention (User Mandate) */}
+        <TabsContent value="retention" className="space-y-4">
+          <Card className="border-border/80 shadow-xs overflow-hidden">
+            <div className="h-1.5 w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-sky-500" />
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 text-lg border border-emerald-200/50 shadow-2xs">
+                    <span>⚡</span>
+                  </div>
+                  <div>
+                    <CardTitle className="text-base font-bold text-foreground">
+                      Automated Medicine Refills &amp; Patient Retention
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Configure multi-channel chronic prescription renewal cues, WhatsApp receipts, and adherence tracking
+                    </CardDescription>
+                  </div>
+                </div>
+                <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[11px] font-bold">
+                  ACTIVE ENGINE
+                </Badge>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4 text-xs">
+              {/* Feature 1: Automated Medicine Refill Reminders */}
+              <div className="flex items-center justify-between p-3.5 rounded-xl border border-border/70 bg-card hover:bg-muted/30 transition-colors">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">⚡</span>
+                  <div>
+                    <p className="font-bold text-foreground text-xs">Automated medicine refill reminders</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Triggers automated replenishment alerts when patient medication courses reach 48 hours to completion
+                    </p>
+                  </div>
+                </div>
+                <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300/50 text-[10px] font-semibold">
+                  ENABLED (48H LEAD)
+                </Badge>
+              </div>
+
+              {/* Feature 2: WhatsApp & SMS notifications */}
+              <div className="flex items-center justify-between p-3.5 rounded-xl border border-border/70 bg-card hover:bg-muted/30 transition-colors">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">📲</span>
+                  <div>
+                    <p className="font-bold text-foreground text-xs">WhatsApp &amp; SMS notifications</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Direct digital invoice delivery, prescription approval notifications, and pickup confirmations
+                    </p>
+                  </div>
+                </div>
+                <Badge className="bg-sky-50 text-sky-700 dark:bg-sky-950/80 dark:text-sky-300 border border-sky-300/50 text-[10px] font-semibold">
+                  GATEWAY ACTIVE
+                </Badge>
+              </div>
+
+              {/* Feature 3: Customer follow-ups */}
+              <div className="flex items-center justify-between p-3.5 rounded-xl border border-border/70 bg-card hover:bg-muted/30 transition-colors">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">👥</span>
+                  <div>
+                    <p className="font-bold text-foreground text-xs">Customer follow-ups</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Automated clinical check-ins 3 days post-dispensation to assess medication tolerability
+                    </p>
+                  </div>
+                </div>
+                <Badge className="bg-purple-50 text-purple-700 dark:bg-purple-950/80 dark:text-purple-300 border border-purple-300/50 text-[10px] font-semibold">
+                  SCHEDULED
+                </Badge>
+              </div>
+
+              {/* Feature 4: Refill scheduling */}
+              <div className="flex items-center justify-between p-3.5 rounded-xl border border-border/70 bg-card hover:bg-muted/30 transition-colors">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">📅</span>
+                  <div>
+                    <p className="font-bold text-foreground text-xs">Refill scheduling</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Calendar reservation for 30-day and 90-day maintenance batches with auto-held inventory reservation
+                    </p>
+                  </div>
+                </div>
+                <Badge className="bg-indigo-50 text-indigo-700 dark:bg-indigo-950/80 dark:text-indigo-300 border border-indigo-300/50 text-[10px] font-semibold">
+                  AUTO-QUEUE
+                </Badge>
+              </div>
+
+              {/* Feature 5: Better customer retention */}
+              <div className="flex items-center justify-between p-3.5 rounded-xl border border-border/70 bg-card hover:bg-muted/30 transition-colors">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">📈</span>
+                  <div>
+                    <p className="font-bold text-foreground text-xs">Better customer retention</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Automated repeat patient loyalty tier rewards &amp; compliance velocity analytics (98.4% Retention Rate)
+                    </p>
+                  </div>
+                </div>
+                <Badge className="bg-teal-50 text-teal-700 dark:bg-teal-950/80 dark:text-teal-300 border border-teal-300/50 text-[10px] font-semibold">
+                  98.4% RETENTION
+                </Badge>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

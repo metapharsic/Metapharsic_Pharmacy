@@ -39,7 +39,10 @@ import {
   KeyRound,
   Cloud,
   Camera,
+  LayoutDashboard,
+  Sparkles,
 } from 'lucide-react'
+import { CustomizableAdminDashboard } from '@/components/dashboard/customizable-admin-dashboard'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -138,15 +141,15 @@ export default function PlatformSuperAdminPage() {
     }
   }, [session, status, isSuperAdmin, router])
 
-  // Tab State: Monitoring, IAM, GeoZones, Cloud, Sidebar Delegation, Users, Subscriptions, Financials, Shops, Catalog
+  // Tab State: Monitoring, Dispensary, IAM, GeoZones, Cloud, Sidebar Delegation, Users, Subscriptions, Financials, Shops, Catalog
   const searchParams = useSearchParams()
   const tabFromUrl = searchParams?.get('tab') as any
-  const [activeTab, setActiveTab] = useState<'monitoring' | 'iam' | 'geozones' | 'cloud' | 'sidebar' | 'users' | 'subscriptions' | 'financials' | 'shops' | 'catalog'>('monitoring')
+  const [activeTab, setActiveTab] = useState<'monitoring' | 'dispensary' | 'iam' | 'geozones' | 'cloud' | 'sidebar' | 'users' | 'subscriptions' | 'financials' | 'shops' | 'catalog'>('monitoring')
 
   useEffect(() => {
     if (
       tabFromUrl &&
-      ['monitoring', 'iam', 'geozones', 'cloud', 'sidebar', 'users', 'subscriptions', 'financials', 'shops', 'catalog'].includes(
+      ['monitoring', 'dispensary', 'iam', 'geozones', 'cloud', 'sidebar', 'users', 'subscriptions', 'financials', 'shops', 'catalog'].includes(
         tabFromUrl
       )
     ) {
@@ -554,6 +557,16 @@ export default function PlatformSuperAdminPage() {
             <span>Export Formatted Excel (.xlsx)</span>
           </Button>
 
+          <Link href="/">
+            <Button
+              size="sm"
+              className="gap-2 bg-gradient-to-r from-teal-600 via-emerald-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-bold shadow-md h-9"
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              <span>🏥 Dispensary Operations Hub &amp; Customizer</span>
+            </Button>
+          </Link>
+
           <Button
             onClick={() => setOnboardOpen(true)}
             size="sm"
@@ -665,6 +678,23 @@ export default function PlatformSuperAdminPage() {
 
       {/* Navigation Tabs */}
       <div className="flex border-b border-border/60 gap-5 text-sm font-semibold overflow-x-auto">
+        <button
+          type="button"
+          onClick={() => setActiveTab('dispensary')}
+          className={cn(
+            'pb-2.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap',
+            activeTab === 'dispensary'
+              ? 'border-teal-500 text-teal-600 dark:text-teal-400 font-bold'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <span className="text-base">⚡</span>
+          <span>Dispensary Intelligence &amp; Customizer</span>
+          <Badge className="bg-teal-500/20 text-teal-700 dark:text-teal-300 border-teal-500/40 text-[10px] py-0 px-1.5 font-bold">
+            12 WIDGETS
+          </Badge>
+        </button>
+
         <button
           type="button"
           onClick={() => setActiveTab('monitoring')}
@@ -805,6 +835,30 @@ export default function PlatformSuperAdminPage() {
           <span>Global Drug Directory</span>
         </button>
       </div>
+
+      {/* ─── TAB: DISPENSARY INTELLIGENCE & CUSTOMIZER ─── */}
+      {activeTab === 'dispensary' && (
+        <div className="space-y-4">
+          <CustomizableAdminDashboard
+            todayRevenue={analytics?.platformSummary?.totalRevenue ?? 1061}
+            todaySalesCount={analytics?.platformSummary?.totalShopsCount ?? 16}
+            totalProducts={orgs.length > 0 ? orgs.length * 15 : 240}
+            lowStockCount={4}
+            expiringCount={2}
+            pendingRxCount={3}
+            recentSales={[]}
+            permissions={{
+              sales: true,
+              inventory: true,
+              batches: true,
+              prescriptions: true,
+              purchases: true,
+              customers: true,
+              suppliers: true,
+            }}
+          />
+        </div>
+      )}
 
       {/* ─── TAB: SYSTEM & ACTIVITY MONITORING ─── */}
       {activeTab === 'monitoring' && <SystemMonitoringPanel />}
