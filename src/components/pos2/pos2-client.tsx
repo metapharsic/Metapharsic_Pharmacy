@@ -2746,9 +2746,38 @@ export function Pos2Client({ user, branches, initialConfig }: Pos2ClientProps) {
 
           {completedSale && (
             <>
+              {/* ─── WhatsApp & Automated Refill Reminder Banner ─────── */}
+              <div className="no-print rounded-xl border-2 border-emerald-500/40 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-transparent p-3.5 shadow-xs space-y-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start sm:items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold text-lg shadow-sm">
+                      ⚡
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-foreground flex items-center gap-2">
+                        <span>Automated Refill &amp; WhatsApp Bill Dispatch</span>
+                        <Badge className="bg-emerald-600 text-white text-[9px] font-mono h-4">ZERO-BLEED</Badge>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Instant WhatsApp invoice PDF with QR seal &bull; 48h chronic refill cues &bull; Day-3 patient check-in
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setWhatsAppInvoiceOpen(true)}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5 shrink-0 shadow-sm h-8 px-3"
+                  >
+                    <MessageSquare className="h-4 w-4 text-white" />
+                    WhatsApp Bill (Alt+W)
+                  </Button>
+                </div>
+              </div>
+
               <ReceiptInvoice
                 sale={completedSale as unknown as ReceiptData}
-                showPrintButton={false}
+                showPrintButton={true}
               />
               <div className="flex items-center justify-between gap-2 rounded-lg border bg-muted/40 p-2.5 text-xs">
                 <div className="flex min-w-0 items-center gap-2">
@@ -2796,12 +2825,12 @@ export function Pos2Client({ user, branches, initialConfig }: Pos2ClientProps) {
             </Button>
             <div className="flex items-center gap-2">
               <Button
-                variant="outline"
+                variant="default"
                 size="sm"
                 onClick={() => setWhatsAppInvoiceOpen(true)}
-                className="gap-1.5 border-emerald-600/40 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500/40 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+                className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs border-none"
               >
-                <MessageSquare className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                <MessageSquare className="h-4 w-4 text-white" />
                 WhatsApp Bill & Refill (Alt+W)
               </Button>
               <Button size="sm" onClick={() => window.print()} className="gap-1.5">

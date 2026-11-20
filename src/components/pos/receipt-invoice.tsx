@@ -7,7 +7,7 @@
 // ─────────────────────────────────────────────────────────────
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { format, isValid, parseISO } from 'date-fns'
-import { Download, FileSpreadsheet, Printer, QrCode, ShieldCheck, Globe } from 'lucide-react'
+import { Download, FileSpreadsheet, Printer, QrCode, ShieldCheck, Globe, Sparkles } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -931,6 +931,17 @@ export function ReceiptInvoice({
           <p className="leading-tight text-[8px]">
             2. Storage & Return: Store below 25°C in a dry place. Unopened items returnable within 7 days with original tax invoice.
           </p>
+
+          {/* ── Refill Advisory Schedule (Screen & Print) ── */}
+          <div className="mt-2 rounded border border-emerald-300 bg-emerald-50/70 p-2 text-[8px] text-emerald-950 dark:border-emerald-700/50 dark:bg-emerald-950/40 dark:text-emerald-200">
+            <div className="flex items-center gap-1 font-bold text-[8.5px] text-emerald-800 dark:text-emerald-300">
+              <Sparkles className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+              <span>⚡ AUTOMATED REFILL SCHEDULE & RETENTION NOTICE</span>
+            </div>
+            <p className="mt-0.5 text-[7.5px] leading-tight">
+              Prescription course calculated for maintenance replenishment. Next refill auto-queued for priority counter pickup. Inquire via WhatsApp or dispensary counter.
+            </p>
+          </div>
 
           <div className="mt-3 pt-3 border-t border-dashed border-zinc-400 flex items-end justify-between">
             <div>

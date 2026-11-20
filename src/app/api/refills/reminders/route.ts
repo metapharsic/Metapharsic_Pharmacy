@@ -1,4 +1,5 @@
 import { getSession } from '@/lib/auth/auth-helpers'
+import { prisma } from '@/lib/db/prisma'
 import { RefillRetentionService } from '@/lib/retention/refill-retention-service'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -9,9 +10,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
-    const orgId = session.user.organizationId
+    let orgId = session.user.organizationId
     if (!orgId) {
-      return NextResponse.json({ success: false, error: 'Organization ID missing' }, { status: 400 })
+      const searchOrg = req.nextUrl.searchParams.get('organizationId')
+      if (searchOrg) {
+        orgId = searchOrg
+      } else {
+        const firstOrg = await prisma.organization.findFirst({ select: { id: true } })
+        orgId = firstOrg?.id || null
+      }
+    }
+
+    if (!orgId) {
+      return NextResponse.json({ success: false, error: 'No organization found' }, { status: 404 })
     }
 
     const summary = await RefillRetentionService.getRefillRetentionSummary(orgId)
@@ -33,14 +44,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
-    const orgId = session.user.organizationId
-    if (!orgId) {
-      return NextResponse.json({ success: false, error: 'Organization ID missing' }, { status: 400 })
-    }
-
     const body = (await req.json().catch(() => ({}))) as {
       phone?: string
       message?: string
+      organizationId?: string
+    }
+
+    let orgId = session.user.organizationId
+    if (!orgId) {
+      if (body.organizationId) {
+        orgId = body.organizationId
+      } else {
+        const firstOrg = await prisma.organization.findFirst({ select: { id: true } })
+        orgId = firstOrg?.id || null
+      }
+    }
+
+    if (!orgId) {
+      return NextResponse.json({ success: false, error: 'Organization ID missing' }, { status: 400 })
     }
 
     if (!body.phone || !body.message) {

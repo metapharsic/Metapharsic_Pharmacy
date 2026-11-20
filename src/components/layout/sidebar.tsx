@@ -39,6 +39,9 @@ import {
   Terminal,
   Keyboard,
   Camera,
+  Sparkles,
+  MessageSquare,
+  Calendar,
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
@@ -133,6 +136,13 @@ const SUPERADMIN_NAV_SECTIONS: NavSection[] = [
         href: ROUTES.POS2,
         icon: ShoppingCart,
         badge: 'LAB',
+        badgeVariant: 'teal',
+      },
+      {
+        label: 'Refills & Retention Hub',
+        href: ROUTES.REFILLS,
+        icon: Sparkles,
+        badge: '⚡ RETENTION',
         badgeVariant: 'teal',
       },
       {
@@ -346,6 +356,20 @@ const STATIC_NAV_SECTIONS: NavSection[] = [
           },
           { label: 'Customers', href: ROUTES.CUSTOMERS, icon: UserCheck, permission: 'customers:read' },
           { label: 'Doctor Masters', href: ROUTES.DOCTORS, icon: Stethoscope, permission: 'sales:read' },
+        ],
+      },
+      {
+        label: 'Refills & Retention',
+        icon: Sparkles,
+        permission: 'sales:read',
+        module: 'sales',
+        badge: '⚡',
+        badgeVariant: 'teal',
+        children: [
+          { label: 'Refills & Retention Hub', href: ROUTES.REFILLS, icon: Sparkles, permission: 'sales:read' },
+          { label: 'WhatsApp Automation', href: '/refills?tab=whatsapp', icon: MessageSquare, permission: 'sales:read' },
+          { label: 'Customer Follow-ups', href: '/refills?tab=followups', icon: Users, permission: 'customers:read' },
+          { label: 'Refill Scheduling', href: '/refills?tab=schedules', icon: Calendar, permission: 'sales:read' },
         ],
       },
       { label: 'Returns', href: ROUTES.SALE_RETURNS, icon: RotateCcw, permission: 'returns:read', module: 'returns' },

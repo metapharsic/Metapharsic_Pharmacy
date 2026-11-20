@@ -51,6 +51,7 @@ export const ROUTES = {
   SALES: '/sales',
   SALE: (id: string) => `/sales/${id}`,
   DOCTORS: '/doctors',
+  REFILLS: '/refills',
 
   // Returns
   SALE_RETURNS: '/returns/sales',
@@ -150,6 +151,7 @@ export const API = {
   EXPIRY_EXPIRING: '/api/expiry/expiring',
   EXPIRY_EXPIRED: '/api/expiry/expired',
   AUDIT: '/api/audit',
+  REFILLS: '/api/refills/reminders',
   NOTIFICATIONS: '/api/notifications',
   FILES: '/api/files',
 } as const
