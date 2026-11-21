@@ -21,6 +21,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ROUTES } from '@/lib/constants/routes'
 import { useToast } from '@/lib/hooks/use-toast'
+import { PrescriptionScanModal } from './prescription-scan-modal'
+import type { ParsedPrescriptionResult } from '@/lib/scanner/prescription-parser'
 
 interface BranchOption {
   id: string
@@ -46,6 +48,28 @@ export function PrescriptionForm({ branches, defaultBranchId }: PrescriptionForm
   const [notes, setNotes] = useState('')
   const [imageUrl, setImageUrl] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isScanModalOpen, setIsScanModalOpen] = useState(false)
+
+  const handleApplyScanResult = (res: ParsedPrescriptionResult) => {
+    if (res.patient.name) setPatientName(res.patient.name)
+    if (res.patient.age) setPatientAge(String(res.patient.age))
+    if (res.patient.phone) setPatientPhone(res.patient.phone)
+    if (res.doctor.name) setDoctorName(res.doctor.name)
+    if (res.doctor.regNumber) setDoctorRegNumber(res.doctor.regNumber)
+    if (res.prescriptionDate) setPrescriptionDate(res.prescriptionDate)
+
+    if (res.medicines.length > 0) {
+      const medLines = res.medicines.map((m, i) => {
+        const drug = m.matchedProduct ? m.matchedProduct.productName : m.candidateName
+        const dose = `${m.dosage.formulation} - ${m.dosage.frequency}${m.dosage.duration ? ` (${m.dosage.duration})` : ''}${m.dosage.timing ? ` [${m.dosage.timing}]` : ''}`
+        return `${i + 1}. ${drug} | ${dose}`
+      })
+      const fullMedNotes = `PRESCRIBED MEDICINES:\n${medLines.join('\n')}${notes ? `\n\n${notes}` : ''}`
+      setNotes(fullMedNotes)
+    }
+
+    toast.success('Form Auto-Filled', 'Prescription details and medications populated.')
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -115,11 +139,21 @@ export function PrescriptionForm({ branches, defaultBranchId }: PrescriptionForm
   return (
     <form onSubmit={handleSubmit}>
       <Card className="mx-auto max-w-2xl">
-        <CardHeader>
-          <CardTitle>New Prescription</CardTitle>
-          <CardDescription>
-            Register a patient prescription for verification and dispensing
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <div>
+            <CardTitle>New Prescription</CardTitle>
+            <CardDescription>
+              Register a patient prescription for verification and dispensing
+            </CardDescription>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="flex items-center gap-1.5 border-blue-300 bg-blue-50/50 hover:bg-blue-100/70 text-blue-700 shadow-2xs"
+            onClick={() => setIsScanModalOpen(true)}
+          >
+            <span>⚡ AI / OCR Scan Rx</span>
+          </Button>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -246,6 +280,13 @@ export function PrescriptionForm({ branches, defaultBranchId }: PrescriptionForm
           </Button>
         </CardFooter>
       </Card>
+
+      <PrescriptionScanModal
+        isOpen={isScanModalOpen}
+        onClose={() => setIsScanModalOpen(false)}
+        onApply={handleApplyScanResult}
+        branchId={branchId}
+      />
     </form>
   )
 }

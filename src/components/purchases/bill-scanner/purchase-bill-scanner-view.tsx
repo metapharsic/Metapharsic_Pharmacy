@@ -13,6 +13,7 @@ import {
   RotateCcw,
   Sparkles,
   Wand2,
+  Zap,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -83,6 +84,7 @@ export function PurchaseBillScannerView({
   const [scanProgress, setScanProgress] = useState<number>(0)
   const [isScanning, setIsScanning] = useState<boolean>(false)
   const [scanErrorMessage, setScanErrorMessage] = useState<string | null>(null)
+  const [ocrEngineMode, setOcrEngineMode] = useState<'zero-llm' | 'hybrid'>('zero-llm')
 
   // Structured Review State
   const [billData, setBillData] = useState<ReviewBillData>({
@@ -220,8 +222,9 @@ export function PurchaseBillScannerView({
         }
         formData.append('autoProvision', String(autoProvisionOnScan))
 
-        // API Call to POST /api/purchases/scan
-        const response = await fetch('/api/purchases/scan', {
+        // API Call: Deterministic Zero-LLM (Local) or Hybrid Multi-Tier OCR
+        const endpoint = ocrEngineMode === 'zero-llm' ? '/api/purchases/scan-deterministic' : '/api/purchases/scan'
+        const response = await fetch(endpoint, {
           method: 'POST',
           body: formData,
         })
@@ -396,7 +399,7 @@ export function PurchaseBillScannerView({
         setIsScanning(false)
       }
     },
-    [billData.branchId, branches, toast, autoProvisionOnScan]
+    [billData.branchId, branches, toast, autoProvisionOnScan, ocrEngineMode]
   )
 
   // Clear or Reset Document
@@ -850,6 +853,32 @@ export function PurchaseBillScannerView({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Engine Selector: Zero-LLM Deterministic vs AI/Cloud */}
+          <div className="flex items-center bg-muted/60 p-0.5 rounded-md border text-xs">
+            <Button
+              type="button"
+              size="sm"
+              variant={ocrEngineMode === 'zero-llm' ? 'default' : 'ghost'}
+              className="h-7 text-xs px-2.5 gap-1 font-medium"
+              onClick={() => setOcrEngineMode('zero-llm')}
+              title="Zero-LLM: 100% deterministic local OCR & table reconstruction. Zero cloud token costs."
+            >
+              <Zap className="h-3 w-3 text-amber-400 fill-amber-400" />
+              ⚡ Zero-LLM (Local)
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={ocrEngineMode === 'hybrid' ? 'default' : 'ghost'}
+              className="h-7 text-xs px-2.5 gap-1 font-medium"
+              onClick={() => setOcrEngineMode('hybrid')}
+              title="Cloud / Gemini AI multi-tier OCR pipeline"
+            >
+              <Sparkles className="h-3 w-3" />
+              AI Cloud
+            </Button>
+          </div>
+
           <Badge variant="outline" className="text-xs font-mono">
             {branches.find((b) => b.id === billData.branchId)?.name || 'Active Branch'}
           </Badge>
