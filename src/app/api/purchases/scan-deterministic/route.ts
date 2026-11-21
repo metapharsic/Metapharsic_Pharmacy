@@ -5,6 +5,7 @@ import { requirePermission } from '@/lib/auth/auth-helpers'
 import { PERMISSIONS } from '@/lib/constants/permissions'
 import { runDeterministicOcr } from '@/lib/scanner/deterministic-ocr-client'
 import { reconstructInvoiceFromBoxes } from '@/lib/scanner/spatial-table-reconstructor'
+import { parsePurchaseBill } from '@/lib/scanner/purchase-bill-parser'
 
 export const dynamic = 'force-dynamic'
 
@@ -62,6 +63,24 @@ export async function POST(req: NextRequest) {
     const allBoxes = ocrResult.pages.flatMap((p) => p.boxes)
     const reconstructed = reconstructInvoiceFromBoxes(allBoxes)
     const processingTimeMs = Date.now() - t0
+
+    // Automatic AI Vision Cascade: If deterministic spatial clustering yields fewer than 3 items
+    // (typical on crumpled, skewed, or mobile phone camera photos), seamlessly upgrade to Gemini Vision
+    if (reconstructed.items.length < 3 && process.env.GEMINI_API_KEY) {
+      try {
+        const mimeType = filename.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'
+        const aiFallback = await parsePurchaseBill(fileBuffer, mimeType, { filename })
+        if (aiFallback.success && aiFallback.extractedData?.items?.length > 0) {
+          return NextResponse.json({
+            ...aiFallback,
+            extractionMethod: 'HYBRID_AI_VISION_CASCADE',
+            processingTimeMs: Date.now() - t0,
+          })
+        }
+      } catch (cascadeErr) {
+        console.warn('[DeterministicScan] AI cascade fallback error:', cascadeErr)
+      }
+    }
 
     return NextResponse.json({
       success: reconstructed.success,

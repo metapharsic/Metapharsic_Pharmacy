@@ -376,7 +376,12 @@ export function reconstructInvoiceFromBoxes(boxes: OcrBoundingBox[]): Reconstruc
     const taxPct = cleanOcrNumber((colBuckets.taxPercent || [])[0] || '12') || 12
     const totalAmount = cleanOcrNumber((colBuckets.totalAmount || [])[0] || '0')
 
-    const batch = (colBuckets.batchNumber || []).join('') || 'BATCH123'
+    // Discard noise rows that have zero financial data
+    if (unitCost <= 0 && mrp <= 0 && totalAmount <= 0) {
+      continue
+    }
+
+    const batch = (colBuckets.batchNumber || []).join('').trim() || ''
     const expRaw = (colBuckets.expiryDate || [])[0] || ''
     const expiry = normalizeExpiryDate(expRaw)
     const hsn = (colBuckets.hsnCode || [])[0] || '3004'
@@ -474,7 +479,7 @@ export function reconstructInvoiceFromBoxes(boxes: OcrBoundingBox[]): Reconstruc
       }
 
       // 3. Batch number: alphanumeric token of 5-12 chars
-      let batch = 'BATCH123'
+      let batch = ''
       const batchMatch = rowText.match(/\b([A-Z0-9]{2,}[0-9][A-Z0-9]{2,})\b/)
       if (batchMatch && !batchMatch[1].includes('.')) {
         batch = batchMatch[1]
@@ -496,7 +501,7 @@ export function reconstructInvoiceFromBoxes(boxes: OcrBoundingBox[]): Reconstruc
         .replace(/\b\d{1,2}[/\-7]\d{2,4}\b/g, '')
         .trim()
 
-      if (batch !== 'BATCH123') {
+      if (batch) {
         cleanName = cleanName.replace(batch, '').trim()
       }
       cleanName = cleanName.replace(/\b\d+\b/g, '').replace(/\s+/g, ' ').trim()

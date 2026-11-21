@@ -84,7 +84,7 @@ export function PurchaseBillScannerView({
   const [scanProgress, setScanProgress] = useState<number>(0)
   const [isScanning, setIsScanning] = useState<boolean>(false)
   const [scanErrorMessage, setScanErrorMessage] = useState<string | null>(null)
-  const [ocrEngineMode, setOcrEngineMode] = useState<'zero-llm' | 'hybrid'>('zero-llm')
+  const [ocrEngineMode, setOcrEngineMode] = useState<'zero-llm' | 'hybrid'>('hybrid')
 
   // Structured Review State
   const [billData, setBillData] = useState<ReviewBillData>({
@@ -893,7 +893,7 @@ export function PurchaseBillScannerView({
 
       {/* Top Section: Upload Dropzone & Scanning Feedback */}
       <div className="space-y-3">
-        {/* Auto-Provision Configuration Switch */}
+        {/* Auto-Provision & Engine Configuration Switch */}
         <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg border border-primary/20 bg-primary/5">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -913,15 +913,42 @@ export function PurchaseBillScannerView({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="auto-provision-toggle"
-              checked={autoProvisionOnScan}
-              onCheckedChange={(checked) => setAutoProvisionOnScan(Boolean(checked))}
-            />
-            <Label htmlFor="auto-provision-toggle" className="text-xs text-muted-foreground cursor-pointer select-none">
-              {autoProvisionOnScan ? 'Auto-Provision Enabled' : 'Disabled'}
-            </Label>
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Inline Engine Toggle */}
+            <div className="flex items-center bg-background/80 p-0.5 rounded-md border text-xs shadow-sm">
+              <Button
+                type="button"
+                size="sm"
+                variant={ocrEngineMode === 'hybrid' ? 'default' : 'ghost'}
+                className="h-7 text-xs px-2.5 gap-1.5 font-medium"
+                onClick={() => setOcrEngineMode('hybrid')}
+                title="AI Cloud Vision (Gemini 2.5 Flash): High-accuracy semantic extraction for crumpled/phone photos"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+                AI Cloud (Recommended)
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={ocrEngineMode === 'zero-llm' ? 'default' : 'ghost'}
+                className="h-7 text-xs px-2.5 gap-1.5 font-medium"
+                onClick={() => setOcrEngineMode('zero-llm')}
+                title="Zero-LLM: 100% deterministic local spatial OCR & table reconstruction"
+              >
+                <Zap className="h-3.5 w-3.5 text-amber-500" />
+                Zero-LLM (Local)
+              </Button>
+            </div>
+            <div className="flex items-center gap-2 border-l pl-4 border-border/50">
+              <Checkbox
+                id="auto-provision-toggle"
+                checked={autoProvisionOnScan}
+                onCheckedChange={(checked) => setAutoProvisionOnScan(Boolean(checked))}
+              />
+              <Label htmlFor="auto-provision-toggle" className="text-xs text-muted-foreground cursor-pointer select-none">
+                {autoProvisionOnScan ? 'Auto-Provision Enabled' : 'Disabled'}
+              </Label>
+            </div>
           </div>
         </div>
 
