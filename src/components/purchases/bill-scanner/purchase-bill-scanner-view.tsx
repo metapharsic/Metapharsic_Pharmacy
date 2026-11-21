@@ -126,10 +126,11 @@ export function PurchaseBillScannerView({
 
     async function fetchMasterTables() {
       try {
-        const [suppliersRes, productsRes, branchesRes] = await Promise.all([
+        const [suppliersRes, productsRes, branchesRes, ocrRes] = await Promise.all([
           fetch('/api/suppliers?view=master'),
           fetch('/api/products?limit=1000'),
           fetch('/api/inventory/branches'),
+          fetch('/api/settings/ocr-status').catch(() => null),
         ])
 
         const sData = (await suppliersRes.json()) as { success?: boolean; data?: MasterSupplier[] }
@@ -137,6 +138,17 @@ export function PurchaseBillScannerView({
         const bData = (await branchesRes.json()) as { success?: boolean; data?: MasterBranch[] }
 
         if (!active) return
+
+        if (ocrRes) {
+          try {
+            const ocrData = (await ocrRes.json()) as { success?: boolean; activeEngine?: string }
+            if (ocrData.success && ocrData.activeEngine) {
+              setOcrEngineMode(ocrData.activeEngine === 'zero-llm' ? 'zero-llm' : 'hybrid')
+            }
+          } catch {
+            // Graceful fallback to default
+          }
+        }
 
         if (sData.success && Array.isArray(sData.data)) {
           setSuppliers(sData.data)

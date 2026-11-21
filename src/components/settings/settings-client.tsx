@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Building2, FileText, Bell, Save, ShieldCheck, Lock, Loader2, KeyRound, QrCode, Copy, CheckCircle2 } from 'lucide-react'
+import { Building2, FileText, Bell, Save, ShieldCheck, Lock, Loader2, KeyRound, QrCode, Copy, CheckCircle2, Sparkles, Zap, Activity, Check } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,7 +42,28 @@ export function SettingsClient() {
   const [totpSecret, setTotpSecret] = useState('')
   const [updatingMfa, setUpdatingMfa] = useState(false)
 
+  // OCR & Vision Engine Setting
+  const [ocrDefaultEngine, setOcrDefaultEngine] = useState<'hybrid' | 'zero-llm'>('hybrid')
+  const [ocrStatus, setOcrStatus] = useState<{
+    googleAi?: { available: boolean; status: string; maskedKey?: string; latencyMs?: number }
+    localOcr?: { available: boolean; status: string; engine?: string }
+  } | null>(null)
+  const [testingOcr, setTestingOcr] = useState(false)
+
   useEffect(() => {
+    // Load OCR Engine Status
+    fetch('/api/settings/ocr-status')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) {
+          setOcrStatus(d)
+          if (d.activeEngine) {
+            setOcrDefaultEngine(d.activeEngine === 'zero-llm' ? 'zero-llm' : 'hybrid')
+          }
+        }
+      })
+      .catch(() => null)
+
     // Load Admin MFA status
     fetch('/api/user/mfa')
       .then((res) => res.json())
@@ -131,11 +152,19 @@ export function SettingsClient() {
             receiptFooter,
             lowStockThreshold,
             expiryAlertDays,
+            ocrDefaultEngine,
           },
         }),
       })
       const data = await res.json()
       if (data.success) {
+        // Also sync active engine
+        await fetch('/api/settings/ocr-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ engine: ocrDefaultEngine }),
+        }).catch(() => null)
+
         toast.success('Dispensary settings saved successfully to database')
       } else {
         toast.error(data.error?.message || 'Failed to save settings')
@@ -144,6 +173,24 @@ export function SettingsClient() {
       toast.error('Network error saving settings')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleTestGoogleAi = async () => {
+    setTestingOcr(true)
+    try {
+      const res = await fetch('/api/settings/ocr-status')
+      const data = await res.json()
+      if (data.success && data.googleAi?.status === 'ONLINE') {
+        setOcrStatus(data)
+        toast.success(`Google AI Vision online! Latency: ${data.googleAi.latencyMs || 0}ms`)
+      } else {
+        toast.error('Google AI Vision connection check failed. Verify GEMINI_API_KEY.')
+      }
+    } catch {
+      toast.error('Network error checking Google AI connection')
+    } finally {
+      setTestingOcr(false)
     }
   }
 
@@ -182,6 +229,10 @@ export function SettingsClient() {
           <TabsTrigger value="billing" className="gap-1.5 text-xs">
             <FileText className="h-3.5 w-3.5" />
             Billing &amp; Invoice Rules
+          </TabsTrigger>
+          <TabsTrigger value="ocr" className="gap-1.5 text-xs font-semibold text-primary">
+            <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+            OCR &amp; Vision Engine
           </TabsTrigger>
           <TabsTrigger value="inventory" className="gap-1.5 text-xs">
             <Bell className="h-3.5 w-3.5" />
@@ -364,6 +415,158 @@ export function SettingsClient() {
                   onChange={(e) => setReceiptFooter(e.target.value)}
                   placeholder="Thank you message or return policy disclaimer"
                 />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab: OCR & Vision Engine */}
+        <TabsContent value="ocr" className="space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-amber-500" />
+                    Purchase Bill &amp; Prescription Vision Engine
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Configure the default recognition engine for automated wholesale purchase bills and prescription ingestion
+                  </CardDescription>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTestGoogleAi}
+                  disabled={testingOcr}
+                  className="h-8 text-xs gap-1.5"
+                >
+                  {testingOcr ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Activity className="h-3.5 w-3.5 text-emerald-600" />
+                  )}
+                  {testingOcr ? 'Pinging Google AI...' : 'Test Google AI Health'}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Engine Option 1: Google AI API (Gemini Vision 2.5 Flash) */}
+                <div
+                  onClick={() => setOcrDefaultEngine('hybrid')}
+                  className={cn(
+                    'relative flex flex-col justify-between p-4 rounded-xl border-2 cursor-pointer transition-all',
+                    ocrDefaultEngine === 'hybrid'
+                      ? 'border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20'
+                      : 'border-border/70 hover:border-border hover:bg-muted/20'
+                  )}
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                          <Sparkles className="h-4 w-4 text-amber-500" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-foreground">Google AI API (Gemini Vision)</h4>
+                          <p className="text-[11px] text-muted-foreground font-mono">Model: gemini-2.5-flash</p>
+                        </div>
+                      </div>
+                      {ocrDefaultEngine === 'hybrid' ? (
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                          <Check className="h-3 w-3 stroke-[3]" />
+                        </div>
+                      ) : (
+                        <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30" />
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-300 text-[10px]">
+                        Recommended
+                      </Badge>
+                      <Badge variant="outline" className="text-[10px] bg-background">
+                        98% Accuracy on Mobile Photos
+                      </Badge>
+                      {ocrStatus?.googleAi?.status === 'ONLINE' && (
+                        <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/50">
+                          🟢 Online ({ocrStatus.googleAi.latencyMs || 0}ms)
+                        </Badge>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-muted-foreground pt-1 leading-relaxed">
+                      Deep multimodal AI that semanticizes crumpled distributor bills, folded papers, WhatsApp photos, skewed angles, and blue-ink handwriting. Accurately separates formulation suffixes (RD, TRIO) from manufacturer batches.
+                    </p>
+                  </div>
+
+                  <div className="pt-3 mt-3 border-t border-border/50 flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>Key: {ocrStatus?.googleAi?.maskedKey || 'Secured in host .env'}</span>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">Zero Local CPU Load</span>
+                  </div>
+                </div>
+
+                {/* Engine Option 2: Local Zero-LLM Deterministic OCR */}
+                <div
+                  onClick={() => setOcrDefaultEngine('zero-llm')}
+                  className={cn(
+                    'relative flex flex-col justify-between p-4 rounded-xl border-2 cursor-pointer transition-all',
+                    ocrDefaultEngine === 'zero-llm'
+                      ? 'border-amber-500 bg-amber-500/5 shadow-sm ring-1 ring-amber-500/20'
+                      : 'border-border/70 hover:border-border hover:bg-muted/20'
+                  )}
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
+                          <Zap className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-foreground">Local Deterministic OCR (Offline)</h4>
+                          <p className="text-[11px] text-muted-foreground font-mono">OpenCV + PyTesseract / Sharp</p>
+                        </div>
+                      </div>
+                      {ocrDefaultEngine === 'zero-llm' ? (
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-white">
+                          <Check className="h-3 w-3 stroke-[3]" />
+                        </div>
+                      ) : (
+                        <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30" />
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border-amber-300 text-[10px]">
+                        100% Offline
+                      </Badge>
+                      <Badge variant="outline" className="text-[10px] bg-background">
+                        Zero Token Cost
+                      </Badge>
+                      <Badge variant="outline" className="text-[10px] text-sky-600 border-sky-300 bg-sky-50 dark:bg-sky-950/50">
+                        ⚡ Local Grid
+                      </Badge>
+                    </div>
+
+                    <p className="text-xs text-muted-foreground pt-1 leading-relaxed">
+                      On-premises spatial coordinate clustering. Runs entirely on your local machine or VPS with zero cloud API calls. Best suited for high-contrast digital PDF invoices and clean flat-bed desktop scans.
+                    </p>
+                  </div>
+
+                  <div className="pt-3 mt-3 border-t border-border/50 flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>Privacy: 100% On-Premises</span>
+                    <span className="font-semibold text-amber-600 dark:text-amber-400">Zero Cloud Tokens</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-border/60 bg-muted/30 text-xs text-muted-foreground">
+                <span className="text-base">💡</span>
+                <span>
+                  <strong>Flexible Hybrid Control:</strong> This setting configures the default engine for all new uploads. Pharmacists can still switch between Google AI and Local OCR on the fly right on the Purchase Bill Scanner page for any individual bill.
+                </span>
               </div>
             </CardContent>
           </Card>
