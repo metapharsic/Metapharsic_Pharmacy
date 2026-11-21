@@ -168,6 +168,32 @@ def extract_boxes_from_image(img_bgr, mode='invoice', page_idx=0):
                             })
         except Exception:
             pass
+    else:
+        # Fallback to pytesseract with spatial coordinates
+        try:
+            import pytesseract
+            data = pytesseract.image_to_data(preprocessed, output_type=pytesseract.Output.DICT)
+            n_boxes = len(data['text'])
+            for i in range(n_boxes):
+                t = str(data['text'][i]).strip()
+                if not t:
+                    continue
+                conf = float(data['conf'][i])
+                if conf < 10:
+                    continue
+                x, y, w, h = data['left'][i], data['top'][i], data['width'][i], data['height'][i]
+                x1 = float(x) * scale_x
+                y1 = float(y) * scale_y
+                x2 = float(x + w) * scale_x
+                y2 = float(y + h) * scale_y
+                boxes.append({
+                    "text": t,
+                    "confidence": round(conf / 100.0, 3),
+                    "box": [round(x1, 1), round(y1, 1), round(x2, 1), round(y2, 1)],
+                    "page": page_idx + 1
+                })
+        except Exception:
+            pass
 
     return {
         "page": page_idx + 1,
