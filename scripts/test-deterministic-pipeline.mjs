@@ -12,7 +12,8 @@ const imgPath = path.resolve(rootDir, 'invoice_pic/1.jpeg')
 const pyScript = path.resolve(rootDir, 'scripts/deterministic_ocr_engine.py')
 
 const t0 = Date.now()
-const py = spawn('python', [pyScript, '--input', imgPath, '--mode', 'invoice'])
+const pythonBin = process.platform === 'win32' ? 'python' : 'python3'
+const py = spawn(pythonBin, [pyScript, '--input', imgPath, '--mode', 'invoice'])
 
 let stdout = ''
 let stderr = ''

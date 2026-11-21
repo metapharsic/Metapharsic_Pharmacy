@@ -227,7 +227,8 @@ export async function runDeterministicOcr(
     }
 
     try {
-      const pyProc = spawn('python', [scriptPath, '--input', filePath, '--mode', mode], {
+      const pythonBin = process.env.PYTHON_BIN || (process.platform === 'win32' ? 'python' : 'python3')
+      const pyProc = spawn(pythonBin, [scriptPath, '--input', filePath, '--mode', mode], {
         windowsHide: true,
         timeout: 25000,
         env: {
