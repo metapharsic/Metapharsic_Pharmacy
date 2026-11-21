@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest'
 import { parseDosageFromLine } from '../prescription-parser'
 
 describe('Zero-LLM Prescription Dosage Pattern Parser', () => {

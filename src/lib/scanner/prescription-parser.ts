@@ -10,7 +10,7 @@
  *    - < 0.85: Flagged with Top 3 inventory matches for 1-click pharmacist disambiguation.
  */
 
-import prisma from '@/lib/db/prisma'
+import prisma from '../db/prisma'
 import { cleanMedicineName, calculateTrigramSimilarity } from './entity-matcher'
 import type { OcrBoundingBox } from './deterministic-ocr-client'
 import { normalizeExpiryDate } from './spatial-table-reconstructor'

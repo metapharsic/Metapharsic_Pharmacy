@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest'
 import { parseThermalReceipt } from '../receipt-parser'
 import type { OcrBoundingBox } from '../deterministic-ocr-client'
 
