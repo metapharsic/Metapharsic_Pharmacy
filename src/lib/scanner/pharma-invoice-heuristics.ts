@@ -376,26 +376,52 @@ function tryParseItemFromLine(
   const beforeWords = beforeExpiry.split(/\s+/).filter(Boolean)
   const afterWords = afterExpiry.split(/\s+/).filter(Boolean)
 
-  // Batch is often the token immediately before or after expiry (including 2-char codes like MD, MA)
+  const MEDICINE_KEYWORDS = new Set([
+    'TAB', 'TABS', 'TABLET', 'TABLETS', 'CAP', 'CAPS', 'CAPSULE', 'CAPSULES',
+    'SYP', 'SYRUP', 'INJ', 'INJECTION', 'OINT', 'OINTMENT', 'GEL', 'DROPS',
+    'DROP', 'DROBT', 'SUSP', 'SUSPENSION', 'SOL', 'SOLUTION', 'CREAM',
+    'RESPULES', 'ROTACAPS', 'LOTION', 'POWDER', 'MG', 'GM', 'ML', 'MCG',
+    'PLUS', 'FORTE', 'DUO', 'TRIO', 'DS', 'SF', 'RD', 'CV', 'DM', 'H',
+  ])
+
+  // Batch is often the token immediately before or after expiry (preferring alphanumeric with digits)
   let batchNumber = ''
-  if (beforeWords.length > 0 && /^[A-Za-z0-9\-_]{2,15}$/.test(beforeWords[beforeWords.length - 1])) {
-    const candidate = beforeWords[beforeWords.length - 1]
-    if (candidate !== hsnCode && !PACK_SIZE_REGEX.test(candidate)) {
+  if (beforeWords.length > 0) {
+    const candidate = beforeWords[beforeWords.length - 1].toUpperCase()
+    if (
+      candidate !== hsnCode &&
+      !PACK_SIZE_REGEX.test(candidate) &&
+      !MEDICINE_KEYWORDS.has(candidate) &&
+      /^[A-Za-z0-9\-_]{2,15}$/.test(candidate)
+    ) {
       batchNumber = candidate
       beforeWords.pop()
     }
   }
 
-  if (!batchNumber && afterWords.length > 0 && /^[A-Za-z0-9\-_]{2,15}$/.test(afterWords[0])) {
-    batchNumber = afterWords.shift()!
+  if (!batchNumber && afterWords.length > 0) {
+    const candidate = afterWords[0].toUpperCase()
+    if (!MEDICINE_KEYWORDS.has(candidate) && /^[A-Za-z0-9\-_]{2,15}$/.test(candidate)) {
+      batchNumber = candidate
+      afterWords.shift()
+    }
+  }
+
+  // Look for any alphanumeric token with mixed letters & digits anywhere in words
+  if (!batchNumber) {
+    const candidate = words.find(
+      (w) =>
+        /^(?=[A-Za-z0-9]{3,15}$)(?=.*[A-Za-z])(?=.*[0-9]).*$/.test(w) &&
+        w !== hsnCode &&
+        !MEDICINE_KEYWORDS.has(w.toUpperCase())
+    )
+    if (candidate) {
+      batchNumber = candidate.toUpperCase()
+    }
   }
 
   if (!batchNumber) {
-    // Search anywhere for batch-like token
-    const candidate = words.find(
-      (w) => /^[A-Z0-9]{2,12}$/.test(w) && w !== hsnCode && !/^\d+$/.test(w)
-    )
-    batchNumber = candidate || `BATCH-${index}`
+    batchNumber = `BATCH-${index}`
   }
 
   // Numbers parsing from afterExpiry (quantities, rates, taxes, totals)
@@ -504,9 +530,23 @@ function tryParseItemFromLine(
   }
 
   // Product description is the remaining text in beforeExpiry
-  let rawDescription = beforeWords.join(' ').replace(/^\d+[\.\s\-]+/, '').trim()
-  if (!rawDescription) {
-    rawDescription = `MEDICINE ITEM ${index}`
+  let rawDescription = beforeWords.join(' ').trim()
+
+  // Clean leading noise: serial numbers, OCR artifacts (le, Hh, 1|, 3|__-, etc.)
+  rawDescription = rawDescription.replace(/^[0-9\.\-\|\<\~\*\_\"\:\s\=\>\+\(\)\#\[\]]+/, '').trim()
+  rawDescription = rawDescription.replace(/^(?:le|Hh|ll|II|I\s*[;:])/i, '').trim()
+  rawDescription = rawDescription.replace(/^[0-9\.\-\|\<\~\*\_\"\:\s\=\>\+\(\)\#\[\]]+/, '').trim()
+
+  // Clean trailing noise: brackets, stray symbols, rate/tax column bleed
+  rawDescription = rawDescription.replace(/[\*\[\(].*$/, '').trim()
+  rawDescription = rawDescription.replace(/\s*[\=\-\.\:\_]+\s*N[0-9].*$/, '').trim()
+  rawDescription = rawDescription.replace(/\s*\|\s*.*$/, '').trim()
+  rawDescription = rawDescription.replace(/[\s\-_*#]+$/, '').trim()
+
+  // Discard pure numeric, barcode, or punctuation noise lines (must have at least 3 alphabet characters for a legitimate medicine name)
+  const alphabetCount = rawDescription.replace(/[^A-Za-z]/g, '').length
+  if (alphabetCount < 3) {
+    return null
   }
 
   // Ensure MRP >= unitCost

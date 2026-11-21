@@ -200,14 +200,33 @@ export interface ExtractedBillDetails extends ParsedInvoiceData {
 }
 
 const GEMINI_VISION_MODELS = [
-  'gemini-3.5-flash',
-  'gemini-3-flash-preview',
   'gemini-2.5-flash',
   'gemini-flash-latest',
+  'gemini-2.5-flash-lite',
+  'gemini-3-flash-preview',
 ]
 
 /**
- * Cloud AI Vision extraction using Google Gemini (3.5 Flash / 3 Flash / 2.5 Flash) with JSON schema.
+ * Normalizes an expiry date to the last calendar day of that month.
+ * e.g. 2026-08-01 -> 2026-08-31, 2028-02-01 -> 2028-02-29
+ */
+function normalizeToMonthEnd(rawDate?: string | null): string {
+  if (!rawDate) return new Date().toISOString().slice(0, 10)
+  const trimmed = rawDate.trim()
+  const m = trimmed.match(/^(\d{4})[-/](\d{1,2})(?:[-/]\d{1,2})?$/)
+  if (m) {
+    const year = parseInt(m[1], 10)
+    const month = parseInt(m[2], 10)
+    if (month >= 1 && month <= 12) {
+      const lastDay = new Date(year, month, 0).getDate()
+      return `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+    }
+  }
+  return trimmed
+}
+
+/**
+ * Cloud AI Vision extraction using Google Gemini (2.5 Flash / Flash Latest) with JSON schema.
  * Supports images as well as native digital and scanned PDFs.
  */
 export async function extractWithGeminiVision(
@@ -224,9 +243,9 @@ Analyze this purchase bill and extract the data as strict JSON conforming to thi
 {
   "supplier": {
     "rawName": "string",
-    "gstin": "string (15 chars)",
+    "gstin": "string",
     "dlNumber": "string",
-    "pan": "string (10 chars)",
+    "pan": "string",
     "phone": "string",
     "email": "string",
     "address": "string",
@@ -241,7 +260,7 @@ Analyze this purchase bill and extract the data as strict JSON conforming to thi
   },
   "paymentTerms": {
     "paymentMethod": "CASH | UPI | CREDIT | CARD | NETBANKING | CHEQUE",
-    "creditDays": number,
+    "creditDays": 30,
     "dueDate": "YYYY-MM-DD",
     "paymentReference": "string or null",
     "upiVpa": "string or null",
@@ -251,11 +270,11 @@ Analyze this purchase bill and extract the data as strict JSON conforming to thi
   },
   "items": [
     {
-      "rawDescription": "string",
-      "packSize": "string",
-      "hsnCode": "string",
-      "batchNumber": "string",
-      "expiryDate": "YYYY-MM-DD (last day of month)",
+      "rawDescription": "string (clean medicine / formulation brand name without serial numbers or leading symbols)",
+      "packSize": "string (e.g. 10 Tabs, 100ml)",
+      "hsnCode": "string (e.g. 3004)",
+      "batchNumber": "string (actual alphanumeric batch / lot code)",
+      "expiryDate": "YYYY-MM-DD (normalized to last day of expiry month)",
       "billedQuantity": number,
       "freeQuantity": number,
       "unitCost": number,
@@ -336,74 +355,96 @@ Analyze this purchase bill and extract the data as strict JSON conforming to thi
     }
 
     for (const model of GEMINI_VISION_MODELS) {
-      for (let attempt = 1; attempt <= 2; attempt++) {
-        try {
-          const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents: [
-                  {
-                    parts: [
-                      { text: prompt },
-                      {
-                        inline_data: {
-                          mime_type: mimeType,
-                          data: base64Data,
-                        },
-                      },
-                    ],
-                  },
-                ],
-                generationConfig: {
-                  response_mime_type: 'application/json',
-                  temperature: 0.1,
-                },
-              }),
-            }
-          )
+      try {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 90000)
 
-          if (!response.ok) {
-            // If 503 or 429, retry once after short delay, else break to next model
-            if ((response.status === 503 || response.status === 429) && attempt === 1) {
-              await new Promise((r) => setTimeout(r, 1000))
-              continue
-            }
-            break
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    { text: prompt },
+                    {
+                      inline_data: {
+                        mime_type: mimeType,
+                        data: base64Data,
+                      },
+                    },
+                  ],
+                },
+              ],
+              generationConfig: {
+                response_mime_type: 'application/json',
+                temperature: 0.1,
+              },
+            }),
           }
+        )
+        clearTimeout(timeoutId)
+
+        if (!response.ok) {
+          continue
+        }
 
           const data = (await response.json()) as GeminiApiResponse
           const contentText = data?.candidates?.[0]?.content?.parts?.[0]?.text
           if (!contentText || typeof contentText !== 'string') break
 
           const parsedJson = JSON.parse(contentText) as GeminiInvoiceRaw
-          const items: ExtractedLineItem[] = (parsedJson.items || []).map((it, idx) => ({
-            id: `item-${idx + 1}`,
-            rawDescription: it.rawDescription || 'Unknown Medicine',
-            matchConfidence: 0.98,
-            isNewProduct: true,
-            packSize: it.packSize,
-            hsnCode: it.hsnCode || '3004',
-            batchNumber: String(it.batchNumber || `BATCH-${idx + 1}`).trim().toUpperCase(),
-            expiryDate: it.expiryDate || new Date().toISOString().slice(0, 10),
-            billedQuantity: Number(it.billedQuantity) || 1,
-            freeQuantity: Number(it.freeQuantity) || 0,
-            unitCost: Number(it.unitCost) || 0,
-            mrp: Number(it.mrp) || 0,
-            discountPercent: Number(it.discountPercent) || 0,
-            taxPercent: Number(it.taxPercent) || 12,
-            taxAmount: Number(it.taxAmount) || 0,
-            totalAmount: Number(it.totalAmount) || 0,
-          }))
+          const items: ExtractedLineItem[] = (parsedJson.items || []).map((it, idx) => {
+            // Clean medicine description: strip leading bullets, numbers, hyphens
+            let cleanDesc = String(it.rawDescription || `Medicine Item ${idx + 1}`).trim()
+            cleanDesc = cleanDesc.replace(/^[0-9\.\-\|\<\~\*\_\"\:\s\=\>\+]+/, '').trim()
+            if (!cleanDesc) cleanDesc = `Medicine Item ${idx + 1}`
+
+            const normalizedExp = normalizeToMonthEnd(it.expiryDate)
+            const billedQty = Number(it.billedQuantity) || 1
+            const freeQty = Number(it.freeQuantity) || 0
+            const unitCost = Number(it.unitCost) || 0
+            let mrp = Number(it.mrp) || 0
+            if (mrp <= 0 && unitCost > 0) mrp = Math.round(unitCost * 1.35 * 100) / 100
+
+            const discPct = Number(it.discountPercent) || 0
+            const taxPct = Number(it.taxPercent) || 12
+            const lineTaxable = Math.round(billedQty * unitCost * (1 - discPct / 100) * 100) / 100
+            const lineTax = Number(it.taxAmount) || Math.round(lineTaxable * (taxPct / 100) * 100) / 100
+            const lineTotal = Number(it.totalAmount) || Math.round((lineTaxable + lineTax) * 100) / 100
+
+            return {
+              id: `item-${idx + 1}`,
+              rawDescription: cleanDesc,
+              matchedProductName: cleanDesc,
+              productName: cleanDesc,
+              matchConfidence: 0.98,
+              isNewProduct: true,
+              packSize: it.packSize || '10 Tablets',
+              hsnCode: it.hsnCode || '3004',
+              batchNumber: String(it.batchNumber || `BATCH-${idx + 1}`).trim().toUpperCase(),
+              expiryDate: normalizedExp,
+              billedQuantity: billedQty,
+              freeQuantity: freeQty,
+              unitCost,
+              mrp,
+              ptr: unitCost,
+              discountPercent: discPct,
+              taxPercent: taxPct,
+              taxAmount: lineTax,
+              totalAmount: lineTotal,
+            }
+          })
 
           const financials: ExtractedFinancials = {
-            subtotal: Number(parsedJson.financials?.subtotal) || 0,
+            subtotal: Number(parsedJson.financials?.subtotal) || items.reduce((s, x) => s + x.totalAmount, 0),
             taxAmount: Number(parsedJson.financials?.taxAmount) || 0,
             discountAmount: Number(parsedJson.financials?.discountAmount) || 0,
             roundOff: Number(parsedJson.financials?.roundOff) || 0,
-            totalAmount: Number(parsedJson.financials?.totalAmount) || 0,
+            totalAmount: Number(parsedJson.financials?.totalAmount) || items.reduce((s, x) => s + x.totalAmount, 0),
             isReconciled: true,
             reconciliationVariance: 0.0,
           }
@@ -416,7 +457,7 @@ Analyze this purchase bill and extract the data as strict JSON conforming to thi
 
           const paymentTerms: IngestionThreadResult['paymentTerms'] = {
             paymentMethod: finalPaymentMethod,
-            creditDays: Number(parsedJson.paymentTerms?.creditDays) || 21,
+            creditDays: Number(parsedJson.paymentTerms?.creditDays) || 30,
             dueDate: parsedJson.paymentTerms?.dueDate || parsedJson.invoice?.dueDate || new Date().toISOString().slice(0, 10),
             paymentReference: parsedJson.paymentTerms?.paymentReference || null,
             upiVpa: parsedJson.paymentTerms?.upiVpa || null,
@@ -437,7 +478,7 @@ Analyze this purchase bill and extract the data as strict JSON conforming to thi
               city: parsedJson.supplier?.city || null,
               state: parsedJson.supplier?.state || null,
               pincode: parsedJson.supplier?.pincode || null,
-              matchConfidence: parsedJson.supplier?.gstin ? 1.0 : 0.9,
+              matchConfidence: parsedJson.supplier?.gstin ? 1.0 : 0.95,
               isNew: true,
             },
             invoice: {
@@ -451,10 +492,9 @@ Analyze this purchase bill and extract the data as strict JSON conforming to thi
             overallConfidence: 0.98,
           }
         } catch {
-          // Model call failed, try next
-          break
+          // Model call failed, try next model
+          continue
         }
-      }
     }
 
     return null
@@ -723,7 +763,30 @@ export async function parsePurchaseBill(
   }
 
   // ───────────────────────────────────────────────────────────
-  // Tier 1.5: Local Deep Learning OCR (OpenCV + PaddleOCR Engine)
+  // Tier 2: Cloud AI Vision Engine (Gemini 2.5 Flash / High Precision)
+  // ───────────────────────────────────────────────────────────
+  // Prioritize Gemini Vision for non-vector files / images when API key is present
+  if (
+    (!extractedData || extractedData.items.length === 0) &&
+    options?.forceTier !== 'digital_pdf' &&
+    options?.forceTier !== 'tesseract'
+  ) {
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        const geminiMime = isPdf ? 'application/pdf' : mimeType || 'image/jpeg'
+        const geminiResult = await extractWithGeminiVision(buffer, geminiMime)
+        if (geminiResult && geminiResult.items.length > 0) {
+          extractedData = geminiResult
+          extractionMethod = 'GEMINI_VISION'
+        }
+      } catch {
+        // Fallback to PaddleOCR or Tesseract
+      }
+    }
+  }
+
+  // ───────────────────────────────────────────────────────────
+  // Tier 2.5: Local Deep Learning OCR (OpenCV + PaddleOCR Engine)
   // ───────────────────────────────────────────────────────────
   if (!extractedData || extractedData.items.length === 0) {
     try {
@@ -772,30 +835,7 @@ export async function parsePurchaseBill(
         if (paddleRes.pageCount) pageCount = paddleRes.pageCount
       }
     } catch {
-      // Fallback to Gemini Vision or Tesseract
-    }
-  }
-
-  // ───────────────────────────────────────────────────────────
-  // Tier 2: Cloud AI Vision Engine (Gemini Multi-Model Fallback)
-  // ───────────────────────────────────────────────────────────
-  // Escalate to Gemini Vision if no line items were extracted yet
-  if (
-    (!extractedData || extractedData.items.length === 0) &&
-    options?.forceTier !== 'digital_pdf' &&
-    options?.forceTier !== 'tesseract'
-  ) {
-    if (process.env.GEMINI_API_KEY) {
-      try {
-        const geminiMime = isPdf ? 'application/pdf' : mimeType || 'image/png'
-        const geminiResult = await extractWithGeminiVision(buffer, geminiMime)
-        if (geminiResult && geminiResult.items.length > 0) {
-          extractedData = geminiResult
-          extractionMethod = 'GEMINI_VISION'
-        }
-      } catch {
-        // Fallback to Tier 3
-      }
+      // Fallback to Tesseract
     }
   }
 
@@ -924,8 +964,8 @@ export async function parsePurchaseBill(
       overallConfidence: multiThreadResult.overallConfidence,
     }
   } else {
-    // Enrich with worker validated items if worker produced enriched items
-    if (fallbackItems.length > 0) {
+    // Preserve high-fidelity AI vision items when Gemini Vision succeeds; only use worker items for offline OCR fallback
+    if (extractionMethod !== 'GEMINI_VISION' && fallbackItems.length > 0) {
       extractedData.items = fallbackItems
     }
     parsedPayload = extractedData

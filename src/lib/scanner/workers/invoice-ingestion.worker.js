@@ -256,8 +256,15 @@ function extractLineItems(rawText = '', parsedTableRows = [], structuredItems = 
         /([A-Za-z0-9\s\-\.\+\/\(\)]+?)\s+(?:(\d{4,8})\s+)?([A-Z0-9]{2,15})\s+(\d{1,2}[\/\-\.]\d{2,4})\s+(\d+)\s*(?:(\d+))?\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)/
       )
       if (match) {
+        let rawDesc = match[1].trim()
+        rawDesc = rawDesc.replace(/^[0-9\.\-\|\<\~\*\_\"\:\s\=\>\+\(\)\#\[\]]+/, '').trim()
+        rawDesc = rawDesc.replace(/^(?:le|Hh|ll|II|I\s*[;:])/i, '').trim()
+        rawDesc = rawDesc.replace(/[\*\[\(].*$/, '').trim()
+        rawDesc = rawDesc.replace(/\s*[\=\-\.\:\_]+\s*N[0-9].*$/, '').trim()
+        rawDesc = rawDesc.replace(/\s*\|\s*.*$/, '').trim()
+        if (rawDesc.replace(/[^A-Za-z]/g, '').length < 3) continue
+
         idx++
-        const rawDesc = match[1].trim()
         const hsn = match[2] || '3004'
         const batch = match[3].trim().toUpperCase()
         const exp = normalizeDate(match[4])
