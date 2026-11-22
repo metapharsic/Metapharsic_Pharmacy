@@ -195,12 +195,17 @@ export function PurchaseBillScannerView({
 
   // Handle Document Upload & Trigger OCR Scanning Pipeline
   const handleFileSelected = useCallback(
-    async (file: File) => {
+    async (file: File, overrideMode?: 'hybrid' | 'zero-llm') => {
       setSelectedFile(file)
       setScanErrorMessage(null)
       setIsScanning(true)
       setScanStage('uploading')
       setScanProgress(10)
+
+      const activeMode = overrideMode || ocrEngineMode
+      if (overrideMode) {
+        setOcrEngineMode(overrideMode)
+      }
 
       // Create local object URL for preview
       const objectUrl = URL.createObjectURL(file)
@@ -235,7 +240,7 @@ export function PurchaseBillScannerView({
         formData.append('autoProvision', String(autoProvisionOnScan))
 
         // API Call: Deterministic Zero-LLM (Local) or Hybrid Multi-Tier OCR
-        const endpoint = ocrEngineMode === 'zero-llm' ? '/api/purchases/scan-deterministic' : '/api/purchases/scan'
+        const endpoint = activeMode === 'zero-llm' ? '/api/purchases/scan-deterministic' : '/api/purchases/scan'
         const response = await fetch(endpoint, {
           method: 'POST',
           body: formData,
@@ -843,6 +848,30 @@ export function PurchaseBillScannerView({
     )
   }, [branches, billData.branchId])
 
+  const handleSwitchEngine = useCallback(
+    async (mode: 'hybrid' | 'zero-llm', triggerRescan: boolean = false) => {
+      setOcrEngineMode(mode)
+      try {
+        await fetch('/api/settings/ocr-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ engine: mode }),
+        })
+        toast.success(
+          mode === 'hybrid'
+            ? 'Switched to Google AI Vision (Gemini 2.5 Flash) — 98% accuracy on folded/phone bills'
+            : 'Switched to Zero-LLM Local OCR — 100% offline'
+        )
+      } catch {
+        // Non-blocking fallback
+      }
+      if (triggerRescan && selectedFile) {
+        void handleFileSelected(selectedFile, mode)
+      }
+    },
+    [selectedFile, toast, handleFileSelected]
+  )
+
   return (
     <div className={cn('space-y-4', className)}>
       {/* Navigation Header */}
@@ -870,24 +899,24 @@ export function PurchaseBillScannerView({
             <Button
               type="button"
               size="sm"
-              variant={ocrEngineMode === 'zero-llm' ? 'default' : 'ghost'}
+              variant={ocrEngineMode === 'hybrid' ? 'default' : 'ghost'}
               className="h-7 text-xs px-2.5 gap-1 font-medium"
-              onClick={() => setOcrEngineMode('zero-llm')}
-              title="Zero-LLM: 100% deterministic local OCR & table reconstruction. Zero cloud token costs."
+              onClick={() => handleSwitchEngine('hybrid')}
+              title="Cloud / Gemini AI multi-tier OCR pipeline (Recommended for phone photos & folded bills)"
             >
-              <Zap className="h-3 w-3 text-amber-400 fill-amber-400" />
-              ⚡ Zero-LLM (Local)
+              <Sparkles className="h-3 w-3 text-amber-400" />
+              AI Cloud
             </Button>
             <Button
               type="button"
               size="sm"
-              variant={ocrEngineMode === 'hybrid' ? 'default' : 'ghost'}
+              variant={ocrEngineMode === 'zero-llm' ? 'default' : 'ghost'}
               className="h-7 text-xs px-2.5 gap-1 font-medium"
-              onClick={() => setOcrEngineMode('hybrid')}
-              title="Cloud / Gemini AI multi-tier OCR pipeline"
+              onClick={() => handleSwitchEngine('zero-llm')}
+              title="Zero-LLM: 100% deterministic local OCR & table reconstruction. Zero cloud token costs."
             >
-              <Sparkles className="h-3 w-3" />
-              AI Cloud
+              <Zap className="h-3 w-3 text-amber-500" />
+              ⚡ Local OCR
             </Button>
           </div>
 
@@ -933,7 +962,7 @@ export function PurchaseBillScannerView({
                 size="sm"
                 variant={ocrEngineMode === 'hybrid' ? 'default' : 'ghost'}
                 className="h-7 text-xs px-2.5 gap-1.5 font-medium"
-                onClick={() => setOcrEngineMode('hybrid')}
+                onClick={() => handleSwitchEngine('hybrid')}
                 title="AI Cloud Vision (Gemini 2.5 Flash): High-accuracy semantic extraction for crumpled/phone photos"
               >
                 <Sparkles className="h-3.5 w-3.5 text-amber-300" />
@@ -944,7 +973,7 @@ export function PurchaseBillScannerView({
                 size="sm"
                 variant={ocrEngineMode === 'zero-llm' ? 'default' : 'ghost'}
                 className="h-7 text-xs px-2.5 gap-1.5 font-medium"
-                onClick={() => setOcrEngineMode('zero-llm')}
+                onClick={() => handleSwitchEngine('zero-llm')}
                 title="Zero-LLM: 100% deterministic local spatial OCR & table reconstruction"
               >
                 <Zap className="h-3.5 w-3.5 text-amber-500" />
@@ -1112,6 +1141,32 @@ export function PurchaseBillScannerView({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Active Engine Toggle in Quick Actions Bar */}
+          <div className="flex items-center rounded-md border border-border/80 bg-muted/40 p-0.5">
+            <Button
+              type="button"
+              variant={ocrEngineMode === 'hybrid' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => handleSwitchEngine('hybrid', selectedFile !== null)}
+              className="h-6 text-[11px] px-2 font-medium gap-1"
+              title="Google AI Vision (Gemini 2.5 Flash) — 98% accuracy on mobile phone & folded bills"
+            >
+              <Sparkles className="h-3 w-3 text-amber-300" />
+              <span>AI Cloud</span>
+            </Button>
+            <Button
+              type="button"
+              variant={ocrEngineMode === 'zero-llm' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => handleSwitchEngine('zero-llm', selectedFile !== null)}
+              className="h-6 text-[11px] px-2 font-medium gap-1"
+              title="Zero-LLM: 100% deterministic local OCR. Zero cloud token costs."
+            >
+              <Zap className="h-3 w-3 text-amber-500" />
+              <span>⚡ Local OCR</span>
+            </Button>
+          </div>
+
           {/* Layout Mode Toggles */}
           <div className="flex items-center rounded-md border border-border/80 bg-muted/40 p-0.5">
             <Button
@@ -1151,6 +1206,34 @@ export function PurchaseBillScannerView({
           )}
         </div>
       </div>
+
+      {/* Low-Confidence Recovery Banner for Zero-LLM */}
+      {selectedFile && billData.items.length < 3 && ocrEngineMode === 'zero-llm' && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-amber-900 dark:text-amber-200">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-amber-500/20 text-amber-600 dark:text-amber-300 shrink-0">
+              <Zap className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-xs font-bold">
+                Low Confidence with Local Offline OCR ({billData.items.length} item{billData.items.length !== 1 ? 's' : ''} detected)
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Folded paper creases, blue-ink pen scribbles, and dot-matrix ribbons require Google AI Vision.
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => handleSwitchEngine('hybrid', true)}
+            className="h-7 text-xs gap-1.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold shadow-xs"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>Re-Scan with Google AI Vision</span>
+          </Button>
+        </div>
+      )}
 
       {/* Dual-View Review Workspace */}
       <div

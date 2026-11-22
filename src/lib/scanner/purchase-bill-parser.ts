@@ -75,11 +75,13 @@ export interface ScanBillResponse {
 
 export interface ParseOptions {
   branchId?: string
+  organizationId?: string
   filename?: string
   mimeType?: string
   forceTier?: 'digital_pdf' | 'gemini' | 'tesseract' | 'mock'
   mock?: boolean
   prisma?: EntityMatcherPrismaClient | null
+  customApiKey?: string
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -231,9 +233,21 @@ function normalizeToMonthEnd(rawDate?: string | null): string {
  */
 export async function extractWithGeminiVision(
   buffer: Buffer,
-  mimeType: string
+  mimeType: string,
+  customKey?: string
 ): Promise<ExtractedBillDetails | null> {
-  const apiKey = process.env.GEMINI_API_KEY
+  let apiKey = customKey || process.env.GEMINI_API_KEY
+  if (!apiKey) {
+    try {
+      const fs = await import('fs')
+      const envPath = path.join(process.cwd(), '.env')
+      if (fs.existsSync(envPath)) {
+        const envContent = fs.readFileSync(envPath, 'utf8')
+        const m = envContent.match(/GEMINI_API_KEY=["']?([^"'\r\n]+)/)
+        if (m) apiKey = m[1]
+      }
+    } catch {}
+  }
   if (!apiKey) return null
 
   try {
@@ -242,8 +256,8 @@ export async function extractWithGeminiVision(
 Analyze this purchase bill and extract the data as strict JSON conforming to this schema:
 {
   "supplier": {
-    "rawName": "string",
-    "gstin": "string",
+    "rawName": "string (The wholesale distributor / agency / seller printed at the top of the invoice, e.g. 'HYPER PHARMA', 'MEDINOVA DISTRIBUTORS'. Do NOT extract the chemist or retail pharmacy shop name printed in the 'Billed To' or 'Customer' section)",
+    "gstin": "string (15-character GSTIN of the Distributor)",
     "dlNumber": "string",
     "pan": "string",
     "phone": "string",
@@ -398,9 +412,11 @@ Analyze this purchase bill and extract the data as strict JSON conforming to thi
 
           const parsedJson = JSON.parse(contentText) as GeminiInvoiceRaw
           const items: ExtractedLineItem[] = (parsedJson.items || []).map((it, idx) => {
-            // Clean medicine description: strip leading bullets, numbers, hyphens
+            // Clean medicine description: strip leading bullets, numbers, hyphens, brackets
             let cleanDesc = String(it.rawDescription || `Medicine Item ${idx + 1}`).trim()
-            cleanDesc = cleanDesc.replace(/^[0-9\.\-\|\<\~\*\_\"\:\s\=\>\+]+/, '').trim()
+            cleanDesc = cleanDesc.replace(/^[0-9\.\-\|\<\~\*\_\"\:\s\=\>\+\[\]\(\)\{\}]+/, '').trim()
+            // Strip trailing brackets/parentheses that captured other column fragments e.g. " [108 \ 185.50["
+            cleanDesc = cleanDesc.replace(/[\s\[\(]+(?:\d+s?|\d+\.\d+|\b[A-Z0-9]{5,}\b).*$/i, '').trim()
             if (!cleanDesc) cleanDesc = `Medicine Item ${idx + 1}`
 
             const normalizedExp = normalizeToMonthEnd(it.expiryDate)
@@ -765,23 +781,39 @@ export async function parsePurchaseBill(
   // ───────────────────────────────────────────────────────────
   // Tier 2: Cloud AI Vision Engine (Gemini 2.5 Flash / High Precision)
   // ───────────────────────────────────────────────────────────
+  let effectiveApiKey = options?.customApiKey
+  if (!effectiveApiKey && options?.organizationId) {
+    try {
+      const prismaClient = options?.prisma || (await import('@/lib/db/prisma')).default
+      const customKeySetting = await (prismaClient as any).organizationSetting.findUnique({
+        where: {
+          organizationId_key: {
+            organizationId: options.organizationId,
+            key: 'customGeminiApiKey',
+          },
+        },
+      })
+      if (customKeySetting?.value && customKeySetting.value.trim().length > 10) {
+        effectiveApiKey = customKeySetting.value.trim()
+      }
+    } catch {}
+  }
+
   // Prioritize Gemini Vision for non-vector files / images when API key is present
   if (
     (!extractedData || extractedData.items.length === 0) &&
     options?.forceTier !== 'digital_pdf' &&
     options?.forceTier !== 'tesseract'
   ) {
-    if (process.env.GEMINI_API_KEY) {
-      try {
-        const geminiMime = isPdf ? 'application/pdf' : mimeType || 'image/jpeg'
-        const geminiResult = await extractWithGeminiVision(buffer, geminiMime)
-        if (geminiResult && geminiResult.items.length > 0) {
-          extractedData = geminiResult
-          extractionMethod = 'GEMINI_VISION'
-        }
-      } catch {
-        // Fallback to PaddleOCR or Tesseract
+    try {
+      const geminiMime = isPdf ? 'application/pdf' : mimeType || 'image/jpeg'
+      const geminiResult = await extractWithGeminiVision(buffer, geminiMime, effectiveApiKey)
+      if (geminiResult && geminiResult.items.length > 0) {
+        extractedData = geminiResult
+        extractionMethod = 'GEMINI_VISION'
       }
+    } catch {
+      // Fallback to PaddleOCR or Tesseract
     }
   }
 

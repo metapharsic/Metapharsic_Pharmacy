@@ -65,8 +65,8 @@ export async function POST(req: NextRequest) {
     const processingTimeMs = Date.now() - t0
 
     // Automatic AI Vision Cascade: If deterministic spatial clustering yields fewer than 3 items
-    // (typical on crumpled, skewed, or mobile phone camera photos), seamlessly upgrade to Gemini Vision
-    if (reconstructed.items.length < 3 && process.env.GEMINI_API_KEY) {
+    // or zero financial totals (typical on crumpled, skewed, or mobile phone camera photos), seamlessly upgrade to Gemini Vision
+    if (reconstructed.items.length < 3 || reconstructed.financials.totalAmount <= 0) {
       try {
         const mimeType = filename.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'
         const aiFallback = await parsePurchaseBill(fileBuffer, mimeType, { filename })

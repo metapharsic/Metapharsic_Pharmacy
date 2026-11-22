@@ -44,9 +44,13 @@ export function SettingsClient() {
 
   // OCR & Vision Engine Setting
   const [ocrDefaultEngine, setOcrDefaultEngine] = useState<'hybrid' | 'zero-llm'>('hybrid')
+  const [customGeminiApiKey, setCustomGeminiApiKey] = useState('')
+  const [isCustomKey, setIsCustomKey] = useState(false)
   const [ocrStatus, setOcrStatus] = useState<{
     googleAi?: { available: boolean; status: string; maskedKey?: string; latencyMs?: number }
     localOcr?: { available: boolean; status: string; engine?: string }
+    customKeyMasked?: string | null
+    isCustomKey?: boolean
   } | null>(null)
   const [testingOcr, setTestingOcr] = useState(false)
 
@@ -59,6 +63,10 @@ export function SettingsClient() {
           setOcrStatus(d)
           if (d.activeEngine) {
             setOcrDefaultEngine(d.activeEngine === 'zero-llm' ? 'zero-llm' : 'hybrid')
+          }
+          if (d.customKeyMasked) {
+            setCustomGeminiApiKey(d.customKeyMasked)
+            setIsCustomKey(true)
           }
         }
       })
@@ -158,11 +166,14 @@ export function SettingsClient() {
       })
       const data = await res.json()
       if (data.success) {
-        // Also sync active engine
+        // Also sync active engine and custom API key
         await fetch('/api/settings/ocr-status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ engine: ocrDefaultEngine }),
+          body: JSON.stringify({
+            engine: ocrDefaultEngine,
+            customGeminiApiKey: customGeminiApiKey.includes('...') ? undefined : customGeminiApiKey,
+          }),
         }).catch(() => null)
 
         toast.success('Dispensary settings saved successfully to database')
@@ -559,6 +570,58 @@ export function SettingsClient() {
                     <span>Privacy: 100% On-Premises</span>
                     <span className="font-semibold text-amber-600 dark:text-amber-400">Zero Cloud Tokens</span>
                   </div>
+                </div>
+              </div>
+
+              {/* Bring Your Own Key (BYOK) Card */}
+              <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <KeyRound className="h-4 w-4 text-primary" />
+                    <Label htmlFor="customGeminiApiKey" className="text-xs font-bold text-foreground">
+                      Bring Your Own Google AI Key (BYOK)
+                    </Label>
+                    <Badge variant="outline" className="text-[10px] text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300">
+                      1,500 Scans / Day Free
+                    </Badge>
+                  </div>
+                  {isCustomKey && (
+                    <Badge className="bg-emerald-600 text-white text-[10px]">
+                      Custom Key Active
+                    </Badge>
+                  )}
+                </div>
+
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Provide your own free Google Gemini API key from Google AI Studio. All purchase invoice scans and camera-to-bill detections will run on your key's free tier quota with <strong>zero billing to Metapharsic</strong>.
+                </p>
+
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+                  <Input
+                    id="customGeminiApiKey"
+                    type="password"
+                    placeholder="Paste custom Gemini API key (AIzaSy...)"
+                    value={customGeminiApiKey}
+                    onChange={(e) => {
+                      setCustomGeminiApiKey(e.target.value)
+                      setIsCustomKey(false)
+                    }}
+                    className="h-8 text-xs font-mono"
+                  />
+                  {customGeminiApiKey && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs shrink-0"
+                      onClick={() => {
+                        setCustomGeminiApiKey('')
+                        setIsCustomKey(false)
+                      }}
+                    >
+                      Clear
+                    </Button>
+                  )}
                 </div>
               </div>
 

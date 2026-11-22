@@ -20,8 +20,22 @@ export async function GET() {
     const orgId = tenant.organizationId || '__GLOBAL__'
     const settingsMap = await getSettings(orgId)
     const activeEngine = settingsMap.ocrDefaultEngine || 'hybrid'
+    const customKey = (settingsMap.customGeminiApiKey || '').trim()
 
-    const apiKey = process.env.GEMINI_API_KEY || ''
+    let apiKey = customKey || process.env.GEMINI_API_KEY || ''
+    if (!apiKey) {
+      try {
+        const fs = await import('fs')
+        const path = await import('path')
+        const envPath = path.join(process.cwd(), '.env')
+        if (fs.existsSync(envPath)) {
+          const envContent = fs.readFileSync(envPath, 'utf8')
+          const m = envContent.match(/GEMINI_API_KEY=["']?([^"'\r\n]+)/)
+          if (m) apiKey = m[1]
+        }
+      } catch {}
+    }
+
     const isKeyConfigured = apiKey.length > 10
     const maskedKey = isKeyConfigured
       ? `${apiKey.slice(0, 8)}...${apiKey.slice(-4)}`
@@ -47,12 +61,15 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       activeEngine,
+      isCustomKey: customKey.length > 10,
+      customKeyMasked: customKey.length > 10 ? `${customKey.slice(0, 8)}...${customKey.slice(-4)}` : null,
       googleAi: {
         available: googleAiStatus === 'ONLINE',
         status: googleAiStatus,
         model: 'gemini-2.5-flash',
         keyConfigured: isKeyConfigured,
         maskedKey,
+        isCustomKey: customKey.length > 10,
         latencyMs: googleAiLatencyMs,
         description: 'Google Gemini 2.5 Flash Cloud Vision API (98% precision for mobile photos, folded bills & handwriting)',
       },
@@ -71,23 +88,38 @@ export async function GET() {
 
 /**
  * POST /api/settings/ocr-status
- * Updates the organization's preferred default OCR engine (hybrid vs zero-llm).
+ * Updates the organization's preferred default OCR engine (hybrid vs zero-llm) and optional BYOK API key.
  */
 export async function POST(req: NextRequest) {
   try {
     const tenant = await requireTenantContext()
     await requirePermission(PERMISSIONS.ORGANIZATION_UPDATE)
 
-    const body = (await req.json()) as { engine?: string }
-    const engine = body.engine === 'zero-llm' ? 'zero-llm' : 'hybrid'
-
+    const body = (await req.json()) as { engine?: string; customGeminiApiKey?: string }
     const orgId = tenant.organizationId || '__GLOBAL__'
-    await upsertSettings(orgId, { ocrDefaultEngine: engine })
+    const updates: Record<string, string> = {}
+
+    if (body.engine) {
+      updates.ocrDefaultEngine = body.engine === 'zero-llm' ? 'zero-llm' : 'hybrid'
+    }
+
+    if (body.customGeminiApiKey !== undefined) {
+      updates.customGeminiApiKey = body.customGeminiApiKey.trim()
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await upsertSettings(orgId, updates)
+    }
+
+    const currentSettings = await getSettings(orgId)
+    const activeEngine = currentSettings.ocrDefaultEngine || 'hybrid'
+    const customKey = currentSettings.customGeminiApiKey || ''
 
     return NextResponse.json({
       success: true,
-      activeEngine: engine,
-      message: `Default OCR engine switched to ${engine === 'hybrid' ? 'Google AI Vision (Gemini 2.5 Flash)' : 'Local Zero-LLM Deterministic OCR'}.`,
+      activeEngine,
+      isCustomKey: customKey.length > 10,
+      message: `Settings updated successfully.`,
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

@@ -128,6 +128,7 @@ export async function POST(req: NextRequest) {
     const parsedResult = await parsePurchaseBill(buffer, mimeType, {
       filename: file.name,
       branchId,
+      organizationId: (sessionUser as { organizationId?: string }).organizationId,
       mock: isMock,
     })
 
