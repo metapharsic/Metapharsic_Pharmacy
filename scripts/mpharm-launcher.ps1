@@ -311,12 +311,27 @@ if (-not $needsMigration) {
 # 7. LAUNCH MPHARM SERVER (High-Performance Production Mode / Fast Dev)
 # ------------------------------------------------------------------------------
 $nextDir = Join-Path $RootDir ".next"
-$hasBuild = (Test-Path $nextDir) -and (Test-Path (Join-Path $nextDir "BUILD_ID"))
+$buildIdFile = Join-Path $nextDir "BUILD_ID"
+$hasBuild = (Test-Path $nextDir) -and (Test-Path $buildIdFile)
 
-if ($Rebuild -or (-not $hasBuild -and -not $Dev)) {
+# Auto-detect if source files were modified since last build
+$needsRebuild = $false
+if ($hasBuild -and -not $Dev) {
+    try {
+        $buildTime = (Get-Item $buildIdFile).LastWriteTime
+        $latestSrc = Get-ChildItem -Path (Join-Path $RootDir "src") -Recurse -File -Include "*.ts","*.tsx","*.js" -ErrorAction SilentlyContinue | 
+            Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        if ($latestSrc -and ($latestSrc.LastWriteTime -gt $buildTime)) {
+            Log-Message "Detected updated source files since last build ($($latestSrc.Name)). Triggering fresh build..." "UPDATE" ([ConsoleColor]::Yellow)
+            $needsRebuild = $true
+        }
+    } catch {}
+}
+
+if ($Rebuild -or $needsRebuild -or (-not $hasBuild -and -not $Dev)) {
     Log-Message "Pre-compiling production bundle for instant page loads..." "BUILD" ([ConsoleColor]::Magenta)
     & cmd.exe /c "npm run build" 2>&1 | Tee-Object -FilePath $traceFile -Append
-    $hasBuild = (Test-Path $nextDir) -and (Test-Path (Join-Path $nextDir "BUILD_ID"))
+    $hasBuild = (Test-Path $nextDir) -and (Test-Path $buildIdFile)
 }
 
 $launchCmd = ""
@@ -362,6 +377,19 @@ try {
     Ensure-PortAvailable -TargetPort $Port
     & cmd.exe /c $launchCmd 2>&1 | Tee-Object -FilePath $traceFile -Append
     $exitCode = $LASTEXITCODE
+
+    # Self-healing clean rebuild if production bundle was invalid or missing modules
+    if ($exitCode -ne 0 -and $hasBuild -and -not $Dev) {
+        Log-Message "Production bundle experienced runtime module errors. Initiating self-healing clean rebuild..." "RECOVERY" ([ConsoleColor]::Yellow)
+        Remove-Item -Path $nextDir -Recurse -Force -ErrorAction SilentlyContinue
+        & cmd.exe /c "npm run build" 2>&1 | Tee-Object -FilePath $traceFile -Append
+        if ((Test-Path (Join-Path $nextDir "BUILD_ID"))) {
+            Log-Message "Clean rebuild succeeded. Re-launching production server..." "RECOVERY" ([ConsoleColor]::Green)
+            Ensure-PortAvailable -TargetPort $Port
+            & cmd.exe /c $launchCmd 2>&1 | Tee-Object -FilePath $traceFile -Append
+            $exitCode = $LASTEXITCODE
+        }
+    }
 
     # Append session trace content to daily log
     if (Test-Path $traceFile) {
