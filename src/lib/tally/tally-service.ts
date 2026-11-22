@@ -15,6 +15,16 @@ import {
   processGstr1Data,
 } from './gstr1-exporter'
 import {
+  generatePurchasesRegisterCsv,
+  generateCustomersCsv,
+  generateSuppliersCsv,
+  generateStockItemsCsv,
+  generateDaybookCsv,
+  generateDebitNotesCsv,
+  generateUnitsCsv,
+  generatePriceListsCsv,
+} from './tally-csv-generators'
+import {
   DEFAULT_TALLY_CONFIG,
   type BatchSummaryItem,
   type CompanySetupForTally,
@@ -161,7 +171,7 @@ export async function generateTallyExport(
   }
 
   const dateSuffix = format(new Date(), 'yyyyMMdd_HHmm')
-  const requestedFormat = query.format || 'xml'
+  const requestedFormat = query.format || 'csv'
 
   switch (query.type) {
     case 'sales': {
@@ -328,6 +338,23 @@ export async function generateTallyExport(
       const xml = buildPurchaseVouchersXml(purchases as unknown as PurchaseForTally[], config)
       const totalAmount = purchases.reduce((sum, p) => sum + Number(p.totalAmount), 0)
 
+      if (requestedFormat === 'csv') {
+        const csv = generatePurchasesRegisterCsv(purchases)
+        return {
+          xml: csv,
+          content: csv,
+          contentType: 'text/csv; charset=utf-8',
+          filename: `purchase_register_${dateSuffix}.csv`,
+          summary: {
+            exportType: 'purchases',
+            voucherCount: purchases.length,
+            totalAmount,
+            dateRange: { startDate: query.startDate, endDate: query.endDate },
+            generatedAt: new Date().toISOString(),
+          },
+        }
+      }
+
       return {
         xml,
         content: xml,
@@ -369,6 +396,23 @@ export async function generateTallyExport(
       }))
 
       const xml = buildCustomerLedgersXml(mapped)
+
+      if (requestedFormat === 'csv') {
+        const csv = generateCustomersCsv(mapped)
+        return {
+          xml: csv,
+          content: csv,
+          contentType: 'text/csv; charset=utf-8',
+          filename: `customers_${dateSuffix}.csv`,
+          summary: {
+            exportType: 'customers',
+            voucherCount: customers.length,
+            totalAmount: 0,
+            dateRange: {},
+            generatedAt: new Date().toISOString(),
+          },
+        }
+      }
 
       return {
         xml,
@@ -414,6 +458,23 @@ export async function generateTallyExport(
       }))
 
       const xml = buildSupplierLedgersXml(mapped)
+
+      if (requestedFormat === 'csv') {
+        const csv = generateSuppliersCsv(mapped)
+        return {
+          xml: csv,
+          content: csv,
+          contentType: 'text/csv; charset=utf-8',
+          filename: `suppliers_${dateSuffix}.csv`,
+          summary: {
+            exportType: 'suppliers',
+            voucherCount: suppliers.length,
+            totalAmount: 0,
+            dateRange: {},
+            generatedAt: new Date().toISOString(),
+          },
+        }
+      }
 
       return {
         xml,
@@ -467,6 +528,23 @@ export async function generateTallyExport(
       })
 
       const xml = buildStockItemsXml(mapped)
+
+      if (requestedFormat === 'csv') {
+        const csv = generateStockItemsCsv(mapped)
+        return {
+          xml: csv,
+          content: csv,
+          contentType: 'text/csv; charset=utf-8',
+          filename: `stock_items_${dateSuffix}.csv`,
+          summary: {
+            exportType: 'stock_items',
+            voucherCount: products.length,
+            totalAmount: 0,
+            dateRange: {},
+            generatedAt: new Date().toISOString(),
+          },
+        }
+      }
 
       return {
         xml,
@@ -559,6 +637,23 @@ export async function generateTallyExport(
 
       const totalSalesAmount = sales.reduce((sum, s) => sum + Number(s.totalAmount), 0)
       const totalPurchasesAmount = purchases.reduce((sum, p) => sum + Number(p.totalAmount), 0)
+
+      if (requestedFormat === 'csv') {
+        const csv = generateDaybookCsv(sales, purchases)
+        return {
+          xml: csv,
+          content: csv,
+          contentType: 'text/csv; charset=utf-8',
+          filename: `daybook_${dateSuffix}.csv`,
+          summary: {
+            exportType: 'daybook',
+            voucherCount: sales.length + purchases.length,
+            totalAmount: totalSalesAmount + totalPurchasesAmount,
+            dateRange: { startDate: query.startDate, endDate: query.endDate },
+            generatedAt: new Date().toISOString(),
+          },
+        }
+      }
 
       return {
         xml,
@@ -665,6 +760,23 @@ export async function generateTallyExport(
 
       const xml = buildDebitNotesXml(debitNotesForTally, config)
 
+      if (requestedFormat === 'csv') {
+        const csv = generateDebitNotesCsv(returns)
+        return {
+          xml: csv,
+          content: csv,
+          contentType: 'text/csv; charset=utf-8',
+          filename: `debit_notes_${dateSuffix}.csv`,
+          summary: {
+            exportType: 'debit_notes',
+            voucherCount: returns.length,
+            totalAmount,
+            dateRange: { startDate: query.startDate, endDate: query.endDate },
+            generatedAt: new Date().toISOString(),
+          },
+        }
+      }
+
       return {
         xml,
         content: xml,
@@ -683,6 +795,23 @@ export async function generateTallyExport(
     case 'units': {
       const units = getPharmaUnitsForTally()
       const xml = buildUnitsXml(units)
+
+      if (requestedFormat === 'csv') {
+        const csv = generateUnitsCsv(units)
+        return {
+          xml: csv,
+          content: csv,
+          contentType: 'text/csv; charset=utf-8',
+          filename: `units_${dateSuffix}.csv`,
+          summary: {
+            exportType: 'units',
+            voucherCount: units.length,
+            totalAmount: 0,
+            dateRange: {},
+            generatedAt: new Date().toISOString(),
+          },
+        }
+      }
 
       return {
         xml,
@@ -743,6 +872,23 @@ export async function generateTallyExport(
         rules,
       })
 
+      if (requestedFormat === 'csv') {
+        const csv = generatePriceListsCsv(rules)
+        return {
+          xml: csv,
+          content: csv,
+          contentType: 'text/csv; charset=utf-8',
+          filename: `price_lists_${dateSuffix}.csv`,
+          summary: {
+            exportType: 'price_lists',
+            voucherCount: rules.length,
+            totalAmount: 0,
+            dateRange: {},
+            generatedAt: new Date().toISOString(),
+          },
+        }
+      }
+
       return {
         xml,
         content: xml,
@@ -781,6 +927,37 @@ export async function generateTallyExport(
       }
 
       const xml = buildCompanySetupXml(companySetup)
+
+      if (requestedFormat === 'csv') {
+        const csv = [
+          'Setting,Value',
+          `Company Name,"${companySetup.companyName}"`,
+          `Legal Name,"${companySetup.legalName}"`,
+          `State,"${companySetup.stateName}"`,
+          `GSTIN,"${companySetup.gstin}"`,
+          `Drug License,"${companySetup.dlNumber}"`,
+          `Address,"${companySetup.address || ''}"`,
+          `Phone,"${companySetup.phone || ''}"`,
+          `Email,"${companySetup.email || ''}"`,
+          `Registration Type,"${companySetup.registrationType}"`,
+          `Maintain Batch-Wise,"${companySetup.maintainBatchWise}"`,
+          `Track Expiry Dates,"${companySetup.trackExpiryDates}"`,
+          `Track Mfg Dates,"${companySetup.trackMfgDates}"`,
+        ].join('\r\n')
+        return {
+          xml: csv,
+          content: csv,
+          contentType: 'text/csv; charset=utf-8',
+          filename: `company_setup_${dateSuffix}.csv`,
+          summary: {
+            exportType: 'company_setup',
+            voucherCount: 1,
+            totalAmount: 0,
+            dateRange: {},
+            generatedAt: new Date().toISOString(),
+          },
+        }
+      }
 
       return {
         xml,

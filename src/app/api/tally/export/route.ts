@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = req.nextUrl
     const type = (searchParams.get('type') ?? 'sales') as TallyExportType
-    const format = (searchParams.get('format') ?? 'xml') as TallyExportFormat
+    const format = (searchParams.get('format') ?? 'csv') as TallyExportFormat
     const startDate = searchParams.get('startDate') ?? undefined
     const endDate = searchParams.get('endDate') ?? undefined
     const branchId = searchParams.get('branchId') ?? undefined

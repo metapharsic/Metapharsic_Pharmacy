@@ -259,7 +259,7 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
   }
 
   // Handle preview fetch
-  const handlePreview = async (formatType: TallyExportFormat = 'xml') => {
+  const handlePreview = async (formatType: TallyExportFormat = 'csv') => {
     setPreviewLoading(true)
     try {
       const params = new URLSearchParams({
@@ -288,7 +288,7 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
 
   // Handle direct download
   const handleDownload = (
-    formatType: TallyExportFormat = 'xml',
+    formatType: TallyExportFormat = 'csv',
     overrideType?: TallyExportType
   ) => {
     const type = overrideType || selectedType
@@ -580,7 +580,7 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
                 desc: 'Supplier GRNs with batch allocations, cost price, and input tax breakdown.',
                 icon: Truck,
                 badge: 'Purchase Voucher',
-                hasCsv: false,
+                hasCsv: true,
               },
               {
                 id: 'daybook' as TallyExportType,
@@ -588,7 +588,7 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
                 desc: 'Combined chronological package of both sales and purchases for the period.',
                 icon: CalendarDays,
                 badge: 'Combined Feed',
-                hasCsv: false,
+                hasCsv: true,
               },
               {
                 id: 'customers' as TallyExportType,
@@ -596,7 +596,7 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
                 desc: 'Registered customers and credit accounts grouped under Sundry Debtors.',
                 icon: Users,
                 badge: 'Sundry Debtors',
-                hasCsv: false,
+                hasCsv: true,
               },
               {
                 id: 'suppliers' as TallyExportType,
@@ -604,7 +604,7 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
                 desc: 'Vendor accounts, drug license, and contact details under Sundry Creditors.',
                 icon: Building2,
                 badge: 'Sundry Creditors',
-                hasCsv: false,
+                hasCsv: true,
               },
               {
                 id: 'stock_items' as TallyExportType,
@@ -612,7 +612,7 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
                 desc: 'Product catalog with HSN codes, GST rates, UQC units, and batch tracking enabled.',
                 icon: Package,
                 badge: 'Inventory Valuation',
-                hasCsv: false,
+                hasCsv: true,
               },
               {
                 id: 'debit_notes' as TallyExportType,
@@ -620,7 +620,7 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
                 desc: 'Return expired or damaged stock to suppliers (Ctrl+F9) with input GST reversal.',
                 icon: FileCode,
                 badge: 'Debit Note Voucher',
-                hasCsv: false,
+                hasCsv: true,
               },
               {
                 id: 'units' as TallyExportType,
@@ -628,7 +628,7 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
                 desc: 'Simple & compound units (Box, Strip, Nos, Kg, Grams) with conversion ratios.',
                 icon: Layers,
                 badge: 'Unit of Measure',
-                hasCsv: false,
+                hasCsv: true,
               },
               {
                 id: 'price_lists' as TallyExportType,
@@ -636,7 +636,7 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
                 desc: 'Price rules for Retailer, Stockist, & Wholesaler tiers with standard margins.',
                 icon: Receipt,
                 badge: 'Price Levels',
-                hasCsv: false,
+                hasCsv: true,
               },
               {
                 id: 'company_setup' as TallyExportType,
@@ -644,7 +644,7 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
                 desc: 'Statutory accounting features: GST activation, batch-wise details, mfg & exp date controls.',
                 icon: Building2,
                 badge: 'Statutory Features',
-                hasCsv: false,
+                hasCsv: true,
               },
             ].map((pkg) => {
               const isSelected = selectedType === pkg.id
@@ -684,7 +684,22 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
                       <Button
                         size="sm"
                         variant={isSelected ? 'default' : 'outline'}
-                        className="flex-1 gap-1.5 text-xs"
+                        className="flex-1 gap-1.5 text-xs font-semibold"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedType(pkg.id)
+                          handleDownload('csv', pkg.id)
+                        }}
+                      >
+                        <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500" />
+                        Download CSV
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1 text-xs text-muted-foreground hover:text-foreground"
+                        title="Download XML format for Tally Prime / ERP 9"
                         onClick={(e) => {
                           e.stopPropagation()
                           setSelectedType(pkg.id)
@@ -692,25 +707,8 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
                         }}
                       >
                         <Download className="h-3.5 w-3.5" />
-                        Download XML
+                        XML
                       </Button>
-
-                      {pkg.hasCsv && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="gap-1.5 text-xs"
-                          title="Download Excel/CSV format"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedType(pkg.id)
-                            handleDownload('csv', pkg.id)
-                          }}
-                        >
-                          <FileSpreadsheet className="h-3.5 w-3.5" />
-                          CSV
-                        </Button>
-                      )}
 
                       <Button
                         size="sm"
@@ -720,7 +718,7 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
                         onClick={(e) => {
                           e.stopPropagation()
                           setSelectedType(pkg.id)
-                          void handlePreview('xml')
+                          void handlePreview('csv')
                         }}
                       >
                         <Eye className="h-3.5 w-3.5" />
@@ -749,7 +747,7 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
-                    variant="outline"
+                    variant="default"
                     size="sm"
                     className="gap-1.5"
                     onClick={() => handleDownload('csv', 'batch_summary')}
@@ -1623,16 +1621,30 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
               Showing preview of first 4,000 characters (Total length:{' '}
               {previewData?.fullXmlLength.toLocaleString()} bytes)
             </span>
-            <Button
-              size="sm"
-              onClick={() => {
-                setPreviewOpen(false)
-                handleDownload('xml')
-              }}
-              className="gap-1.5"
-            >
-              <Download className="h-4 w-4" /> Download Complete File
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => {
+                  setPreviewOpen(false)
+                  handleDownload('csv')
+                }}
+                className="gap-1.5 font-semibold"
+              >
+                <FileSpreadsheet className="h-4 w-4 text-emerald-400" /> Download CSV
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setPreviewOpen(false)
+                  handleDownload('xml')
+                }}
+                className="gap-1.5"
+              >
+                <Download className="h-4 w-4" /> Export XML
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
