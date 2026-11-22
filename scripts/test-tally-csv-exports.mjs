@@ -1,5 +1,4 @@
-async function testExports() {
-  const baseUrl = 'http://localhost:5888'
+async function testExports(baseUrl = 'https://pharmacy.metapharsic.cloud') {
   console.log(`\n--- Testing Ledger & Accounts CSV Exports on ${baseUrl} ---`)
 
   // 1. Authenticate as admin
