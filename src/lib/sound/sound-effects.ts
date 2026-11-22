@@ -181,3 +181,36 @@ export function playClickSound(): void {
   }
 }
 
+/**
+ * Procedural two-tone bell chime for in-app notifications.
+ */
+export function playNotificationSound(): void {
+  if (isSoundMuted()) return
+  const ctx = getAudioContext()
+  if (!ctx) return
+
+  try {
+    const notes = [659.25, 880] // E5 -> A5
+    notes.forEach((freq, index) => {
+      const startTime = ctx.currentTime + index * 0.08
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(freq, startTime)
+
+      gain.gain.setValueAtTime(0.08, startTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.3)
+
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+
+      osc.start(startTime)
+      osc.stop(startTime + 0.3)
+    })
+  } catch {
+    // ignore
+  }
+}
+
+

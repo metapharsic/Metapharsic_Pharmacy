@@ -12,6 +12,7 @@ import { isSoundMuted, toggleSound, playClickSound } from '@/lib/sound/sound-eff
 import { useShortcuts } from '@/components/shared/keyboard-shortcuts-provider'
 import { useDatabaseBackup } from '@/components/shared/database-backup-provider'
 import { LanguageToggle } from '@/components/shared/language-toggle'
+import { NotificationPopover } from '@/components/layout/notification-popover'
 import { useI18n } from '@/lib/i18n/i18n-context'
 import { cn } from '@/lib/utils/cn'
 
@@ -246,13 +247,8 @@ export function Header() {
           {soundMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
         </Button>
 
-        {/* Notification Bell */}
-        <Button variant="outline" size="icon" className="relative h-8.5 w-8.5 rounded-lg border-border/70">
-          <Bell className="h-4 w-4 text-muted-foreground" />
-          <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-teal-600 text-[10px] font-bold text-white shadow-xs">
-            3
-          </span>
-        </Button>
+        {/* Live Synchronized Notification Engine */}
+        <NotificationPopover />
       </div>
     </header>
   )
