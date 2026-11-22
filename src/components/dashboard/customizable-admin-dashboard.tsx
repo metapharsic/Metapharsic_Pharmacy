@@ -953,13 +953,13 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
           </CardHeader>
 
           <CardContent className="p-0">
-            {props.recentSales.length === 0 ? (
+            {(!props.recentSales || props.recentSales.length === 0) ? (
               <div className="py-12 text-center text-xs text-muted-foreground">
                 No transactions recorded on this terminal today
               </div>
             ) : (
               <div className="divide-y divide-border/60">
-                {props.recentSales.map((sale) => (
+                {(props.recentSales || []).map((sale) => (
                   <Link
                     key={sale.id}
                     href={`/sales/${sale.id}`}
