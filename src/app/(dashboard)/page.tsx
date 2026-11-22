@@ -12,6 +12,8 @@ async function getDashboardStats(permissions: {
   inventory: boolean
   batches: boolean
   prescriptions: boolean
+  customers: boolean
+  suppliers: boolean
 }) {
   const tenant = await getTenantContext()
   const organizationId = tenant?.organizationId ?? undefined
@@ -44,8 +46,14 @@ async function getDashboardStats(permissions: {
     totalProducts,
     lowStockCount,
     expiringCount,
+    criticalExpiringCount,
     pendingPrescriptions,
     recentSales,
+    salesByPayment,
+    totalPatients,
+    totalSuppliers,
+    branchInfo,
+    orgInfo,
   ] = await Promise.all([
     permissions.sales
       ? prisma.sale.aggregate({
@@ -84,6 +92,18 @@ async function getDashboardStats(permissions: {
           },
         })
       : Promise.resolve(null),
+    permissions.batches
+      ? prisma.batch.count({
+          where: {
+            status: 'ACTIVE',
+            ...batchScope,
+            expiryDate: {
+              gte: new Date(),
+              lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            },
+          },
+        })
+      : Promise.resolve(0),
     permissions.prescriptions
       ? prisma.prescription.count({
           where: {
@@ -100,16 +120,71 @@ async function getDashboardStats(permissions: {
           include: { customer: { select: { name: true } } },
         })
       : Promise.resolve(null),
+    permissions.sales
+      ? prisma.sale.groupBy({
+          by: ['paymentMethod'],
+          where: {
+            ...branchScope,
+            saleDate: { gte: today },
+            status: 'COMPLETED',
+          },
+          _sum: { totalAmount: true },
+          _count: { _all: true },
+        })
+      : Promise.resolve([]),
+    permissions.customers
+      ? prisma.customer.count({
+          where: {
+            ...(organizationId ? { organizationId } : {}),
+          },
+        })
+      : Promise.resolve(0),
+    permissions.suppliers
+      ? prisma.supplier.count({
+          where: {
+            ...(organizationId ? { organizationId } : {}),
+            isActive: true,
+          },
+        })
+      : Promise.resolve(0),
+    branchId
+      ? prisma.branch.findUnique({
+          where: { id: branchId },
+          select: { name: true, code: true },
+        })
+      : Promise.resolve(null),
+    organizationId
+      ? prisma.organization.findUnique({
+          where: { id: organizationId },
+          select: { name: true, code: true, gstin: true, dlNumber: true },
+        })
+      : Promise.resolve(null),
   ])
+
+  const paymentSplit: Record<string, { count: number; amount: number }> = {}
+  for (const p of salesByPayment || []) {
+    paymentSplit[p.paymentMethod || 'OTHER'] = {
+      count: p._count?._all ?? 0,
+      amount: Number(p._sum?.totalAmount ?? 0),
+    }
+  }
 
   return {
     todaySales,
     totalProducts,
     lowStockCount,
     expiringCount,
+    criticalExpiringCount: criticalExpiringCount ?? 0,
     pendingPrescriptions,
     recentSales,
     branchId,
+    paymentSplit,
+    totalPatients: totalPatients ?? 0,
+    totalSuppliers: totalSuppliers ?? 0,
+    branchName: branchInfo?.name,
+    organizationName: orgInfo?.name,
+    gstin: orgInfo?.gstin ?? undefined,
+    dlNumber: orgInfo?.dlNumber ?? undefined,
   }
 }
 
@@ -137,6 +212,8 @@ export default async function DashboardPage() {
     inventory: canInventory,
     batches: canBatches,
     prescriptions: canPrescriptions,
+    customers: canCustomers,
+    suppliers: canSuppliers,
   })
 
   const todayRevenue = Number(stats.todaySales?._sum.totalAmount ?? 0)
@@ -152,7 +229,15 @@ export default async function DashboardPage() {
       totalProducts={stats.totalProducts}
       lowStockCount={lowStockCount}
       expiringCount={expiringCount}
+      criticalExpiringCount={stats.criticalExpiringCount}
       pendingRxCount={pendingRxCount}
+      totalPatients={stats.totalPatients}
+      totalSuppliers={stats.totalSuppliers}
+      paymentSplit={stats.paymentSplit}
+      organizationName={stats.organizationName}
+      branchName={stats.branchName}
+      gstin={stats.gstin}
+      dlNumber={stats.dlNumber}
       recentSales={(stats.recentSales as any) || []}
       branchId={stats.branchId}
       permissions={{
