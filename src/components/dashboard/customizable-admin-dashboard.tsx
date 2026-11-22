@@ -516,7 +516,7 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
       {/* ─────────────────────────────────────────────────────────────
           1. HERO HEADER WITH EXECUTIVE STATUS & CLEAN ACTION BUTTONS
       ───────────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 p-5 sm:p-6 text-white shadow-lg border border-slate-800">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 p-5 sm:p-6 text-white shadow-lg border border-slate-800 shimmer-active card-elevate">
         <div className="absolute right-0 top-0 h-full w-96 bg-[radial-gradient(circle_at_top_right,rgba(20,184,166,0.18),transparent_70%)] pointer-events-none" />
         
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 relative z-10">
@@ -529,11 +529,13 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
                   {props.branchName || 'Main Counter'}
                 </span>
               </h1>
-              <Badge className="bg-teal-500/20 text-teal-300 border-teal-500/40 text-[11px] font-semibold px-2 py-0.5 font-mono">
-                ● Live Sovereign Telemetry
+              <Badge className="bg-teal-500/20 text-teal-300 border-teal-500/40 text-[11px] font-semibold px-2.5 py-0.5 font-mono flex items-center gap-2 shadow-[0_0_12px_rgba(20,184,166,0.25)]">
+                <span className="beacon-emerald"><span className="core-dot" /></span>
+                <span>Live Sovereign Telemetry</span>
               </Badge>
-              <Badge className="bg-sky-500/20 text-sky-300 border-sky-500/40 text-[11px] font-semibold px-2 py-0.5 font-mono">
-                📹 48h Vault Active
+              <Badge className="bg-sky-500/20 text-sky-300 border-sky-500/40 text-[11px] font-semibold px-2.5 py-0.5 font-mono flex items-center gap-2 shadow-[0_0_12px_rgba(14,165,233,0.25)]">
+                <span className="beacon-sky"><span className="core-dot" /></span>
+                <span>48h Vault Active</span>
               </Badge>
             </div>
             <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
@@ -563,7 +565,7 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
             </Button>
 
             <Link href="/pos">
-              <Button size="sm" className="h-9 px-4 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-xs">
+              <Button size="sm" className="h-9 px-4 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-xs btn-neon-glow">
                 <ShoppingCart className="h-3.5 w-3.5" />
                 <span>Open POS (F2)</span>
               </Button>
@@ -610,7 +612,7 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
           {/* Item 1: ⚡ Automated medicine refill reminders */}
           <div 
             onClick={() => { setActiveRefillTab('refills'); setRefillModalOpen(true) }}
-            className="group cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 hover:border-amber-500/50 hover:bg-zinc-900 transition-all"
+            className="group cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 hover:border-amber-500/50 hover:bg-zinc-900 card-elevate transition-all"
           >
             <div className="flex items-center gap-2">
               <span className="text-base">⚡</span>
@@ -629,7 +631,7 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
           {/* Item 2: 📲 WhatsApp & SMS notifications */}
           <div 
             onClick={() => { setActiveRefillTab('refills'); setRefillModalOpen(true) }}
-            className="group cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 hover:border-emerald-500/50 hover:bg-zinc-900 transition-all"
+            className="group cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 hover:border-emerald-500/50 hover:bg-zinc-900 card-elevate transition-all"
           >
             <div className="flex items-center gap-2">
               <span className="text-base">📲</span>
@@ -648,7 +650,7 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
           {/* Item 3: 👥 Customer follow-ups */}
           <div 
             onClick={() => { setActiveRefillTab('followups'); setRefillModalOpen(true) }}
-            className="group cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 hover:border-purple-500/50 hover:bg-zinc-900 transition-all"
+            className="group cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 hover:border-purple-500/50 hover:bg-zinc-900 card-elevate transition-all"
           >
             <div className="flex items-center gap-2">
               <span className="text-base">👥</span>
@@ -667,7 +669,7 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
           {/* Item 4: 📅 Refill scheduling */}
           <div 
             onClick={() => { setActiveRefillTab('refills'); setRefillModalOpen(true) }}
-            className="group cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 hover:border-sky-500/50 hover:bg-zinc-900 transition-all"
+            className="group cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 hover:border-sky-500/50 hover:bg-zinc-900 card-elevate transition-all"
           >
             <div className="flex items-center gap-2">
               <span className="text-base">📅</span>
@@ -686,7 +688,7 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
           {/* Item 5: 📈 Better customer retention */}
           <div 
             onClick={() => { setActiveRefillTab('retention'); setRefillModalOpen(true) }}
-            className="group cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 hover:border-teal-500/50 hover:bg-zinc-900 transition-all"
+            className="group cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 hover:border-teal-500/50 hover:bg-zinc-900 card-elevate transition-all"
           >
             <div className="flex items-center gap-2">
               <span className="text-base">📈</span>
@@ -855,7 +857,7 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
             ].includes(widget.id)
 
             const cardContent = (
-              <Card className="group relative overflow-hidden transition-all duration-200 hover:shadow-md hover:border-teal-500/60 cursor-pointer h-full border-border/70 flex flex-col justify-between">
+              <Card className="group relative overflow-hidden card-elevate cursor-pointer h-full border-border/70 flex flex-col justify-between">
                 {/* Top Color Accent Strip */}
                 <div className={`h-1.5 w-full bg-gradient-to-r ${colors.strip}`} />
 
@@ -877,8 +879,13 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
                       </div>
                     </div>
 
-                    <Badge className={`text-[10px] py-0 px-2 font-semibold ${colors.badge}`}>
-                      {widget.badgeText}
+                    <Badge className={`text-[10px] py-0.5 px-2 font-semibold flex items-center gap-1.5 ${colors.badge}`}>
+                      {widget.color === 'emerald' && <span className="beacon-emerald"><span className="core-dot" /></span>}
+                      {widget.color === 'rose' && <span className="beacon-rose"><span className="core-dot" /></span>}
+                      {widget.color === 'amber' && <span className="beacon-amber"><span className="core-dot" /></span>}
+                      {widget.color === 'sky' && <span className="beacon-sky"><span className="core-dot" /></span>}
+                      {widget.color === 'purple' && <span className="beacon-purple"><span className="core-dot" /></span>}
+                      <span>{widget.badgeText}</span>
                     </Badge>
                   </div>
                 </CardHeader>
@@ -933,7 +940,7 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
       ───────────────────────────────────────────────────────────── */}
       <div className="grid gap-5 lg:grid-cols-3">
         {/* Recent Sales Activity */}
-        <Card className="lg:col-span-2 border-border/80 shadow-xs">
+        <Card className="lg:col-span-2 border-border/80 shadow-xs card-elevate">
           <CardHeader className="flex flex-row items-center justify-between pb-3 border-b">
             <div>
               <CardTitle className="text-base font-bold flex items-center gap-2">
@@ -999,7 +1006,7 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
 
         {/* Quick Operations & Clinical Notice */}
         <div className="space-y-4">
-          <Card className="border-border/80 shadow-xs">
+          <Card className="border-border/80 shadow-xs card-elevate">
             <CardHeader className="pb-3 border-b">
               <CardTitle className="text-base font-bold flex items-center gap-2">
                 <Layers className="h-4 w-4 text-sky-600" />
@@ -1012,7 +1019,7 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
                 <Link
                   key={action.href}
                   href={action.href}
-                  className="group flex items-center justify-between rounded-xl border border-border/70 bg-card p-3 shadow-2xs transition-all hover:border-teal-500/60 hover:bg-teal-50/20 dark:hover:bg-teal-950/20"
+                  className="group flex items-center justify-between rounded-xl border border-border/70 bg-card p-3 shadow-2xs transition-all hover:border-teal-500/60 hover:bg-teal-50/20 dark:hover:bg-teal-950/20 card-elevate"
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300 transition-colors group-hover:bg-teal-600 group-hover:text-white">

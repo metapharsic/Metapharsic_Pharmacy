@@ -403,7 +403,7 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
             <Badge
               variant="outline"
               className={cn(
-                'gap-1.5 px-2.5 py-0.5 text-xs font-medium',
+                'gap-2 px-2.5 py-0.5 text-xs font-semibold',
                 serverStatus?.online
                   ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
                   : 'border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400'
@@ -411,12 +411,12 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
             >
               {serverStatus?.online ? (
                 <>
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+                  <span className="beacon-emerald"><span className="core-dot" /></span>
                   Port 9000 Online ({serverStatus.latencyMs}ms)
                 </>
               ) : (
                 <>
-                  <span className="h-2 w-2 rounded-full bg-amber-500" />
+                  <span className="beacon-amber"><span className="core-dot" /></span>
                   Port 9000 Offline / Standby
                 </>
               )}
@@ -654,9 +654,9 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
                 <Card
                   key={pkg.id}
                   className={cn(
-                    'relative flex cursor-pointer flex-col justify-between border transition-all',
+                    'relative flex cursor-pointer flex-col justify-between border card-elevate transition-all',
                     isSelected
-                      ? 'border-primary bg-primary/5 ring-2 ring-primary'
+                      ? 'border-primary bg-primary/5 ring-2 ring-primary shadow-md'
                       : 'hover:border-primary/50'
                   )}
                   onClick={() => setSelectedType(pkg.id)}

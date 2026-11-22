@@ -51,10 +51,11 @@ export async function POST(req: NextRequest) {
 
       // Normalize image with Sharp for optimal contrast & size
       try {
-        imageBuffer = await sharp(imageBuffer)
+        const normalized = await sharp(imageBuffer)
           .resize(1920, 1080, { fit: 'inside', withoutEnlargement: true })
           .jpeg({ quality: 85 })
           .toBuffer()
+        imageBuffer = Buffer.from(normalized)
       } catch (err) {
         console.warn('[CameraToBill] Sharp normalization warning:', err)
       }

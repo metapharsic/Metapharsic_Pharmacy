@@ -110,7 +110,9 @@ export function Header() {
             <div className="hidden lg:flex items-center gap-2 rounded-lg border border-border/70 bg-muted/40 px-2.5 py-1 text-xs">
               <Globe className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400" />
               <span className="font-semibold text-foreground/90">ap-south-1</span>
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="beacon-emerald">
+                <span className="core-dot" />
+              </span>
               <span className="text-[11px] text-muted-foreground">
                 {isAr ? '5 مسارات متوازية' : '5 Parallel Threads'}
               </span>
@@ -145,7 +147,9 @@ export function Header() {
               <span className="font-semibold text-foreground/90">
                 {isAr ? 'نقطة بيع 01' : 'Terminal 01'}
               </span>
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="beacon-emerald">
+                <span className="core-dot" />
+              </span>
               <span className="text-[11px] text-muted-foreground">
                 {isAr ? 'صيدلية الصرف' : 'Dispensary'}
               </span>
@@ -178,7 +182,7 @@ export function Header() {
           <Button
             asChild
             size="sm"
-            className="gap-2 bg-gradient-to-r from-teal-800 to-teal-700 hover:from-teal-900 hover:to-teal-800 text-white font-medium shadow-teal-glow text-xs"
+            className="gap-2 bg-gradient-to-r from-teal-800 to-teal-700 hover:from-teal-900 hover:to-teal-800 text-white font-medium shadow-teal-glow text-xs btn-neon-glow"
           >
             <Link href="/platform?tab=monitoring">
               <Cpu className="h-3.5 w-3.5" />
@@ -189,7 +193,7 @@ export function Header() {
           <Button
             asChild
             size="sm"
-            className="gap-2 bg-gradient-to-r from-teal-800 to-teal-700 hover:from-teal-900 hover:to-teal-800 text-white font-medium shadow-teal-glow text-xs"
+            className="gap-2 bg-gradient-to-r from-teal-800 to-teal-700 hover:from-teal-900 hover:to-teal-800 text-white font-medium shadow-teal-glow text-xs btn-neon-glow"
           >
             <Link href={ROUTES.POS}>
               <ShoppingCart className="h-3.5 w-3.5" />

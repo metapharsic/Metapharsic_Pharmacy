@@ -88,6 +88,7 @@ import { WhatsAppInvoiceDialog } from '@/components/sales/whatsapp-invoice-dialo
 import { BarcodeScannerModal } from '@/components/scanner/barcode-scanner-modal'
 import { AiStripCounterModal } from './ai-strip-counter-modal'
 import { CameraCounterScannerModal } from '@/components/pos/camera-counter-scanner-modal'
+import type { PosCartLine } from '@/lib/stores/pos-cart-store'
 import { playBarcodeBeep } from '@/lib/scanner/barcode-sound'
 import { useBarcodeScanner } from '@/lib/scanner/use-barcode-scanner'
 import {
@@ -3024,7 +3025,7 @@ export function Pos2Client({ user, branches, initialConfig }: Pos2ClientProps) {
       <CameraCounterScannerModal
         open={counterVisionOpen}
         onOpenChange={setCounterVisionOpen}
-        branchId={branchId}
+        branchId={branchId || undefined}
         onCommitItemsToCart={handleCommitCounterVisionItems}
       />
 

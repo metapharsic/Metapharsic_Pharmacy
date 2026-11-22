@@ -23,5 +23,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "scratch", "scripts", "generate_dummy.ts", "prisma/**/*"]
+  "exclude": ["node_modules", "scratch", "scripts", "generate_dummy.ts", "prisma/**/*", "**/*.test.ts", "**/__tests__/**"]
 }

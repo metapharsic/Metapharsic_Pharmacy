@@ -559,7 +559,7 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
             {item.badge && (
               <span
                 className={cn(
-                  'rounded px-1.5 py-0.5 text-[9px] font-bold tabular-nums',
+                  'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-bold tabular-nums',
                   item.badgeVariant === 'rose'
                     ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
                     : item.badgeVariant === 'amber'
@@ -569,6 +569,9 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
                         : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
                 )}
               >
+                {item.badgeVariant === 'rose' && <span className="beacon-rose scale-75 origin-center"><span className="core-dot" /></span>}
+                {item.badgeVariant === 'amber' && <span className="beacon-amber scale-75 origin-center"><span className="core-dot" /></span>}
+                {item.badgeVariant === 'teal' && <span className="beacon-emerald scale-75 origin-center"><span className="core-dot" /></span>}
                 {item.badge}
               </span>
             )}
@@ -614,7 +617,7 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
       {item.badge && (
         <span
           className={cn(
-            'rounded px-1.5 py-0.5 text-[9px] font-bold tabular-nums transition-all',
+            'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-bold tabular-nums transition-all',
             item.badgeVariant === 'rose'
               ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
               : item.badgeVariant === 'amber'
@@ -624,6 +627,9 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
                   : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
           )}
         >
+          {item.badgeVariant === 'rose' && <span className="beacon-rose scale-75 origin-center"><span className="core-dot" /></span>}
+          {item.badgeVariant === 'amber' && <span className="beacon-amber scale-75 origin-center"><span className="core-dot" /></span>}
+          {item.badgeVariant === 'teal' && <span className="beacon-emerald scale-75 origin-center"><span className="core-dot" /></span>}
           {item.badge}
         </span>
       )}
@@ -832,7 +838,9 @@ export function Sidebar() {
       {/* Brand Header */}
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-border/70 px-4">
         <Logo size="md" />
-        <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="System Connected & Wired" />
+        <div className="flex items-center gap-1.5" title="Dispensary Operational & In-Sync">
+          <span className="beacon-emerald"><span className="core-dot" /></span>
+        </div>
       </div>
 
       {/* Categorized Navigation */}

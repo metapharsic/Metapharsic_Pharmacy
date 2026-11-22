@@ -239,6 +239,7 @@
   .table-scroll-container {
     scrollbar-gutter: stable;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .bg-clinical-mesh {
@@ -248,9 +249,63 @@
       radial-gradient(at 90% 80%, rgba(6, 182, 212, 0.15) 0px, transparent 50%),
       radial-gradient(at 50% 50%, rgba(15, 118, 110, 0.1) 0px, transparent 60%);
   }
+
+  /* ─── Premium Graphic Lift & Tilt Effects ─── */
+  .card-elevate {
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease;
+    will-change: transform, box-shadow;
+  }
+  .card-elevate:hover {
+    transform: translateY(-3px) scale(1.002);
+    box-shadow: 0 14px 30px -4px rgba(13, 148, 136, 0.12), 0 8px 16px -4px rgba(0, 0, 0, 0.06);
+    border-color: hsl(var(--primary) / 0.4) !important;
+  }
+  .dark .card-elevate:hover {
+    box-shadow: 0 16px 36px -4px rgba(20, 184, 166, 0.15), 0 8px 16px -4px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Shimmer Light Sweep Effect */
+  .shimmer-active {
+    position: relative;
+    overflow: hidden;
+  }
+  .shimmer-active::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.09) 50%,
+      transparent 100%
+    );
+    transform: translateX(-100%);
+    animation: shimmer-sweep 3.5s infinite ease-in-out;
+    pointer-events: none;
+  }
+
+  /* Glowing Button Hover */
+  .btn-neon-glow {
+    position: relative;
+    transition: all 0.25s ease;
+  }
+  .btn-neon-glow:hover {
+    box-shadow: 0 0 20px -2px rgba(13, 148, 136, 0.5), 0 0 8px rgba(20, 184, 166, 0.4);
+    transform: translateY(-1px);
+  }
 }
 
-/* Clean Number Inputs without spin button artifacts or displacement */
+/* ═══════════════════════════════════════════════════════════════════
+   PREMIUM CLINICAL SCROLL, BLINKING & RADAR BEACON SUITE
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Global Smooth Scroll */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px;
+}
+
+/* Clean Number Inputs without spin button artifacts */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -260,10 +315,15 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
-/* Polished clinical scrollbar */
+/* Polished clinical scrollbar with glowing gradient thumb */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--primary) / 0.35) transparent;
+}
+
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
 }
 
 ::-webkit-scrollbar-track {
@@ -271,10 +331,217 @@ input[type="number"] {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.2);
+  background: linear-gradient(180deg, hsl(var(--primary) / 0.38), hsl(var(--primary) / 0.18));
   border-radius: 9999px;
+  border: 1px solid hsl(var(--primary) / 0.1);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.35);
+  background: linear-gradient(180deg, hsl(var(--primary) / 0.8), hsl(var(--primary) / 0.55));
+  box-shadow: 0 0 12px hsl(var(--primary) / 0.6);
+}
+
+/* Keyframes for Shimmer, Radar Rings, and Blinking */
+@keyframes shimmer-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+@keyframes radar-ring {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+@keyframes beacon-breathe {
+  0%, 100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 4px currentColor);
+  }
+  50% {
+    opacity: 0.4;
+    filter: drop-shadow(0 0 1px currentColor);
+  }
+}
+
+@keyframes critical-strobe {
+  0%, 49%, 100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px rgba(244, 63, 94, 0.95));
+  }
+  50%, 99% {
+    opacity: 0.2;
+    filter: drop-shadow(0 0 1px rgba(244, 63, 94, 0.15));
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ─── High-Visibility Blinking Indicators ─── */
+
+/* Green Online / Live Beacon */
+.beacon-emerald {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 8px;
+  height: 8px;
+}
+.beacon-emerald::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  background-color: #10b981;
+  animation: radar-ring 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.beacon-emerald .core-dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background-color: #10b981;
+  box-shadow: 0 0 10px #10b981;
+  animation: beacon-breathe 2s ease-in-out infinite;
+}
+
+/* Red Critical / Quarantine Alert Blinker */
+.beacon-rose {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 8px;
+  height: 8px;
+}
+.beacon-rose::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  background-color: #f43f5e;
+  animation: radar-ring 1.3s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.beacon-rose .core-dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background-color: #f43f5e;
+  box-shadow: 0 0 12px #f43f5e;
+  animation: critical-strobe 1.1s infinite ease-in-out;
+}
+
+/* Amber Warning / Attention Beacon */
+.beacon-amber {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 8px;
+  height: 8px;
+}
+.beacon-amber::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  background-color: #f59e0b;
+  animation: radar-ring 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.beacon-amber .core-dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background-color: #f59e0b;
+  box-shadow: 0 0 10px #f59e0b;
+  animation: beacon-breathe 2s ease-in-out infinite;
+}
+
+/* Sky Blue Telemetry & Sync Beacon */
+.beacon-sky {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 8px;
+  height: 8px;
+}
+.beacon-sky::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  background-color: #0ea5e9;
+  animation: radar-ring 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.beacon-sky .core-dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background-color: #0ea5e9;
+  box-shadow: 0 0 10px #0ea5e9;
+  animation: beacon-breathe 1.8s ease-in-out infinite;
+}
+
+/* Purple AI Neural Pulse */
+.beacon-purple {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 8px;
+  height: 8px;
+}
+.beacon-purple::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  background-color: #a855f7;
+  animation: radar-ring 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.beacon-purple .core-dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background-color: #a855f7;
+  box-shadow: 0 0 10px #a855f7;
+  animation: beacon-breathe 2.4s ease-in-out infinite;
 }
