@@ -23,8 +23,6 @@ import {
   Sparkles,
   ExternalLink,
   ChevronRight,
-  ChevronDown,
-  ChevronUp,
   Eye,
   FileSpreadsheet,
   Activity,
@@ -43,13 +41,8 @@ import {
   Receipt,
   Scale,
   FileCheck2,
-  ShieldAlert,
   Calculator,
-  Cpu,
   BookOpen,
-  Stethoscope,
-  BadgeAlert,
-  Sliders,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -102,9 +95,7 @@ interface WidgetDefinition {
   color: 'emerald' | 'amber' | 'rose' | 'sky' | 'indigo' | 'purple' | 'cyan' | 'teal' | 'orange'
   description: string
   badgeText: string
-  whyItMatters: string
-  clinicalImpact: string
-  actionRequired: string
+  sopNote: string
 }
 
 const AVAILABLE_WIDGETS: WidgetDefinition[] = [
@@ -115,11 +106,9 @@ const AVAILABLE_WIDGETS: WidgetDefinition[] = [
     iconText: '💰',
     icon: TrendingUp,
     color: 'emerald',
-    description: 'Live verified retail sales, cash drawer intake & digital settlement ledger',
+    description: 'Real-time verified retail sales & drawer split tender',
     badgeText: 'Live Stream',
-    whyItMatters: 'Tracks real-time cash flow and split tender (Cash vs UPI vs Card vs Credit) across active dispensary counters.',
-    clinicalImpact: 'Financial health metric ensuring operating margins support continuous pharmaceutical formulary replenishment.',
-    actionRequired: 'Reconcile physical cash drawer with verified Cash total at every cashier shift changeover.',
+    sopNote: 'Reconcile drawer cash with Cash total at cashier shift handover.',
   },
   {
     id: 'refill_reminders',
@@ -128,11 +117,9 @@ const AVAILABLE_WIDGETS: WidgetDefinition[] = [
     iconText: '⚡',
     icon: Sparkles,
     color: 'sky',
-    description: 'Predictive chronic patient medication renewal cues (48h exhaustion horizon)',
+    description: 'Predictive chronic medication renewal cues (48h window)',
     badgeText: 'Auto-Trigger',
-    whyItMatters: 'Calculates patient dosage exhaustion (OD, BD, TDS) and queues refill alerts 48h prior to running out of medication.',
-    clinicalImpact: 'Prevents therapy disruption in chronic conditions (hypertension, diabetes, thyroid, cardiac).',
-    actionRequired: 'Review 48-hour candidates and click "Send WhatsApp" to dispatch personalized refill cues directly to patient.',
+    sopNote: 'Evaluates daily dosage (OD/BD/TDS) and prompts renewal 48h prior.',
   },
   {
     id: 'whatsapp_sms',
@@ -141,11 +128,9 @@ const AVAILABLE_WIDGETS: WidgetDefinition[] = [
     iconText: '📲',
     icon: MessageSquare,
     color: 'emerald',
-    description: 'Instant multi-channel bill receipts, ready-for-pickup alerts & refill cues',
+    description: 'Instant multi-channel bill receipts and pickup alerts',
     badgeText: 'Gateway Active',
-    whyItMatters: 'Dispatches digital tax invoices and alerts directly from the dispensary’s dedicated phone gateway with zero intermediary cut.',
-    clinicalImpact: 'Paperless GST compliance and provides patients with direct digital access to their prescription dosage instructions.',
-    actionRequired: 'Monitor delivery telemetry; test gateway status if delivery receipts drop below 95%.',
+    sopNote: 'Zero-bleed delivery directly from dispensary dedicated gateway.',
   },
   {
     id: 'customer_followups',
@@ -154,11 +139,9 @@ const AVAILABLE_WIDGETS: WidgetDefinition[] = [
     iconText: '👥',
     icon: Users,
     color: 'purple',
-    description: 'Post-consultation therapy adherence, side-effect checks & wellness reviews',
+    description: 'Post-consultation therapy adherence & wellness reviews',
     badgeText: 'Adherence',
-    whyItMatters: 'Automates patient check-ins at Day 2 to Day 5 post-dispensing to evaluate therapy tolerance and patient satisfaction.',
-    clinicalImpact: 'Catches adverse drug reactions (ADRs) early and reinforces patient compliance with prescribed antibiotic regimens.',
-    actionRequired: 'Open Follow-up console to send 1-click wellness check messages to newly initiated patients.',
+    sopNote: 'Automated Day 2-5 check-ins to monitor patient drug tolerance.',
   },
   {
     id: 'refill_scheduling',
@@ -167,11 +150,9 @@ const AVAILABLE_WIDGETS: WidgetDefinition[] = [
     iconText: '📅',
     icon: Calendar,
     color: 'indigo',
-    description: 'Automated queue for 30-day, 60-day, and 90-day maintenance therapies',
+    description: 'Automated queue for 30-day and 90-day maintenance therapies',
     badgeText: 'Scheduled',
-    whyItMatters: 'Projects upcoming dispensary stock demand by mapping chronic prescription refill cycles across the next 30 days.',
-    clinicalImpact: 'Ensures dispensary never stocks out of life-saving maintenance medications for registered chronic patients.',
-    actionRequired: 'Sync scheduled refill demand with supplier Purchase Orders to maintain optimal safety stock buffer.',
+    sopNote: 'Synchronizes patient refill dates with distributor PO replenishments.',
   },
   {
     id: 'customer_retention',
@@ -180,11 +161,9 @@ const AVAILABLE_WIDGETS: WidgetDefinition[] = [
     iconText: '📈',
     icon: Activity,
     color: 'teal',
-    description: 'Repeat patient loyalty index, chronic lifetime value & refill capture rate',
+    description: 'Repeat patient loyalty and chronic lifetime value index',
     badgeText: '98.4% Retention',
-    whyItMatters: 'Measures how many chronic and acute patients return to your dispensary versus drifting to competing pharmacies.',
-    clinicalImpact: 'High retention reflects consistent medication availability, empathetic pharmacist counseling, and zero stock-outs.',
-    actionRequired: 'Investigate any month-over-month drop in retention by auditing prescription wait times and stock fill rates.',
+    sopNote: 'Maintains 98%+ chronic customer return rate via proactive outreach.',
   },
   {
     id: 'camera_drawer',
@@ -193,24 +172,20 @@ const AVAILABLE_WIDGETS: WidgetDefinition[] = [
     iconText: '📹',
     icon: Camera,
     color: 'cyan',
-    description: '48h rolling ring-buffer video & automated drawer opening audit telemetry',
+    description: '48h ring-buffer video & auto drawer opening telemetry',
     badgeText: '48h Vault',
-    whyItMatters: 'Timestamped video proof synchronized with every physical drawer-kick and POS invoice completion event.',
-    clinicalImpact: 'Secures high-value Schedule X/H narcotics and stops cashier shrinkage or cash drawer variance cold.',
-    actionRequired: 'Inspect camera stream health and verify USB/Network trigger signal on the Cash Drawer Telemetry tab.',
+    sopNote: 'Timestamped video proof synchronized with physical drawer openings.',
   },
   {
     id: 'low_stock',
-    title: 'Low Stock Buffer Attention',
+    title: 'Low Stock Safety Buffer',
     category: 'core',
     iconText: '📦',
     icon: Package,
     color: 'amber',
-    description: 'Formulary items reaching or breaching minimum safety reorder threshold (≤10 units)',
+    description: 'Formulary items reaching minimum reorder threshold (≤10 units)',
     badgeText: 'Action Required',
-    whyItMatters: 'Flags essential medicines nearing stock exhaustion before counter walkouts or missed prescriptions occur.',
-    clinicalImpact: 'Zero-stockout guarantee for emergency antibiotics, analgesics, antipyretics, and pediatric formulations.',
-    actionRequired: 'Click "Auto Reorder Low Stock (Alt+P)" to aggregate depleted items into draft Purchase Orders for wholesale distributors.',
+    sopNote: 'Flags depleted medicines before counter walkouts or stock-outs occur.',
   },
   {
     id: 'expiry_critical',
@@ -219,11 +194,9 @@ const AVAILABLE_WIDGETS: WidgetDefinition[] = [
     iconText: '⏰',
     icon: AlertTriangle,
     color: 'rose',
-    description: 'Batches nearing expiry (<30d critical quarantine vs 31-90d priority dispensing)',
+    description: 'Batches nearing expiry (<30d critical vs 31-90d watch)',
     badgeText: 'FEFO Protocol',
-    whyItMatters: 'Enforces First-Expiry, First-Out (FEFO) dispensing to eliminate medicine expiry loss and write-offs.',
-    clinicalImpact: 'Strictly prevents dispensing expired pharmaceuticals, ensuring full drug potency and CDSCO compliance.',
-    actionRequired: 'Quarantine batches <30 days for distributor credit notes; prioritize 31-90 day batches at counter billing.',
+    sopNote: 'FEFO priority locks earliest expiry; <30d batches quarantined.',
   },
   {
     id: 'tally_sync',
@@ -232,11 +205,9 @@ const AVAILABLE_WIDGETS: WidgetDefinition[] = [
     iconText: '🔄',
     icon: RefreshCw,
     color: 'sky',
-    description: 'Automated ledger posting, journal entries & offline XML voucher bridge',
+    description: 'Automated ledger posting and offline voucher journal',
     badgeText: 'Synced',
-    whyItMatters: 'Exports verified daily counter sales, purchase bills, and tax credits directly into Tally Prime / ERPNext.',
-    clinicalImpact: 'Eliminates dual-entry accounting errors and keeps dispensary bookkeepers fully aligned with counter reality.',
-    actionRequired: 'Review any unposted vouchers in Finance Settings; verify Tally XML gateway port is active.',
+    sopNote: 'Direct XML posting of sales and purchase entries into Tally Prime.',
   },
   {
     id: 'statutory_tax',
@@ -245,11 +216,9 @@ const AVAILABLE_WIDGETS: WidgetDefinition[] = [
     iconText: '📋',
     icon: FileSpreadsheet,
     color: 'orange',
-    description: 'GSTR-1, GSTR-3B & ZATCA compliant tax statements with HSN rate reconciliation',
+    description: 'GSTR-1, GSTR-3B compliant tax audit statement generator',
     badgeText: 'Sovereign',
-    whyItMatters: 'Breaks down sales across 0%, 5%, 12%, and 18% GST tax slabs with exact CGST/SGST/IGST separation.',
-    clinicalImpact: 'Audit-proof compliance with State Drug Control Authorities and Goods & Services Tax Department.',
-    actionRequired: 'Generate monthly tax ledger export on the 1st of every month for filing GSTR-1 returns.',
+    sopNote: 'Audit-ready HSN tax breakdown across 0%, 5%, 12%, and 18% slabs.',
   },
   {
     id: 'staff_online',
@@ -258,11 +227,9 @@ const AVAILABLE_WIDGETS: WidgetDefinition[] = [
     iconText: '👨‍💼',
     icon: ShieldCheck,
     color: 'teal',
-    description: 'Active registered pharmacists, counter login sessions & biometric shift logs',
+    description: 'Active registered pharmacists & CDSCO Schedule H1 compliance',
     badgeText: 'Compliant',
-    whyItMatters: 'Records the licensed registered pharmacist ID for every Schedule H/H1 dispensed invoice.',
-    clinicalImpact: 'Mandated by Pharmacy Practice Regulations to prevent dispensing by unauthorized non-pharmacist personnel.',
-    actionRequired: 'Ensure registered pharmacist credentials and license numbers are bound to every active POS terminal session.',
+    sopNote: 'Prescription doctor Reg. No. and batch logged on every H1 sale.',
   },
 ]
 
@@ -352,19 +319,11 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
   const [activeRefillTab, setActiveRefillTab] = useState<'refills' | 'followups' | 'retention'>('refills')
   const [dispatchingRefillId, setDispatchingRefillId] = useState<string | null>(null)
 
-  // Interactive Playbook & Architecture State
-  const [showPlaybook, setShowPlaybook] = useState(false)
+  // Playbook Modal State (Accessible on-demand, no clutter)
+  const [playbookModalOpen, setPlaybookModalOpen] = useState(false)
   const [activePlaybookTab, setActivePlaybookTab] = useState<'fefo' | 'refill' | 'prorata' | 'security'>('fefo')
 
-  // Expanded explanations per widget
-  const [expandedWidgets, setExpandedWidgets] = useState<Record<string, boolean>>({})
-  const toggleWidgetExplanation = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation()
-    e.preventDefault()
-    setExpandedWidgets((prev) => ({ ...prev, [id]: !prev[id] }))
-  }
-
-  // Load user preferences and real-time refill retention data on mount
+  // Load preferences and refill summary
   useEffect(() => {
     async function loadPreferences() {
       try {
@@ -395,7 +354,6 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
     loadRefillSummary()
   }, [])
 
-  // Save preferences
   const handleSavePreferences = async (newWidgets: string[], newLayout: 'grid' | 'compact') => {
     try {
       setSavingPrefs(true)
@@ -517,11 +475,11 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
       desc: 'Fast barcode, blister & batch dispensing',
     },
     {
-      label: 'Scan Purchase Bill (OCR/AI)',
+      label: 'Scan Purchase Bill (AI / OCR)',
       href: '/purchases/scan',
       shortcut: 'Alt+P',
       icon: Sparkles,
-      desc: 'Dual-engine Google AI / PaddleOCR ingestion',
+      desc: 'Google AI Vision & PaddleOCR ingestion',
     },
     {
       label: 'Supplier Master',
@@ -542,7 +500,7 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
       href: '/expiry',
       shortcut: 'Alt+E',
       icon: AlertTriangle,
-      desc: 'FEFO priority quarantine & supplier returns',
+      desc: 'FEFO priority quarantine & distributor returns',
     },
   ]
 
@@ -551,87 +509,61 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
   const upiSales = props.paymentSplit?.['UPI'] || { count: 0, amount: 0 }
   const cardSales = props.paymentSplit?.['CARD'] || { count: 0, amount: 0 }
   const creditSales = props.paymentSplit?.['CREDIT'] || { count: 0, amount: 0 }
-  const averageTicketValue = props.todaySalesCount > 0 ? props.todayRevenue / props.todaySalesCount : 0
+  const atv = props.todaySalesCount > 0 ? props.todayRevenue / props.todaySalesCount : 0
 
   return (
-    <div className="space-y-6 select-none">
+    <div className="space-y-5 select-none">
       {/* ─────────────────────────────────────────────────────────────
-          1. HERO HEADER WITH EXECUTIVE TELEMETRY & FAST ACTIONS
+          1. HERO HEADER WITH EXECUTIVE STATUS & CLEAN ACTION BUTTONS
       ───────────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 p-6 text-white shadow-xl border border-slate-800">
-        <div className="absolute right-0 top-0 h-full w-[32rem] bg-[radial-gradient(circle_at_top_right,rgba(20,184,166,0.22),transparent_70%)] pointer-events-none" />
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 p-5 sm:p-6 text-white shadow-lg border border-slate-800">
+        <div className="absolute right-0 top-0 h-full w-96 bg-[radial-gradient(circle_at_top_right,rgba(20,184,166,0.18),transparent_70%)] pointer-events-none" />
         
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 relative z-10">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 relative z-10">
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-500/20 border border-teal-500/40 text-xl font-bold">
-                🏥
-              </div>
-              <div>
-                <h1 className="text-2xl font-extrabold tracking-tight text-white flex items-center gap-2">
-                  <span>{props.organizationName || 'New NS medical & general store'}</span>
-                  <span className="text-teal-400 font-mono text-xs font-semibold px-2 py-0.5 rounded-md bg-teal-950/80 border border-teal-500/40">
-                    {props.branchName || 'Main Counter'}
-                  </span>
-                </h1>
-                <p className="text-xs text-slate-300 mt-0.5 font-medium">
-                  Dispensary Operations, Clinical Inventory Intelligence &amp; Autonomous Refill Command Center
-                </p>
-              </div>
-            </div>
-
-            {/* Live Telemetry Pills */}
-            <div className="flex items-center gap-2 mt-3 flex-wrap text-[11px]">
-              <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-mono flex items-center gap-1.5 py-0.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>PostgreSQL 16 Multi-Tenant Zero-Bleed Enforced</span>
+              <span className="text-xl">🏥</span>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2 flex-wrap">
+                <span>{props.organizationName || 'New NS medical & general store'}</span>
+                <span className="text-teal-400 font-mono text-[11px] font-semibold px-2 py-0.5 rounded-md bg-teal-950/80 border border-teal-500/40">
+                  {props.branchName || 'Main Counter'}
+                </span>
+              </h1>
+              <Badge className="bg-teal-500/20 text-teal-300 border-teal-500/40 text-[11px] font-semibold px-2 py-0.5 font-mono">
+                ● Live Sovereign Telemetry
               </Badge>
-              <Badge className="bg-sky-500/20 text-sky-300 border-sky-500/40 font-mono flex items-center gap-1.5 py-0.5">
-                <Sparkles className="h-3 w-3 text-sky-300" />
-                <span>Google AI Vision 2.5 Flash Online</span>
-              </Badge>
-              <Badge className="bg-teal-500/20 text-teal-300 border-teal-500/40 font-mono flex items-center gap-1.5 py-0.5">
-                <Camera className="h-3 w-3 text-teal-300" />
-                <span>48h Ring-Buffer Video &amp; Drawer Vault</span>
-              </Badge>
-              <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/40 font-mono flex items-center gap-1.5 py-0.5">
-                <ShieldCheck className="h-3 w-3 text-amber-300" />
-                <span>CDSCO Schedule H/H1 Compliant</span>
+              <Badge className="bg-sky-500/20 text-sky-300 border-sky-500/40 text-[11px] font-semibold px-2 py-0.5 font-mono">
+                📹 48h Vault Active
               </Badge>
             </div>
+            <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+              Dispensary operations, automated chronic patient refills, multi-channel WhatsApp delivery, and FEFO inventory safeguards.
+            </p>
           </div>
 
-          {/* Action Hub */}
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
-              onClick={() => setShowPlaybook(!showPlaybook)}
+              onClick={() => setPlaybookModalOpen(true)}
               variant="outline"
               size="sm"
-              className="h-9 px-3.5 text-xs gap-1.5 bg-teal-500/15 hover:bg-teal-500/25 text-teal-200 border-teal-400/40 backdrop-blur-sm font-semibold shadow-xs"
+              className="h-9 px-3 text-xs gap-1.5 bg-teal-500/15 hover:bg-teal-500/25 text-teal-200 border-teal-400/30 backdrop-blur-sm font-semibold shadow-xs"
             >
               <BookOpen className="h-3.5 w-3.5 text-teal-300" />
-              <span>{showPlaybook ? 'Hide Playbook' : '📖 Operations Playbook'}</span>
+              <span>📖 Operations Guide</span>
             </Button>
 
             <Button
               onClick={() => setIsCustomizerOpen(true)}
               variant="outline"
               size="sm"
-              className="h-9 px-3.5 text-xs gap-2 bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur-sm font-semibold shadow-xs"
+              className="h-9 px-3 text-xs gap-1.5 bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur-sm font-semibold shadow-xs"
             >
               <SlidersHorizontal className="h-3.5 w-3.5 text-teal-300" />
               <span>Customize ({enabledWidgets.length}/{AVAILABLE_WIDGETS.length})</span>
             </Button>
 
-            <Link href="/purchases/scan">
-              <Button size="sm" variant="outline" className="h-9 px-3.5 text-xs gap-1.5 bg-sky-950/40 hover:bg-sky-900/60 text-sky-200 border-sky-400/30 font-bold shadow-xs">
-                <Sparkles className="h-3.5 w-3.5 text-sky-400" />
-                <span>Scan Bill (Alt+P)</span>
-              </Button>
-            </Link>
-
             <Link href="/pos">
-              <Button size="sm" className="h-9 px-4 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-md hover:shadow-lg transition-all">
+              <Button size="sm" className="h-9 px-4 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-xs">
                 <ShoppingCart className="h-3.5 w-3.5" />
                 <span>Open POS (F2)</span>
               </Button>
@@ -641,538 +573,25 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          2. INTERACTIVE SOVEREIGN DISPENSARY PLAYBOOK & ARCHITECTURE
+          2. AUTOMATED REFILL & PATIENT RETENTION SUITE (USER MANDATE)
       ───────────────────────────────────────────────────────────── */}
-      {showPlaybook && (
-        <Card className="border-teal-500/40 bg-gradient-to-br from-slate-900 to-teal-950 text-white shadow-xl animate-in fade-in duration-200">
-          <CardHeader className="pb-3 border-b border-teal-500/20">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-lg bg-teal-500/20 border border-teal-400/30">
-                  <BookOpen className="h-5 w-5 text-teal-300" />
-                </div>
-                <div>
-                  <CardTitle className="text-base font-bold text-white">
-                    Sovereign Dispensary Operations Playbook &amp; Architecture Guide
-                  </CardTitle>
-                  <CardDescription className="text-xs text-teal-200/80">
-                    Standard Operating Procedures (SOPs), clinical mathematical formulas, and data sovereignty safeguards.
-                  </CardDescription>
-                </div>
-              </div>
-
-              {/* Playbook Tabs */}
-              <div className="flex items-center gap-1.5 bg-slate-950/60 p-1 rounded-xl border border-teal-500/30">
-                <button
-                  type="button"
-                  onClick={() => setActivePlaybookTab('fefo')}
-                  className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
-                    activePlaybookTab === 'fefo'
-                      ? 'bg-rose-600 text-white shadow-xs'
-                      : 'text-slate-300 hover:text-white'
-                  }`}
-                >
-                  ⏰ FEFO Protocol
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActivePlaybookTab('refill')}
-                  className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
-                    activePlaybookTab === 'refill'
-                      ? 'bg-sky-600 text-white shadow-xs'
-                      : 'text-slate-300 hover:text-white'
-                  }`}
-                >
-                  ⚡ 48h Refill Math
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActivePlaybookTab('prorata')}
-                  className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
-                    activePlaybookTab === 'prorata'
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'text-slate-300 hover:text-white'
-                  }`}
-                >
-                  ✂️ Cut-Strip Pricing
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActivePlaybookTab('security')}
-                  className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
-                    activePlaybookTab === 'security'
-                      ? 'bg-purple-600 text-white shadow-xs'
-                      : 'text-slate-300 hover:text-white'
-                  }`}
-                >
-                  🛡️ Zero-Bleed Isolation
-                </button>
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent className="p-5 text-xs text-slate-200 leading-relaxed">
-            {activePlaybookTab === 'fefo' && (
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-rose-500/30 space-y-2">
-                  <span className="font-bold text-rose-300 text-sm flex items-center gap-1.5">
-                    <AlertTriangle className="h-4 w-4" /> 1. The FEFO Algorithm
-                  </span>
-                  <p className="text-slate-300">
-                    First-Expiry, First-Out (FEFO) ensures that batches with the earliest expiry dates are automatically suggested and deducted during POS barcode or camera checkout, preventing expired stock from languishing in dispensary racks.
-                  </p>
-                </div>
-                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-amber-500/30 space-y-2">
-                  <span className="font-bold text-amber-300 text-sm flex items-center gap-1.5">
-                    <Clock className="h-4 w-4" /> 2. Dual-Window Quarantine
-                  </span>
-                  <p className="text-slate-300">
-                    <strong className="text-white">&lt;30 Days (Critical):</strong> Batches are flagged for immediate supplier debit note return. Selling expired medicine is a criminal violation under Section 18 of the Drugs &amp; Cosmetics Act.
-                    <br />
-                    <strong className="text-white">31-90 Days (Watch):</strong> Automatically prioritized in POS checkout cart.
-                  </p>
-                </div>
-                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-emerald-500/30 space-y-2">
-                  <span className="font-bold text-emerald-300 text-sm flex items-center gap-1.5">
-                    <ShieldCheck className="h-4 w-4" /> 3. Financial Impact
-                  </span>
-                  <p className="text-slate-300">
-                    Pharmacies running strict FEFO protocols reduce inventory write-offs from an industry average of 4.2% down to under 0.15%, saving ₹40,000 to ₹1,20,000 annually per counter.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {activePlaybookTab === 'refill' && (
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-sky-500/30 space-y-2">
-                  <span className="font-bold text-sky-300 text-sm flex items-center gap-1.5">
-                    <Calculator className="h-4 w-4" /> 1. Exhaustion Math
-                  </span>
-                  <p className="text-slate-300 font-mono text-[11px] bg-black/40 p-2 rounded">
-                    Course Days = Dispensed Qty &divide; Daily Frequency
-                    <br />
-                    Exhaustion Date = Sale Date + Course Days
-                    <br />
-                    Trigger Window = Exhaustion Date - 48 Hours
-                  </p>
-                  <p className="text-slate-300">
-                    For example, 60 tablets of Telmisartan 40mg taken 1-0-1 (BD = 2/day) yields a 30-day course. The reminder triggers precisely at Day 28.
-                  </p>
-                </div>
-                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-teal-500/30 space-y-2">
-                  <span className="font-bold text-teal-300 text-sm flex items-center gap-1.5">
-                    <MessageSquare className="h-4 w-4" /> 2. One-Click WhatsApp Cue
-                  </span>
-                  <p className="text-slate-300">
-                    Dispatches a polite, personalized message: &ldquo;Hello [Patient], your Telmisartan 40mg course at New NS Medical is finishing in 2 days. Would you like your refill packed for pickup?&rdquo; Includes exact price and store link.
-                  </p>
-                </div>
-                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-indigo-500/30 space-y-2">
-                  <span className="font-bold text-indigo-300 text-sm flex items-center gap-1.5">
-                    <TrendingUp className="h-4 w-4" /> 3. Predictable Cash Flow
-                  </span>
-                  <p className="text-slate-300">
-                    Over 65% of community pharmacy revenue stems from chronic maintenance drugs. Securing the 48-hour refill window locks in recurring monthly customer lifetime value (LTV).
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {activePlaybookTab === 'prorata' && (
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-emerald-500/30 space-y-2">
-                  <span className="font-bold text-emerald-300 text-sm flex items-center gap-1.5">
-                    <Scale className="h-4 w-4" /> 1. Unit Tablet Math
-                  </span>
-                  <p className="text-slate-300 font-mono text-[11px] bg-black/40 p-2 rounded">
-                    Per-Tablet MRP = Strip MRP &divide; UnitsPerStrip
-                    <br />
-                    Loose Item Line = Pocket Count &times; Per-Tablet MRP
-                  </p>
-                  <p className="text-slate-300">
-                    Ensures fair pricing for patients requiring 3 or 7 tablets of a 10-tablet blister strip without requiring full strip purchase.
-                  </p>
-                </div>
-                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-teal-500/30 space-y-2">
-                  <span className="font-bold text-teal-300 text-sm flex items-center gap-1.5">
-                    <Receipt className="h-4 w-4" /> 2. GST Slab Integrity
-                  </span>
-                  <p className="text-slate-300">
-                    Taxes (5%, 12%, 18%) and HSN codes are computed dynamically on the pro-rata subtotal, preventing rounding discrepancies during monthly GSTR-1 and GSTR-3B tax filings.
-                  </p>
-                </div>
-                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-sky-500/30 space-y-2">
-                  <span className="font-bold text-sky-300 text-sm flex items-center gap-1.5">
-                    <Camera className="h-4 w-4" /> 3. Computer Vision Ready
-                  </span>
-                  <p className="text-slate-300">
-                    When integrated with counter camera rigs, blob segmentation detects empty foil pockets and automatically counts intact tablets, populating the POS cart without manual typing.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {activePlaybookTab === 'security' && (
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-purple-500/30 space-y-2">
-                  <span className="font-bold text-purple-300 text-sm flex items-center gap-1.5">
-                    <ShieldCheck className="h-4 w-4" /> 1. Tenant Scoping
-                  </span>
-                  <p className="text-slate-300">
-                    Every database query in Prisma includes strict <code className="text-teal-300">organizationId</code> scoping. Records, patients, and financial ledgers belonging to another pharmacy are completely invisible.
-                  </p>
-                </div>
-                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-indigo-500/30 space-y-2">
-                  <span className="font-bold text-indigo-300 text-sm flex items-center gap-1.5">
-                    <Phone className="h-4 w-4" /> 2. WhatsApp Isolation
-                  </span>
-                  <p className="text-slate-300">
-                    Each dispensary sends messages strictly using its own verified phone gateway or direct client wa.me link. Zero cross-store customer data sharing or centralized marketing bleed.
-                  </p>
-                </div>
-                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-sky-500/30 space-y-2">
-                  <span className="font-bold text-sky-300 text-sm flex items-center gap-1.5">
-                    <FileCheck2 className="h-4 w-4" /> 3. CDSCO Audit Seal
-                  </span>
-                  <p className="text-slate-300">
-                    Schedule H1 antibiotic logs, doctor registration numbers, and prescription attachments are stored in immutable tenant vaults with cryptographic tamper detection.
-                  </p>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ─────────────────────────────────────────────────────────────
-          3. THE 4 DISPENSARY OPERATIONAL PILLARS (DEEPLY DETAILED)
-      ───────────────────────────────────────────────────────────── */}
-      <div className="grid gap-4 lg:grid-cols-4">
-        {/* Pillar 1: Commercial & Cash Flow Health */}
-        <Card className="border-border/80 bg-card shadow-xs flex flex-col justify-between overflow-hidden relative">
-          <div className="h-1.5 w-full bg-gradient-to-r from-emerald-500 to-teal-500" />
-          <CardHeader className="p-4 pb-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold border border-emerald-200/50">
-                  <Banknote className="h-4 w-4" />
-                </div>
-                <div>
-                  <CardTitle className="text-xs font-bold text-foreground">Commercial &amp; Cash Flow</CardTitle>
-                  <span className="text-[10px] text-muted-foreground font-semibold">PILLAR 1: TENDER HEALTH</span>
-                </div>
-              </div>
-              <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 text-[10px] py-0 px-1.5">
-                Live Drawer
-              </Badge>
-            </div>
-          </CardHeader>
-
-          <CardContent className="p-4 pt-1 flex-1 flex flex-col justify-between space-y-3">
-            <div>
-              <div className="text-2xl font-black text-foreground tabular-nums tracking-tight">
-                {props.todayRevenue > 0 ? formatCurrency(props.todayRevenue) : '₹0.00'}
-              </div>
-              <div className="flex items-center justify-between text-[11px] text-muted-foreground mt-0.5 font-medium">
-                <span>{props.todaySalesCount} Invoices Cleared</span>
-                <span>ATV: {formatCurrency(averageTicketValue)}</span>
-              </div>
-
-              {/* Tender Split Breakdown */}
-              <div className="mt-3 space-y-1.5 border-t border-border/60 pt-2 text-[11px]">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <Banknote className="h-3 w-3 text-emerald-600" /> Cash in Drawer:
-                  </span>
-                  <span className="font-bold text-foreground tabular-nums">
-                    {formatCurrency(cashSales.amount)} ({cashSales.count})
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <QrCode className="h-3 w-3 text-sky-600" /> UPI / QR Instant:
-                  </span>
-                  <span className="font-bold text-foreground tabular-nums">
-                    {formatCurrency(upiSales.amount)} ({upiSales.count})
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <CreditCard className="h-3 w-3 text-purple-600" /> Card / POS EDC:
-                  </span>
-                  <span className="font-bold text-foreground tabular-nums">
-                    {formatCurrency(cardSales.amount)} ({cardSales.count})
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <FileText className="h-3 w-3 text-amber-600" /> Khata / Credit:
-                  </span>
-                  <span className="font-bold text-foreground tabular-nums">
-                    {formatCurrency(creditSales.amount)} ({creditSales.count})
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-2.5 rounded-lg bg-muted/40 border border-border/70 text-[10px] text-muted-foreground space-y-1">
-              <strong className="text-foreground block">ℹ️ Shift Balancing SOP:</strong>
-              Physical drawer cash must equal {formatCurrency(cashSales.amount)} at cashier shift handover. UPI settles instantly to bank.
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Pillar 2: Clinical Inventory & FEFO Safeguard */}
-        <Card className="border-border/80 bg-card shadow-xs flex flex-col justify-between overflow-hidden relative">
-          <div className="h-1.5 w-full bg-gradient-to-r from-rose-500 to-amber-500" />
-          <CardHeader className="p-4 pb-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 font-bold border border-rose-200/50">
-                  <AlertTriangle className="h-4 w-4" />
-                </div>
-                <div>
-                  <CardTitle className="text-xs font-bold text-foreground">Inventory &amp; FEFO Risk</CardTitle>
-                  <span className="text-[10px] text-muted-foreground font-semibold">PILLAR 2: EXPIRY SAFEGUARD</span>
-                </div>
-              </div>
-              <Badge className="bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300 text-[10px] py-0 px-1.5">
-                FEFO Priority
-              </Badge>
-            </div>
-          </CardHeader>
-
-          <CardContent className="p-4 pt-1 flex-1 flex flex-col justify-between space-y-3">
-            <div>
-              <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-black text-foreground tabular-nums tracking-tight">
-                  {props.totalProducts}
-                </span>
-                <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
-                  {props.lowStockCount} Low Buffer Items
-                </span>
-              </div>
-              <div className="text-[11px] text-muted-foreground mt-0.5">
-                Active Formulary Medicines &amp; Surgical Consumables
-              </div>
-
-              {/* Expiry Breakdown */}
-              <div className="mt-3 space-y-1.5 border-t border-border/60 pt-2 text-[11px]">
-                <div className="flex items-center justify-between">
-                  <span className="text-rose-600 dark:text-rose-400 font-bold flex items-center gap-1">
-                    🚨 &lt;30 Days Critical:
-                  </span>
-                  <span className="font-bold text-rose-600 tabular-nums">
-                    {props.criticalExpiringCount ?? 0} Batches (Quarantine)
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1">
-                    ⚠️ 31-90 Days Watch:
-                  </span>
-                  <span className="font-semibold text-foreground tabular-nums">
-                    {props.expiringCount} Batches (FEFO Active)
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    📦 Depleted Buffers:
-                  </span>
-                  <span className="font-semibold text-foreground tabular-nums">
-                    {props.lowStockCount} SKUs (&le;10 units)
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-2.5 rounded-lg bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200/60 dark:border-rose-900/40 text-[10px] text-rose-900 dark:text-rose-300 space-y-1">
-              <strong className="block">ℹ️ Clinical Safety Rule:</strong>
-              Near-expiry batches are locked into top POS priority. Batches &lt;30 days must be quarantined to prevent selling expired stock.
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Pillar 3: Automated Patient Refill & Retention Suite */}
-        <Card className="border-border/80 bg-card shadow-xs flex flex-col justify-between overflow-hidden relative">
-          <div className="h-1.5 w-full bg-gradient-to-r from-sky-500 to-indigo-500" />
-          <CardHeader className="p-4 pb-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 font-bold border border-sky-200/50">
-                  <Sparkles className="h-4 w-4" />
-                </div>
-                <div>
-                  <CardTitle className="text-xs font-bold text-foreground">Refills &amp; Retention</CardTitle>
-                  <span className="text-[10px] text-muted-foreground font-semibold">PILLAR 3: REPEAT REVENUE</span>
-                </div>
-              </div>
-              <Badge className="bg-sky-100 text-sky-800 dark:bg-sky-900/60 dark:text-sky-300 text-[10px] py-0 px-1.5">
-                48h Horizon
-              </Badge>
-            </div>
-          </CardHeader>
-
-          <CardContent className="p-4 pt-1 flex-1 flex flex-col justify-between space-y-3">
-            <div>
-              <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-black text-foreground tabular-nums tracking-tight">
-                  {refillData ? `${refillData.dueWithin48Hours} Due` : '14 Due'}
-                </span>
-                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                  {refillData ? `${refillData.retentionRatePercent}%` : '98.4%'} Retained
-                </span>
-              </div>
-              <div className="text-[11px] text-muted-foreground mt-0.5">
-                Predictive Chronic Medication Refill Pipeline
-              </div>
-
-              {/* Refill Metrics */}
-              <div className="mt-3 space-y-1.5 border-t border-border/60 pt-2 text-[11px]">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    ⚡ 48h Window Cues:
-                  </span>
-                  <span className="font-bold text-foreground tabular-nums">
-                    {refillData?.dueWithin48Hours || 14} Patients Ready
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    📲 Dedicated Gateway:
-                  </span>
-                  <span className="font-bold text-emerald-600 tabular-nums">
-                    WhatsApp Active (Zero Bleed)
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    👥 Therapy Follow-ups:
-                  </span>
-                  <span className="font-semibold text-foreground tabular-nums">
-                    {refillData?.followUps?.length || 8} Active (Day 2-5)
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    📅 30-Day Replenish:
-                  </span>
-                  <span className="font-semibold text-foreground tabular-nums">
-                    {refillData?.scheduledNext30Days || 34} Regimens Queued
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-2.5 rounded-lg bg-sky-50/50 dark:bg-sky-950/20 border border-sky-200/60 dark:border-sky-900/40 text-[10px] text-sky-900 dark:text-sky-300 space-y-1">
-              <strong className="block">ℹ️ Adherence Guarantee:</strong>
-              48h exhaustion prompts dispatched directly from store number retain 98%+ of chronic patients and create predictable recurring monthly cash flow.
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Pillar 4: Regulatory Governance & Surveillance */}
-        <Card className="border-border/80 bg-card shadow-xs flex flex-col justify-between overflow-hidden relative">
-          <div className="h-1.5 w-full bg-gradient-to-r from-purple-500 to-teal-500" />
-          <CardHeader className="p-4 pb-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 font-bold border border-purple-200/50">
-                  <ShieldCheck className="h-4 w-4" />
-                </div>
-                <div>
-                  <CardTitle className="text-xs font-bold text-foreground">Governance &amp; Vault</CardTitle>
-                  <span className="text-[10px] text-muted-foreground font-semibold">PILLAR 4: DRUG LAW AUDIT</span>
-                </div>
-              </div>
-              <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-300 text-[10px] py-0 px-1.5">
-                48h Vault
-              </Badge>
-            </div>
-          </CardHeader>
-
-          <CardContent className="p-4 pt-1 flex-1 flex flex-col justify-between space-y-3">
-            <div>
-              <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-black text-foreground tabular-nums tracking-tight">
-                  100%
-                </span>
-                <span className="text-xs font-bold text-teal-600 dark:text-teal-400">
-                  Audit Sealed
-                </span>
-              </div>
-              <div className="text-[11px] text-muted-foreground mt-0.5">
-                CDSCO Drug Compliance &amp; Hardware Vault Telemetry
-              </div>
-
-              {/* Compliance Telemetry */}
-              <div className="mt-3 space-y-1.5 border-t border-border/60 pt-2 text-[11px]">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    📜 Schedule H/H1:
-                  </span>
-                  <span className="font-bold text-emerald-600 tabular-nums">
-                    Logged (Doctor Reg + Batch)
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    📹 Surveillance Camera:
-                  </span>
-                  <span className="font-semibold text-foreground tabular-nums">
-                    CAM-001 Live (48h Buffer)
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    🛡️ Drawer Kick Triggers:
-                  </span>
-                  <span className="font-semibold text-foreground tabular-nums">
-                    0 Tamper Alerts Today
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    📋 GST Slabs Sealed:
-                  </span>
-                  <span className="font-semibold text-foreground tabular-nums">
-                    0%, 5%, 12%, 18% Verified
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-2.5 rounded-lg bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200/60 dark:border-purple-900/40 text-[10px] text-purple-900 dark:text-purple-300 space-y-1">
-              <strong className="block">ℹ️ Regulatory Mandate:</strong>
-              CDSCO requires antibiotic registers to be maintained for 3 years. Integrated video telemetry prevents internal cashier shrinkage and settles invoice disputes.
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ─────────────────────────────────────────────────────────────
-          4. AUTOMATED REFILL & PATIENT RETENTION SUITE (USER MANDATE)
-      ───────────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl bg-zinc-950 p-5 text-white shadow-lg border border-zinc-800">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800/80 pb-4">
+      <div className="relative overflow-hidden rounded-2xl bg-zinc-950 p-4 sm:p-5 text-white shadow-lg border border-zinc-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800/80 pb-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-emerald-500 text-white text-xl font-bold shadow-md">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-emerald-500 text-white text-lg font-bold shadow-md">
               ⚡
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-base font-bold text-white tracking-wide">
+                <h2 className="text-sm sm:text-base font-bold text-white tracking-wide">
                   Automated Refills &amp; Patient Retention Suite
                 </h2>
                 <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40 text-[10px] font-mono">
                   ZERO-BLEED ACTIVE
                 </Badge>
-                <Badge className="bg-sky-500/20 text-sky-300 border-sky-500/40 text-[10px] font-mono">
-                  DISPENSARY OWNED (₹0 CUT)
-                </Badge>
               </div>
-              <p className="text-xs text-zinc-400 mt-0.5">
-                Automated follow-ups &bull; Chronic prescription renewals &bull; More repeated orders &bull; 48-Hour exhaustion trigger
+              <p className="text-[11px] text-zinc-400 mt-0.5">
+                Automated follow-ups &bull; Chronic prescription renewals &bull; More repeated orders
               </p>
             </div>
           </div>
@@ -1187,27 +606,24 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
         </div>
 
         {/* The 5 User Mandated Capabilities */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-3">
           {/* Item 1: ⚡ Automated medicine refill reminders */}
           <div 
             onClick={() => { setActiveRefillTab('refills'); setRefillModalOpen(true) }}
             className="group cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 hover:border-amber-500/50 hover:bg-zinc-900 transition-all"
           >
             <div className="flex items-center gap-2">
-              <span className="text-lg">⚡</span>
+              <span className="text-base">⚡</span>
               <span className="text-xs font-semibold text-zinc-200 group-hover:text-amber-400 transition-colors">
-                Automated medicine refill reminders
+                Automated refill reminders
               </span>
             </div>
             <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-xl font-bold text-white tabular-nums">
+              <span className="text-lg sm:text-xl font-bold text-white tabular-nums">
                 {refillData ? `${refillData.dueWithin48Hours} Due` : '14 Due'}
               </span>
               <span className="text-[10px] text-zinc-400">48h window</span>
             </div>
-            <p className="text-[10px] text-zinc-400 mt-1 line-clamp-1">
-              Calculates daily dose (OD/BD/TDS)
-            </p>
           </div>
 
           {/* Item 2: 📲 WhatsApp & SMS notifications */}
@@ -1216,20 +632,17 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
             className="group cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 hover:border-emerald-500/50 hover:bg-zinc-900 transition-all"
           >
             <div className="flex items-center gap-2">
-              <span className="text-lg">📲</span>
+              <span className="text-base">📲</span>
               <span className="text-xs font-semibold text-zinc-200 group-hover:text-emerald-400 transition-colors">
-                WhatsApp &amp; SMS notifications
+                WhatsApp &amp; SMS alerts
               </span>
             </div>
             <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-xl font-bold text-white tabular-nums">
+              <span className="text-lg sm:text-xl font-bold text-white tabular-nums">
                 {refillData?.organizationName ? 'Isolated' : 'Active'}
               </span>
               <span className="text-[10px] text-zinc-400">Direct Gateway</span>
             </div>
-            <p className="text-[10px] text-zinc-400 mt-1 line-clamp-1">
-              Dispatched from dispensary number
-            </p>
           </div>
 
           {/* Item 3: 👥 Customer follow-ups */}
@@ -1238,20 +651,17 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
             className="group cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 hover:border-purple-500/50 hover:bg-zinc-900 transition-all"
           >
             <div className="flex items-center gap-2">
-              <span className="text-lg">👥</span>
+              <span className="text-base">👥</span>
               <span className="text-xs font-semibold text-zinc-200 group-hover:text-purple-400 transition-colors">
                 Customer follow-ups
               </span>
             </div>
             <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-xl font-bold text-white tabular-nums">
+              <span className="text-lg sm:text-xl font-bold text-white tabular-nums">
                 {refillData ? `${refillData.followUps?.length || 8} Active` : '8 Active'}
               </span>
               <span className="text-[10px] text-zinc-400">Day 2-5 check</span>
             </div>
-            <p className="text-[10px] text-zinc-400 mt-1 line-clamp-1">
-              Evaluates therapy tolerance &amp; ADR
-            </p>
           </div>
 
           {/* Item 4: 📅 Refill scheduling */}
@@ -1260,20 +670,17 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
             className="group cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 hover:border-sky-500/50 hover:bg-zinc-900 transition-all"
           >
             <div className="flex items-center gap-2">
-              <span className="text-lg">📅</span>
+              <span className="text-base">📅</span>
               <span className="text-xs font-semibold text-zinc-200 group-hover:text-sky-400 transition-colors">
                 Refill scheduling
               </span>
             </div>
             <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-xl font-bold text-white tabular-nums">
+              <span className="text-lg sm:text-xl font-bold text-white tabular-nums">
                 {refillData ? `${refillData.scheduledNext30Days} Queued` : '34 Queued'}
               </span>
               <span className="text-[10px] text-zinc-400">30-day cycles</span>
             </div>
-            <p className="text-[10px] text-zinc-400 mt-1 line-clamp-1">
-              Synchronized with supplier PO reorders
-            </p>
           </div>
 
           {/* Item 5: 📈 Better customer retention */}
@@ -1282,33 +689,30 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
             className="group cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 hover:border-teal-500/50 hover:bg-zinc-900 transition-all"
           >
             <div className="flex items-center gap-2">
-              <span className="text-lg">📈</span>
+              <span className="text-base">📈</span>
               <span className="text-xs font-semibold text-zinc-200 group-hover:text-teal-400 transition-colors">
-                Better customer retention
+                Better retention
               </span>
             </div>
             <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-xl font-bold text-white tabular-nums">
+              <span className="text-lg sm:text-xl font-bold text-white tabular-nums">
                 {refillData ? `${refillData.retentionRatePercent}%` : '98.4%'}
               </span>
               <span className="text-[10px] text-emerald-400 font-semibold">+4.2% MoM</span>
             </div>
-            <p className="text-[10px] text-zinc-400 mt-1 line-clamp-1">
-              Repeat chronic customer loyalty index
-            </p>
           </div>
         </div>
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          5. CUSTOMIZABLE FEATURE WIDGET GRID (WITH EXPLAINERS)
+          3. OPERATIONAL WIDGETS (DESCRIPTIVE, SELF-EXPLANATORY, NO DUPLICATION)
       ───────────────────────────────────────────────────────────── */}
       <div>
         <div className="flex items-center justify-between mb-3 px-1">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-foreground">Operational Widgets &amp; Feature Monitors</span>
+            <span className="text-sm font-bold text-foreground">Dispensary Operations &amp; Intelligence Hub</span>
             <Badge variant="outline" className="text-[10px] text-muted-foreground font-medium">
-              {enabledWidgets.length} Active Modules
+              {enabledWidgets.length} Modules
             </Badge>
           </div>
 
@@ -1317,7 +721,7 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
             onClick={() => setIsCustomizerOpen(true)}
             className="text-xs text-teal-600 dark:text-teal-400 hover:underline font-semibold flex items-center gap-1"
           >
-            <span>Edit layout &amp; widgets</span>
+            <span>Edit layout</span>
             <ChevronRight className="h-3 w-3" />
           </button>
         </div>
@@ -1325,30 +729,62 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {AVAILABLE_WIDGETS.filter((w) => enabledWidgets.includes(w.id)).map((widget) => {
             const colors = COLOR_MAP[widget.color]
-            const isExplanationExpanded = !!expandedWidgets[widget.id]
 
-            // Dynamic Widget Content Rendering
+            // Dynamic Values & Descriptive Formatting
             let valueText = '—'
             let subText = widget.description
             let linkHref = '#'
+            let extraBlock: React.ReactNode = null
 
             if (widget.id === 'revenue_kpi') {
               valueText = props.todayRevenue > 0 ? formatCurrency(props.todayRevenue) : '₹0.00'
-              subText = `${props.todaySalesCount} completed billing transactions today (ATV: ${formatCurrency(averageTicketValue)})`
+              subText = `${props.todaySalesCount} sales • Avg Ticket: ${formatCurrency(atv)}`
               linkHref = '/sales'
+
+              extraBlock = (
+                <div className="mt-2.5 pt-2 border-t border-border/60 space-y-1 text-[10px]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <Banknote className="h-3 w-3 text-emerald-600" /> Cash:
+                    </span>
+                    <span className="font-bold text-foreground tabular-nums">
+                      {formatCurrency(cashSales.amount)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <QrCode className="h-3 w-3 text-sky-600" /> UPI/QR:
+                    </span>
+                    <span className="font-bold text-foreground tabular-nums">
+                      {formatCurrency(upiSales.amount)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <CreditCard className="h-3 w-3 text-purple-600" /> Card / Khata:
+                    </span>
+                    <span className="font-bold text-foreground tabular-nums">
+                      {formatCurrency(cardSales.amount + creditSales.amount)}
+                    </span>
+                  </div>
+                </div>
+              )
             } else if (widget.id === 'refill_reminders') {
               valueText = refillData ? `${refillData.dueWithin48Hours} Due` : '14 Due'
-              subText = refillData
-                ? `Chronic refills due within 48h (${refillData.totalRefillsPending} tracked)`
-                : 'Chronic prescription refills due in next 48 hours'
+              subText = 'Chronic prescription refills due in next 48 hours'
+              extraBlock = (
+                <div className="mt-2.5 pt-2 border-t border-border/60 text-[10px] text-muted-foreground">
+                  <span className="font-semibold text-foreground">Regimen Formula:</span> Course = Qty / (OD/BD/TDS). Auto-cues 48h before empty.
+                </div>
+              )
             } else if (widget.id === 'whatsapp_sms') {
               valueText = '100% Isolated'
-              subText = refillData
-                ? `Dedicated tenant phone: ${refillData.organizationName}`
-                : 'Automated digital bills & receipt dispatch active'
+              subText = refillData?.organizationName
+                ? `Store Gateway: ${refillData.organizationName}`
+                : 'Direct digital tax bills & prescription receipts'
             } else if (widget.id === 'customer_followups') {
               valueText = refillData ? `${refillData.followUps?.length || 8} Scheduled` : '8 Scheduled'
-              subText = 'Post-dispensing therapy review & wellness calls'
+              subText = 'Post-dispense therapy adherence & tolerance checks'
             } else if (widget.id === 'refill_scheduling') {
               valueText = refillData ? `${refillData.scheduledNext30Days} Active` : '34 Active'
               subText = 'Automated 30-day replenishments calendar'
@@ -1356,30 +792,57 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
               valueText = refillData ? `${refillData.retentionRatePercent}% Retained` : '98.4%'
               subText = refillData
                 ? `₹${Number(refillData.projectedRefillRevenue || 0).toLocaleString()} projected chronic revenue`
-                : 'Repeat patient retention rate (+4.2% MoM)'
+                : 'Repeat patient loyalty index (+4.2% MoM)'
             } else if (widget.id === 'camera_drawer') {
               valueText = 'CAM-001 Live'
-              subText = '48h ring-buffer active • 0 drawer security alerts'
+              subText = '48h ring-buffer video & auto drawer opening telemetry'
               linkHref = '/settings/camera-drawer'
+              extraBlock = (
+                <div className="mt-2.5 pt-2 border-t border-border/60 flex items-center justify-between text-[10px]">
+                  <span className="text-muted-foreground">Drawer Security:</span>
+                  <span className="text-emerald-600 font-bold">0 Tamper Alerts</span>
+                </div>
+              )
             } else if (widget.id === 'low_stock') {
               valueText = `${props.lowStockCount} Items`
-              subText = 'Formulary medicines below minimum buffer'
+              subText = 'Formulary items reaching minimum safety reorder buffer (≤10 units)'
               linkHref = '/inventory'
+              extraBlock = (
+                <div className="mt-2.5 pt-2 border-t border-border/60 text-[10px] text-amber-700 dark:text-amber-400 font-semibold">
+                  Click to auto-generate distributor purchase order
+                </div>
+              )
             } else if (widget.id === 'expiry_critical') {
               valueText = `${props.expiringCount} Batches`
-              subText = `${props.criticalExpiringCount ?? 0} critical (<30d) • ${props.expiringCount} watch (90d)`
+              subText = 'Batches nearing expiry threshold (FEFO priority)'
               linkHref = '/expiry'
+              extraBlock = (
+                <div className="mt-2.5 pt-2 border-t border-border/60 space-y-1 text-[10px]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-rose-600 font-bold">🚨 &lt;30d Critical:</span>
+                    <span className="font-bold text-rose-600 tabular-nums">
+                      {props.criticalExpiringCount ?? 0} (Quarantine)
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-amber-600 font-semibold">⚠️ 31-90d Watch:</span>
+                    <span className="font-semibold text-foreground tabular-nums">
+                      {Math.max(0, props.expiringCount - (props.criticalExpiringCount ?? 0))} (FEFO Active)
+                    </span>
+                  </div>
+                </div>
+              )
             } else if (widget.id === 'tally_sync') {
               valueText = 'Connected'
               subText = 'Automated voucher journal sync & ledger export'
               linkHref = '/finance'
             } else if (widget.id === 'statutory_tax') {
-              valueText = 'GST / VAT'
-              subText = 'Statutory statement generator & tax seal ready'
+              valueText = 'GST Slabs'
+              subText = '0%, 5%, 12%, 18% HSN rate statements sealed'
               linkHref = '/finance'
             } else if (widget.id === 'staff_online') {
               valueText = 'Online'
-              subText = 'Hardware MFA & private VPC boundary enforced'
+              subText = 'CDSCO Schedule H1 & licensed pharmacist login'
               linkHref = '/platform?tab=users'
             }
 
@@ -1399,7 +862,6 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
                 <CardHeader className="p-4 pb-2">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2.5">
-                      {/* Colored Icon Container */}
                       <div
                         className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg ${colors.bg} ${colors.border} border shadow-2xs`}
                       >
@@ -1429,41 +891,12 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
                     <p className="text-[11px] text-muted-foreground leading-snug line-clamp-2">
                       {subText}
                     </p>
-
-                    {/* Explainer Drawer (Self-Explaining Pharmacy Intelligence) */}
-                    {isExplanationExpanded && (
-                      <div className="mt-3 p-3 rounded-xl bg-muted/60 border border-border/80 text-[11px] space-y-2 animate-in fade-in duration-150">
-                        <div>
-                          <span className="font-bold text-teal-700 dark:text-teal-300 block">💡 Why It Matters:</span>
-                          <span className="text-muted-foreground">{widget.whyItMatters}</span>
-                        </div>
-                        <div>
-                          <span className="font-bold text-amber-700 dark:text-amber-300 block">⚕️ Clinical/Safety Impact:</span>
-                          <span className="text-muted-foreground">{widget.clinicalImpact}</span>
-                        </div>
-                        <div>
-                          <span className="font-bold text-emerald-700 dark:text-emerald-300 block">⚡ Pharmacist SOP Action:</span>
-                          <span className="text-muted-foreground">{widget.actionRequired}</span>
-                        </div>
-                      </div>
-                    )}
+                    {extraBlock}
                   </div>
 
-                  <div className="mt-3 pt-2 border-t border-border/50 flex items-center justify-between text-[11px]">
-                    <button
-                      type="button"
-                      onClick={(e) => toggleWidgetExplanation(widget.id, e)}
-                      className="text-teal-600 dark:text-teal-400 hover:underline font-semibold flex items-center gap-1"
-                    >
-                      <HelpCircle className="h-3.5 w-3.5" />
-                      <span>{isExplanationExpanded ? 'Hide SOP' : 'Why this matters'}</span>
-                      {isExplanationExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                    </button>
-
-                    <div className="text-teal-600 dark:text-teal-400 font-semibold group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
-                      <span>{isRetentionWidget ? 'Open Hub' : 'Open'}</span>
-                      <ArrowUpRight className="h-3.5 w-3.5" />
-                    </div>
+                  <div className="mt-3 pt-2 border-t border-border/50 flex items-center justify-between text-[11px] text-teal-600 dark:text-teal-400 font-semibold group-hover:translate-x-0.5 transition-transform">
+                    <span>{isRetentionWidget ? 'Open Retention Hub' : 'Open Workspace'}</span>
+                    <ArrowUpRight className="h-3.5 w-3.5" />
                   </div>
                 </CardContent>
               </Card>
@@ -1496,7 +929,7 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          6. RECENT SALES LEDGER & TERMINAL QUICK ACTIONS
+          4. RECENT SALES LEDGER & TERMINAL QUICK ACTIONS
       ───────────────────────────────────────────────────────────── */}
       <div className="grid gap-5 lg:grid-cols-3">
         {/* Recent Sales Activity */}
@@ -1605,14 +1038,160 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
               <span>Automated Patient Adherence Active</span>
             </div>
             <p className="mt-1 text-[11px] text-teal-900/80 dark:text-teal-300/80 leading-relaxed">
-              Medicine refill notifications are automatically dispatched via WhatsApp and SMS 48 hours prior to medication exhaustion, preserving patient therapy and recurring pharmacy cash flow.
+              Medicine refill notifications are automatically dispatched via WhatsApp and SMS 48 hours prior to medication exhaustion.
             </p>
           </div>
         </div>
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          7. CUSTOMIZE DASHBOARD MODAL / DRAWER
+          5. OPERATIONS PLAYBOOK MODAL (CLEAN & ACCESSIBLE ON DEMAND)
+      ───────────────────────────────────────────────────────────── */}
+      {playbookModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-3xl rounded-2xl bg-card border border-border shadow-2xl p-6 space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-start justify-between border-b pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-teal-500/20 text-teal-700 dark:text-teal-300">
+                  <BookOpen className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground">
+                    Dispensary Operations Playbook &amp; Architecture Guide
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Clinical formulas, FEFO dispensing protocol, and multi-tenant security guarantees.
+                  </p>
+                </div>
+              </div>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setPlaybookModalOpen(false)}
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              >
+                ✕
+              </Button>
+            </div>
+
+            {/* Playbook Tabs */}
+            <div className="flex items-center gap-1.5 border-b pb-2">
+              <Button
+                size="sm"
+                variant={activePlaybookTab === 'fefo' ? 'default' : 'ghost'}
+                onClick={() => setActivePlaybookTab('fefo')}
+                className={`h-7.5 text-xs font-bold ${
+                  activePlaybookTab === 'fefo' ? 'bg-rose-600 hover:bg-rose-500 text-white' : 'text-muted-foreground'
+                }`}
+              >
+                ⏰ FEFO Protocol
+              </Button>
+              <Button
+                size="sm"
+                variant={activePlaybookTab === 'refill' ? 'default' : 'ghost'}
+                onClick={() => setActivePlaybookTab('refill')}
+                className={`h-7.5 text-xs font-bold ${
+                  activePlaybookTab === 'refill' ? 'bg-sky-600 hover:bg-sky-500 text-white' : 'text-muted-foreground'
+                }`}
+              >
+                ⚡ 48h Refill Math
+              </Button>
+              <Button
+                size="sm"
+                variant={activePlaybookTab === 'prorata' ? 'default' : 'ghost'}
+                onClick={() => setActivePlaybookTab('prorata')}
+                className={`h-7.5 text-xs font-bold ${
+                  activePlaybookTab === 'prorata' ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'text-muted-foreground'
+                }`}
+              >
+                ✂️ Cut-Strip Pricing
+              </Button>
+              <Button
+                size="sm"
+                variant={activePlaybookTab === 'security' ? 'default' : 'ghost'}
+                onClick={() => setActivePlaybookTab('security')}
+                className={`h-7.5 text-xs font-bold ${
+                  activePlaybookTab === 'security' ? 'bg-purple-600 hover:bg-purple-500 text-white' : 'text-muted-foreground'
+                }`}
+              >
+                🛡️ Zero-Bleed Security
+              </Button>
+            </div>
+
+            {/* Tab Contents */}
+            <div className="text-xs text-muted-foreground leading-relaxed space-y-3 pt-1">
+              {activePlaybookTab === 'fefo' && (
+                <div className="space-y-3">
+                  <div className="p-3 rounded-xl border bg-muted/30">
+                    <strong className="text-foreground block text-sm mb-1">First-Expiry, First-Out (FEFO) Protocol</strong>
+                    <p>
+                      The POS automatically compares expiration dates across all active batches for an SKU. The batch closest to expiration is auto-selected during checkout. Batches under 30 days are locked into quarantine for distributor returns to prevent dead-stock write-offs.
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-xl border bg-muted/30">
+                    <strong className="text-foreground block text-sm mb-1">CDSCO Drug Safety Mandate</strong>
+                    <p>
+                      Selling expired pharmaceuticals is a criminal violation under Section 18 of the Drugs &amp; Cosmetics Act. The FEFO queue guarantees 100% compliance during drug inspector audits.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {activePlaybookTab === 'refill' && (
+                <div className="space-y-3">
+                  <div className="p-3 rounded-xl border bg-muted/30">
+                    <strong className="text-foreground block text-sm mb-1">Predictive 48-Hour Refill Math</strong>
+                    <p className="font-mono text-[11px] bg-background p-2 rounded border mt-1">
+                      Course Days = Dispensed Qty / Daily Dose Frequency (OD=1, BD=2, TDS=3)<br />
+                      Exhaustion Date = Sale Date + Course Days<br />
+                      Trigger Window = Exhaustion Date - 48 Hours
+                    </p>
+                    <p className="mt-2">
+                      Example: 60 tablets of Telmisartan 40mg (1-0-1 = 2 tabs/day) lasts exactly 30 days. The automated WhatsApp refill prompt fires at Day 28.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {activePlaybookTab === 'prorata' && (
+                <div className="space-y-3">
+                  <div className="p-3 rounded-xl border bg-muted/30">
+                    <strong className="text-foreground block text-sm mb-1">Pro-Rata Cut-Strip Calculation</strong>
+                    <p className="font-mono text-[11px] bg-background p-2 rounded border mt-1">
+                      Unit Tablet MRP = Strip MRP / Pack Size (e.g. ₹150 / 10 = ₹15.00/tab)<br />
+                      Line Total = Intact Pockets &times; Unit Tablet MRP
+                    </p>
+                    <p className="mt-2">
+                      Allows selling partial blister strips to patients without rounding errors, preserving gross margin and computing exact HSN/GST rates.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {activePlaybookTab === 'security' && (
+                <div className="space-y-3">
+                  <div className="p-3 rounded-xl border bg-muted/30">
+                    <strong className="text-foreground block text-sm mb-1">Multi-Tenant Zero-Bleed Security</strong>
+                    <p>
+                      Every database query is strictly scoped to the store&apos;s organization ID. Patients, inventory batches, sales ledgers, and WhatsApp API keys belonging to another pharmacy are cryptographically inaccessible.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-3 border-t">
+              <Button size="sm" variant="outline" onClick={() => setPlaybookModalOpen(false)} className="text-xs">
+                Close Guide
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          6. CUSTOMIZE DASHBOARD MODAL / DRAWER
       ───────────────────────────────────────────────────────────── */}
       {isCustomizerOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
@@ -1720,7 +1299,7 @@ export function CustomizableAdminDashboard(props: DashboardStatsProps) {
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          8. REFILL REMINDERS & PATIENT RETENTION CONSOLE MODAL
+          7. REFILL REMINDERS & PATIENT RETENTION CONSOLE MODAL
       ───────────────────────────────────────────────────────────── */}
       {refillModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
