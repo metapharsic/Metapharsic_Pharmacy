@@ -87,6 +87,7 @@ import { ReceiptInvoice, type ReceiptData } from './receipt-invoice'
 import { WhatsAppInvoiceDialog } from '@/components/sales/whatsapp-invoice-dialog'
 import { BarcodeScannerModal } from '@/components/scanner/barcode-scanner-modal'
 import { AiStripCounterModal } from './ai-strip-counter-modal'
+import { CameraCounterScannerModal } from '@/components/pos/camera-counter-scanner-modal'
 import { playBarcodeBeep } from '@/lib/scanner/barcode-sound'
 import { useBarcodeScanner } from '@/lib/scanner/use-barcode-scanner'
 import {
@@ -285,6 +286,7 @@ export function Pos2Client({ user, branches, initialConfig }: Pos2ClientProps) {
   // ─── Barcode Scanner & AI Strip Counter Modals ───────────
   const [scannerModalOpen, setScannerModalOpen] = useState(false)
   const [stripCounterOpen, setStripCounterOpen] = useState(false)
+  const [counterVisionOpen, setCounterVisionOpen] = useState(false)
 
   // Sync cart to persistent storage on every change
   useEffect(() => {
@@ -750,6 +752,59 @@ export function Pos2Client({ user, branches, initialConfig }: Pos2ClientProps) {
       toast.success(`Added ${product.name}`, `Quantity: ${quantity}`)
     },
     [selectedCustomer?.patientDiscountPercent, toast]
+  )
+
+  const handleCommitCounterVisionItems = useCallback(
+    (items: PosCartLine[]) => {
+      items.forEach((item) => {
+        const isTablet = item.isTabletSale || item.unit === 'TABLET'
+        const tabsCut = item.tabsCut || (isTablet ? item.quantity : undefined)
+
+        handleFormatAddToCart(
+          {
+            id: item.productId,
+            name: item.name,
+            genericName: item.genericName ?? null,
+            sku: item.sku,
+            barcode: item.barcode,
+            unitOfMeasure: item.unitOfMeasure,
+            mrp: item.originalMrp || item.mrp,
+            gstRate: item.gstRate,
+            cgstRate: item.cgstRate,
+            sgstRate: item.sgstRate,
+            igstRate: item.igstRate,
+            hsnCode: item.hsnCode,
+            drugSchedule: item.drugSchedule,
+            isPrescriptionRequired: item.isPrescriptionRequired,
+            isGstExempt: item.isGstExempt,
+            additionalBarcodes: [],
+            availableQuantity: item.availableQuantity,
+            categoryName: item.categoryName,
+            composition: item.composition,
+            tabsPerStrip: item.tabsPerStrip,
+          },
+          item.batchId
+            ? {
+                id: item.batchId,
+                batchNumber: item.batchNumber || '',
+                expiryDate: typeof item.expiryDate === 'string' ? item.expiryDate : '',
+                quantity: item.quantity,
+                availableQuantity: item.availableQuantity,
+                mrp: item.originalMrp || item.mrp,
+                status: 'ACTIVE',
+                isNearExpiry: false,
+                isFefoFirst: true,
+              }
+            : undefined,
+          item.quantity,
+          0,
+          0,
+          isTablet ? 'TABLET' : 'STRIP',
+          tabsCut
+        )
+      })
+    },
+    [handleFormatAddToCart]
   )
 
   const handleToggleCartUnit = useCallback(
@@ -1550,8 +1605,15 @@ export function Pos2Client({ user, branches, initialConfig }: Pos2ClientProps) {
         return
       }
 
-      // F8: Toggle Camera / USB Barcode Scanner Modal
+      // F8: Toggle AI Vision Counter (Camera-to-Bill Multi-Item Detection & Cut-Strip Scanner)
       if (e.key === 'F8') {
+        e.preventDefault()
+        setCounterVisionOpen((prev) => !prev)
+        return
+      }
+
+      // F7: Toggle USB Barcode Scanner Modal
+      if (e.key === 'F7') {
         e.preventDefault()
         setScannerModalOpen((prev) => !prev)
         return
@@ -1848,13 +1910,29 @@ export function Pos2Client({ user, branches, initialConfig }: Pos2ClientProps) {
                   )}
                 </div>
 
+                {/* AI Vision Counter-to-Bill Multi-Item Scanner Launch Button */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCounterVisionOpen(true)}
+                  className="shadow-xs h-10 gap-1.5 border-teal-600/50 bg-teal-600/10 text-xs font-bold text-teal-800 transition-colors hover:bg-teal-600 hover:text-white dark:text-teal-200"
+                  title="Open AI Vision Counter (Multi-Item YOLO + Cut-Strip Pro-Rata Camera-to-Bill) (F8)"
+                >
+                  <Camera className="h-4 w-4 text-teal-600 dark:text-teal-400 group-hover:text-white" />
+                  <Sparkles className="h-3.5 w-3.5 text-amber-500 animate-pulse" />
+                  <span className="hidden sm:inline">Camera-to-Bill</span>
+                  <span className="py-0.2 rounded bg-teal-600/20 px-1 font-mono text-[10px] text-teal-900 dark:text-teal-100 font-extrabold">
+                    F8
+                  </span>
+                </Button>
+
                 {/* Barcode Scanner Modal Launch Button */}
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setScannerModalOpen(true)}
                   className="shadow-xs h-10 gap-1.5 border-primary/40 bg-primary/5 text-xs font-medium text-primary hover:bg-primary hover:text-primary-foreground"
-                  title="Open Live Camera / USB Barcode Scanner (F8)"
+                  title="Open Live Camera / USB Barcode Scanner (F7)"
                 >
                   <Barcode className="h-4 w-4" />
                   <Camera className="h-3.5 w-3.5" />
@@ -2940,6 +3018,14 @@ export function Pos2Client({ user, branches, initialConfig }: Pos2ClientProps) {
         onOpenChange={setStripCounterOpen}
         products={products}
         onAddToCart={handleFormatAddToCart}
+      />
+
+      {/* ─── AI Vision Counter (Camera-to-Bill Multi-Item & Cut-Strip Scanner) ─── */}
+      <CameraCounterScannerModal
+        open={counterVisionOpen}
+        onOpenChange={setCounterVisionOpen}
+        branchId={branchId}
+        onCommitItemsToCart={handleCommitCounterVisionItems}
       />
 
       {/* ─── 1-Tablet Sales Pattern & Acute Combo Modal ─────────────────── */}

@@ -427,6 +427,45 @@ export function analyzeRawPixelBuffer(
 }
 
 /**
+ * Pro-rata pricing calculation for cut tablet strips and fractional dispensing.
+ */
+export interface ProRataPricing {
+  stripMrp: number
+  tabsPerStrip: number
+  dispenseCount: number
+  pricePerTab: number
+  lineTotal: number
+  gstRate: number
+  taxableAmount: number
+  taxAmount: number
+}
+
+export function calculateProRataPricing(
+  stripMrp: number,
+  tabsPerStrip: number,
+  dispenseCount: number,
+  gstRate: number = 12
+): ProRataPricing {
+  const safeTabsPerStrip = Math.max(1, tabsPerStrip || 10)
+  const safeCount = Math.max(1, dispenseCount || 1)
+  const pricePerTab = Math.round((stripMrp / safeTabsPerStrip) * 100) / 100
+  const lineTotal = Math.round(safeCount * pricePerTab * 100) / 100
+  const taxableAmount = Math.round((lineTotal / (1 + gstRate / 100)) * 100) / 100
+  const taxAmount = Math.round((lineTotal - taxableAmount) * 100) / 100
+
+  return {
+    stripMrp,
+    tabsPerStrip: safeTabsPerStrip,
+    dispenseCount: safeCount,
+    pricePerTab,
+    lineTotal,
+    gstRate,
+    taxableAmount,
+    taxAmount,
+  }
+}
+
+/**
  * Computer vision analyzer that accepts browser ImageData or Canvas frames.
  */
 export function analyzeStripImageFrame(
