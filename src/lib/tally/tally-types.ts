@@ -2,6 +2,8 @@
 // Tally ERP / TallyPrime Integration Types & Defaults
 // ─────────────────────────────────────────────────────────────
 
+import type { SovereignTaxBreakdown } from '@/lib/territory/sovereign-tax-service'
+
 export interface TallyConfig {
   serverUrl: string
   companyName: string
@@ -64,6 +66,7 @@ export interface TallyExportQuery {
   startDate?: string
   endDate?: string
   branchId?: string
+  territory?: string
   preview?: boolean
 }
 
@@ -86,6 +89,7 @@ export interface TallyPreviewResponse {
   fullXmlLength: number
   csvPreview?: string
   gstr1Summary?: Gstr1ReportSummary
+  sovereignTax?: SovereignTaxBreakdown
   batchSummaryItems?: BatchSummaryItem[]
 }
 

@@ -31,6 +31,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { GstSummary } from '@/lib/finance/finance-service'
 import { formatCurrency } from '@/lib/utils/currency'
+import { useI18n } from '@/lib/i18n/i18n-context'
+import { getTerritoryTaxProfile } from '@/lib/territory/sovereign-tax-service'
 
 interface Gstr1B2BInvoice {
   id: string
@@ -139,6 +141,18 @@ export function GstSummaryView({
   showReportAction = true,
 }: GstSummaryViewProps) {
   const router = useRouter()
+  const { territory, territoryDef, isAr } = useI18n()
+  const taxProfile = getTerritoryTaxProfile(territory)
+
+  const effectiveTitle =
+    territory !== 'IN' && title === 'GST Reports'
+      ? (isAr ? taxProfile.formTitleAr : taxProfile.formTitleEn)
+      : title
+
+  const effectiveDescription =
+    territory !== 'IN' && description.includes('GSTR-1')
+      ? (isAr ? taxProfile.formDescriptionAr : taxProfile.formDescriptionEn)
+      : description
   const [syncLoading, setSyncLoading] = React.useState(false)
   const [fileDialogOpen, setFileDialogOpen] = React.useState(false)
   const [fileLoading, setFileLoading] = React.useState(false)
@@ -232,8 +246,8 @@ export function GstSummaryView({
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-          <p className="text-muted-foreground">{description}</p>
+          <h1 className="text-2xl font-bold tracking-tight">{effectiveTitle}</h1>
+          <p className="text-muted-foreground">{effectiveDescription}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -301,13 +315,13 @@ export function GstSummaryView({
               {formatCurrency(summary.taxableAmount)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {summary.transactionCount} GST transactions recorded
+              {summary.transactionCount} {territory === 'IN' ? 'GST transactions recorded' : `${taxProfile.regime} transactions recorded`}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total GST</CardTitle>
+            <CardTitle className="text-sm font-medium">{territory === 'IN' ? 'Total GST' : `Total ${taxProfile.regime} Tax`}</CardTitle>
             <Scale className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -315,7 +329,9 @@ export function GstSummaryView({
               {formatCurrency(summary.totalTax)}
             </div>
             <p className="text-xs text-muted-foreground">
-              CGST {formatCurrency(summary.cgstAmount)} · SGST {formatCurrency(summary.sgstAmount)}
+              {territory === 'IN'
+                ? `CGST ${formatCurrency(summary.cgstAmount)} · SGST ${formatCurrency(summary.sgstAmount)}`
+                : `Output Tax Rate: ${taxProfile.standardRate}% · Zero-Rated Medicines: 0.0%`}
             </p>
           </CardContent>
         </Card>
@@ -329,7 +345,9 @@ export function GstSummaryView({
               {formatCurrency(summary.totalAmount)}
             </div>
             <p className="text-xs text-muted-foreground">
-              IGST {formatCurrency(summary.igstAmount)}
+              {territory === 'IN'
+                ? `IGST ${formatCurrency(summary.igstAmount)}`
+                : `Total Value (${taxProfile.currency})`}
             </p>
           </CardContent>
         </Card>
@@ -344,9 +362,17 @@ export function GstSummaryView({
         }}
       >
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="gstr1">GSTR-1 (Outward)</TabsTrigger>
-          <TabsTrigger value="gstr3b">GSTR-3B (Summary & ITC)</TabsTrigger>
+          <TabsTrigger value="overview">{isAr ? 'نظرة عامة' : 'Overview'}</TabsTrigger>
+          <TabsTrigger value="gstr1">
+            {territory === 'IN'
+              ? 'GSTR-1 (Outward)'
+              : (isAr ? taxProfile.reportTabLabelAr : taxProfile.reportTabLabelEn)}
+          </TabsTrigger>
+          <TabsTrigger value="gstr3b">
+            {territory === 'IN'
+              ? 'GSTR-3B (Summary & ITC)'
+              : (isAr ? 'ضريبة المدخلات والمشتريات' : 'Input Tax & Purchases')}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4 pt-4">

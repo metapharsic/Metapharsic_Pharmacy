@@ -406,7 +406,7 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { data: session } = useSession()
-  const { t, locale } = useI18n()
+  const { t, locale, territory } = useI18n()
 
   const userRoles = session?.user?.roles ?? []
   const isAdmin = Boolean(
@@ -416,6 +416,16 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
     userRoles.includes('manager') ||
     userRoles.includes('super_admin')
   )
+
+  let effectiveLabel = item.label
+  if (item.href === ROUTES.GST) {
+    if (territory === 'OM') effectiveLabel = 'VAT Reports (OTA)'
+    else if (territory === 'SA') effectiveLabel = 'VAT Reports (ZATCA)'
+    else if (territory === 'BH') effectiveLabel = 'VAT Reports (NBR)'
+    else if (territory === 'QA') effectiveLabel = 'Tax Reports (GTA)'
+    else if (territory === 'MV') effectiveLabel = 'GST Reports (MIRA 205)'
+    else effectiveLabel = 'GST Reports (GSTR-1/3B)'
+  }
 
   const translateLabel = (label: string): string => {
     if (locale !== 'ar') return label
@@ -456,6 +466,12 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
       'Payment Voucher': 'سند صرف',
       'Expense Voucher': 'سند مصروفات',
       'GST Reports': 'تقارير الضرائب والزكاة',
+      'VAT Reports (OTA)': 'إقرارات ضريبة القيمة المضافة (جهاز الضرائب)',
+      'VAT Reports (ZATCA)': 'إقرارات ضريبة القيمة المضافة (زاتكا)',
+      'VAT Reports (NBR)': 'إقرارات ضريبة القيمة المضافة (NBR)',
+      'Tax Reports (GTA)': 'التقارير الضريبية والنظامية (GTA)',
+      'GST Reports (MIRA 205)': 'تقارير ضريبة MIRA 205',
+      'GST Reports (GSTR-1/3B)': 'تقارير ضريبة GST (GSTR-1/3B)',
       'Ledger & Accounts Sync': 'دفتر الأستاذ والمزامنة المحاسبية',
       'Reports & Audits': 'التقارير وسجلات التدقيق',
       'Reports': 'التقارير والتحليلات',
@@ -518,7 +534,7 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
             >
               <item.icon className="h-3.5 w-3.5" />
             </div>
-            <span>{translateLabel(item.label)}</span>
+            <span>{translateLabel(effectiveLabel)}</span>
             {item.badge && (
               <span
                 className={cn(
@@ -575,7 +591,7 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
         >
           <item.icon className="h-3.5 w-3.5" />
         </div>
-        <span>{translateLabel(item.label)}</span>
+        <span>{translateLabel(effectiveLabel)}</span>
       </span>
       {item.badge && (
         <span

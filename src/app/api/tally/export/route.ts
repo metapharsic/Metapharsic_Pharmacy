@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
     const startDate = searchParams.get('startDate') ?? undefined
     const endDate = searchParams.get('endDate') ?? undefined
     const branchId = searchParams.get('branchId') ?? undefined
+    const territory = searchParams.get('territory') ?? undefined
     const isPreview = searchParams.get('preview') === 'true'
 
     const exportResult = await generateTallyExport(
@@ -27,6 +28,7 @@ export async function GET(req: NextRequest) {
         startDate,
         endDate,
         branchId,
+        territory,
         preview: isPreview,
       },
       session.user
@@ -46,6 +48,7 @@ export async function GET(req: NextRequest) {
         fullXmlLength: exportResult.content.length,
         contentType: exportResult.contentType,
         gstr1Summary: exportResult.gstr1Summary,
+        sovereignTax: exportResult.sovereignTax,
         batchSummaryItems,
       })
     }

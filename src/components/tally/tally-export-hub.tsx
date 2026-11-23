@@ -66,6 +66,11 @@ import type {
 } from '@/lib/tally/tally-types'
 import { cn } from '@/lib/utils/cn'
 import { formatCurrency } from '@/lib/utils/currency'
+import { useI18n } from '@/lib/i18n/i18n-context'
+import {
+  getTerritoryTaxProfile,
+  type SovereignTaxBreakdown,
+} from '@/lib/territory/sovereign-tax-service'
 
 interface TallyExportHubProps {
   initialConfig: TallyConfig
@@ -73,6 +78,10 @@ interface TallyExportHubProps {
 }
 
 export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps) {
+  const { territory, territoryDef, isAr } = useI18n()
+  const taxProfile = getTerritoryTaxProfile(territory)
+  const [sovereignTax, setSovereignTax] = useState<SovereignTaxBreakdown | null>(null)
+
   const [activeTab, setActiveTab] = useState('export')
   const [selectedType, setSelectedType] = useState<TallyExportType>('sales')
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'))
@@ -196,13 +205,14 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
     }
   }, [])
 
-  // Fetch GSTR-1 summary
+  // Fetch GSTR-1 / Regional Sovereign Tax summary
   const fetchGstr1Summary = useCallback(async () => {
     setGstr1Loading(true)
     try {
       const params = new URLSearchParams({
         type: 'gstr1',
         preview: 'true',
+        territory,
       })
       if (startDate) params.set('startDate', startDate)
       if (endDate) params.set('endDate', endDate)
@@ -210,15 +220,20 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
 
       const res = await fetch(`/api/tally/export?${params.toString()}`)
       const json = await res.json()
-      if (json.success && json.gstr1Summary) {
-        setGstr1Summary(json.gstr1Summary as Gstr1ReportSummary)
+      if (json.success) {
+        if (json.gstr1Summary) {
+          setGstr1Summary(json.gstr1Summary as Gstr1ReportSummary)
+        }
+        if (json.sovereignTax) {
+          setSovereignTax(json.sovereignTax as SovereignTaxBreakdown)
+        }
       }
     } catch {
-      toast.error('Failed to load GSTR-1 metrics')
+      toast.error(`Failed to load ${taxProfile.formCode} metrics`)
     } finally {
       setGstr1Loading(false)
     }
-  }, [startDate, endDate, selectedBranchId])
+  }, [startDate, endDate, selectedBranchId, territory, taxProfile.formCode])
 
   useEffect(() => {
     void fetchSyncLogs()
@@ -292,7 +307,7 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
     overrideType?: TallyExportType
   ) => {
     const type = overrideType || selectedType
-    const params = new URLSearchParams({ type, format: formatType })
+    const params = new URLSearchParams({ type, format: formatType, territory })
     if (startDate) params.set('startDate', startDate)
     if (endDate) params.set('endDate', endDate)
     if (selectedBranchId) params.set('branchId', selectedBranchId)
@@ -300,12 +315,13 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
     const downloadUrl = `/api/tally/export?${params.toString()}`
     const link = document.createElement('a')
     link.href = downloadUrl
-    link.setAttribute('download', `ledger_${type}.${formatType}`)
+    const filePrefix = type === 'gstr1' ? taxProfile.regime.toLowerCase() : type
+    link.setAttribute('download', `${filePrefix}_return.${formatType}`)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     toast.success(
-      `Downloading ${type.toUpperCase()} package (${formatType.toUpperCase()})...`
+      `Downloading ${type === 'gstr1' ? taxProfile.formCode : type.toUpperCase()} package (${formatType.toUpperCase()})...`
     )
   }
 
@@ -471,7 +487,10 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
           </TabsTrigger>
           <TabsTrigger value="gstr1" className="gap-1.5 text-xs md:text-sm">
             <FileSpreadsheet className="h-4 w-4" />
-            GSTR-1 Reports
+            <span>{isAr ? taxProfile.reportTabLabelAr : taxProfile.reportTabLabelEn}</span>
+            <Badge variant="outline" className="hidden lg:inline-flex text-[9px] px-1 py-0 ml-0.5 font-mono uppercase bg-primary/10 border-primary/30 text-primary">
+              {taxProfile.regime}
+            </Badge>
           </TabsTrigger>
           <TabsTrigger value="sync" className="gap-1.5 text-xs md:text-sm">
             <Activity className="h-4 w-4" />
@@ -959,18 +978,22 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
           </Card>
         </TabsContent>
 
-        {/* ─── TAB 2: GSTR-1 REPORTS ──────────────────────── */}
+        {/* ─── TAB 2: SOVEREIGN TAX & REGIONAL VAT REPORTS ──────────────────────── */}
         <TabsContent value="gstr1" className="space-y-6">
           <Card>
             <CardHeader className="pb-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <CardTitle className="text-base font-semibold">
-                    GSTR-1 GST Portal & TallyPrime Ready
-                  </CardTitle>
-                  <CardDescription>
-                    Outward supplies categorized by Table 4 (B2B registered), Table 7 (B2C
-                    consumers), and Table 12 (HSN summary).
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-base font-semibold">
+                      {isAr ? taxProfile.formTitleAr : taxProfile.formTitleEn}
+                    </CardTitle>
+                    <Badge variant="outline" className="font-mono text-xs uppercase bg-primary/10 border-primary/30 text-primary">
+                      {taxProfile.regime} {taxProfile.standardRate > 0 ? `${taxProfile.standardRate}%` : ''} ({taxProfile.currency})
+                    </Badge>
+                  </div>
+                  <CardDescription className="mt-1">
+                    {isAr ? taxProfile.formDescriptionAr : taxProfile.formDescriptionEn}
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
@@ -980,7 +1003,7 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
                     className="gap-1.5"
                     onClick={() => handleDownload('csv', 'gstr1')}
                   >
-                    <Download className="h-4 w-4" /> Download GSTR-1 CSV
+                    <Download className="h-4 w-4" /> {isAr ? taxProfile.csvDownloadLabelAr : taxProfile.csvDownloadLabelEn}
                   </Button>
                   <Button
                     variant="default"
@@ -988,7 +1011,7 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
                     className="gap-1.5"
                     onClick={() => handleDownload('json', 'gstr1')}
                   >
-                    <FileCode className="h-4 w-4" /> Export Offline JSON
+                    <FileCode className="h-4 w-4" /> {isAr ? taxProfile.jsonDownloadLabelAr : taxProfile.jsonDownloadLabelEn}
                   </Button>
                 </div>
               </div>
@@ -997,6 +1020,128 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
               {gstr1Loading ? (
                 <div className="flex h-40 items-center justify-center">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : territory !== 'IN' && sovereignTax ? (
+                <div className="space-y-6">
+                  {/* KPI Metrics */}
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="rounded-lg border bg-muted/20 p-4">
+                      <div className="text-xs font-medium text-muted-foreground">
+                        {isAr ? 'إجمالي الفواتير الصادرة' : 'Total Tax Invoices'}
+                      </div>
+                      <div className="mt-1 text-2xl font-bold">{sovereignTax.totalInvoices}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {isAr ? 'إجمالي المبيعات: ' : 'Gross Sales: '}{formatCurrency(sovereignTax.totalGrossSales)}
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border bg-muted/20 p-4">
+                      <div className="text-xs font-medium text-muted-foreground">
+                        {isAr ? taxProfile.box1LabelAr : taxProfile.box1LabelEn}
+                      </div>
+                      <div className="mt-1 text-2xl font-bold text-primary">
+                        {formatCurrency(sovereignTax.box1StandardTaxable)}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {isAr ? 'ضريبة: ' : 'Output Tax: '}{formatCurrency(sovereignTax.box1StandardTax)}
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border bg-muted/20 p-4">
+                      <div className="text-xs font-medium text-muted-foreground">
+                        {isAr ? taxProfile.box2LabelAr : taxProfile.box2LabelEn}
+                      </div>
+                      <div className="mt-1 text-2xl font-bold text-teal-600">
+                        {formatCurrency(sovereignTax.box2ZeroRatedTaxable)}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {isAr ? 'نسبة الصفر (0% معتمد)' : 'Zero-Rated: 0.0% Statutory'}
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border bg-muted/20 p-4">
+                      <div className="text-xs font-medium text-muted-foreground">
+                        {isAr ? 'صافي الضريبة الواجبة السداد' : 'Net Tax Liability'}
+                      </div>
+                      <div className="mt-1 text-2xl font-bold text-emerald-600">
+                        {formatCurrency(sovereignTax.netTaxPayable)}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {isAr ? 'مخرجات: ' : 'Output: '}{formatCurrency(sovereignTax.totalOutputTax)} | {isAr ? 'مدخلات: ' : 'Input: '}{formatCurrency(sovereignTax.box5InputTax)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Summary Breakdown table */}
+                  <div className="overflow-hidden rounded-lg border text-sm">
+                    <table className="w-full text-left">
+                      <thead className="border-b bg-muted/50 text-xs font-semibold text-muted-foreground">
+                        <tr>
+                          <th className="p-3">{isAr ? 'البند / الجدول' : 'Statutory Schedule / Box'}</th>
+                          <th className="p-3">{isAr ? 'الوصف القانوني' : 'Statutory Description'}</th>
+                          <th className="p-3 text-right">{isAr ? `القيمة الخاضعة (${taxProfile.currency})` : `Taxable Amount (${taxProfile.currency})`}</th>
+                          <th className="p-3 text-right">{isAr ? 'النسبة %' : 'Rate %'}</th>
+                          <th className="p-3 text-right">{isAr ? `مبلغ الضريبة (${taxProfile.currency})` : `Tax Amount (${taxProfile.currency})`}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        <tr>
+                          <td className="p-3 font-medium">{isAr ? taxProfile.box1LabelAr : taxProfile.box1LabelEn}</td>
+                          <td className="p-3 text-muted-foreground">
+                            {isAr ? `التوريدات الخاضعة للنسبة الرسمية (${taxProfile.standardRate}%)` : `Standard supplies subject to statutory rate (${taxProfile.standardRate}%)`}
+                          </td>
+                          <td className="p-3 text-right">{formatCurrency(sovereignTax.box1StandardTaxable)}</td>
+                          <td className="p-3 text-right">{taxProfile.standardRate.toFixed(1)}%</td>
+                          <td className="p-3 text-right font-medium text-emerald-600">{formatCurrency(sovereignTax.box1StandardTax)}</td>
+                        </tr>
+                        <tr>
+                          <td className="p-3 font-medium">{isAr ? taxProfile.box2LabelAr : taxProfile.box2LabelEn}</td>
+                          <td className="p-3 text-muted-foreground">
+                            {isAr ? 'الأدوية والمستلزمات الصيدلانية الخاضعة لنسبة الصفر' : 'Registered pharmaceuticals and essential health supplies'}
+                          </td>
+                          <td className="p-3 text-right">{formatCurrency(sovereignTax.box2ZeroRatedTaxable)}</td>
+                          <td className="p-3 text-right">0.0%</td>
+                          <td className="p-3 text-right font-medium text-emerald-600">{formatCurrency(0)}</td>
+                        </tr>
+                        <tr>
+                          <td className="p-3 font-medium">{isAr ? taxProfile.box3LabelAr : taxProfile.box3LabelEn}</td>
+                          <td className="p-3 text-muted-foreground">
+                            {isAr ? 'الخدمات الطبية والاستشارات المعفاة' : 'Exempt medical services and statutory healthcare'}
+                          </td>
+                          <td className="p-3 text-right">{formatCurrency(0)}</td>
+                          <td className="p-3 text-right">0.0%</td>
+                          <td className="p-3 text-right font-medium text-emerald-600">{formatCurrency(0)}</td>
+                        </tr>
+                        <tr className="bg-muted/10 font-medium">
+                          <td className="p-3">{isAr ? taxProfile.box4LabelAr : taxProfile.box4LabelEn}</td>
+                          <td className="p-3 text-muted-foreground">
+                            {isAr ? 'إجمالي المخرجات وضريبة المبيعات' : 'Total outward supplies & output tax liability'}
+                          </td>
+                          <td className="p-3 text-right">{formatCurrency(sovereignTax.box1StandardTaxable + sovereignTax.box2ZeroRatedTaxable)}</td>
+                          <td className="p-3 text-right">-</td>
+                          <td className="p-3 text-right font-bold text-emerald-600">{formatCurrency(sovereignTax.totalOutputTax)}</td>
+                        </tr>
+                        <tr>
+                          <td className="p-3 font-medium">{isAr ? taxProfile.box5LabelAr : taxProfile.box5LabelEn}</td>
+                          <td className="p-3 text-muted-foreground">
+                            {isAr ? 'المشتريات الخاضعة للضريبة وضريبة المدخلات القابلة للخصم' : 'Taxable purchases and deductible input tax on pharmacy stock'}
+                          </td>
+                          <td className="p-3 text-right">{formatCurrency(sovereignTax.box5PurchasesTaxable)}</td>
+                          <td className="p-3 text-right">{taxProfile.standardRate.toFixed(1)}%</td>
+                          <td className="p-3 text-right font-medium text-emerald-600">{formatCurrency(sovereignTax.box5InputTax)}</td>
+                        </tr>
+                        <tr className="bg-primary/5 font-bold">
+                          <td className="p-3 text-primary">{isAr ? taxProfile.box6LabelAr : taxProfile.box6LabelEn}</td>
+                          <td className="p-3 text-muted-foreground">
+                            {isAr ? `صافي الضريبة الواجبة السداد لـ ${taxProfile.authorityNameAr}` : `Net statutory tax payable/(refundable) to ${taxProfile.authorityNameEn}`}
+                          </td>
+                          <td className="p-3 text-right">-</td>
+                          <td className="p-3 text-right">-</td>
+                          <td className="p-3 text-right text-base text-primary">{formatCurrency(sovereignTax.netTaxPayable)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               ) : gstr1Summary ? (
                 <div className="space-y-6">
@@ -1110,7 +1255,9 @@ export function TallyExportHub({ initialConfig, branches }: TallyExportHubProps)
                 </div>
               ) : (
                 <div className="py-8 text-center text-sm text-muted-foreground">
-                  Click &apos;Refresh&apos; to compute GSTR-1 metrics for the selected period.
+                  {isAr
+                    ? `اضغط على 'تحديث' لاحتساب بيانات ${taxProfile.formTitleAr} للفترة المحددة.`
+                    : `Click 'Refresh' to compute ${taxProfile.formTitleEn} metrics for the selected period.`}
                 </div>
               )}
             </CardContent>

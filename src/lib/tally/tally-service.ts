@@ -15,6 +15,12 @@ import {
   processGstr1Data,
 } from './gstr1-exporter'
 import {
+  processSovereignTaxData,
+  generateSovereignTaxCsv,
+  generateSovereignTaxJson,
+  type SovereignTaxBreakdown,
+} from '@/lib/territory/sovereign-tax-service'
+import {
   generatePurchasesRegisterCsv,
   generateCustomersCsv,
   generateSuppliersCsv,
@@ -152,6 +158,7 @@ export interface GeneratedTallyExport {
   summary: TallyExportSummary
   filename: string
   gstr1Summary?: Gstr1ReportSummary
+  sovereignTax?: SovereignTaxBreakdown
 }
 
 export async function generateTallyExport(
@@ -161,6 +168,22 @@ export async function generateTallyExport(
   const config = await getTallyConfig()
   const branchScope = await resolveBranchScope(actor, query.branchId)
   const targetBranchId = branchScope ?? undefined
+
+  let territoryCode = query.territory || 'SA'
+  if (!query.territory && actor.organizationId) {
+    const org = await prisma.organization.findUnique({
+      where: { id: actor.organizationId },
+      select: { currency: true, country: true },
+    })
+    if (org) {
+      if (org.currency === 'OMR' || org.country?.toLowerCase().includes('oman')) territoryCode = 'OM'
+      else if (org.currency === 'SAR' || org.country?.toLowerCase().includes('saudi')) territoryCode = 'SA'
+      else if (org.currency === 'BHD' || org.country?.toLowerCase().includes('bahrain')) territoryCode = 'BH'
+      else if (org.currency === 'QAR' || org.country?.toLowerCase().includes('qatar')) territoryCode = 'QA'
+      else if (org.currency === 'MVR' || org.country?.toLowerCase().includes('maldives')) territoryCode = 'MV'
+      else if (org.currency === 'INR' || org.country?.toLowerCase().includes('india')) territoryCode = 'IN'
+    }
+  }
 
   const dateFilter: { gte?: Date; lte?: Date } = {}
   if (query.startDate) {
@@ -276,15 +299,21 @@ export async function generateTallyExport(
 
       const salesForTally = sales as unknown as SaleForTally[]
       const { summary: gstr1Summary } = processGstr1Data(salesForTally)
+      const sovereignTax = processSovereignTaxData(salesForTally, [], territoryCode)
       const totalAmount = sales.reduce((sum, s) => sum + Number(s.totalAmount), 0)
+      const filePrefix = sovereignTax.profile.regime.toLowerCase()
 
       if (requestedFormat === 'json') {
-        const jsonContent = generateGstr1Json(salesForTally)
+        const jsonContent =
+          territoryCode === 'IN'
+            ? generateGstr1Json(salesForTally)
+            : generateSovereignTaxJson(sovereignTax, { startDate: query.startDate, endDate: query.endDate })
+
         return {
           xml: jsonContent,
           content: jsonContent,
           contentType: 'application/json; charset=utf-8',
-          filename: `gstr1_${dateSuffix}.json`,
+          filename: `${filePrefix}_return_${dateSuffix}.json`,
           summary: {
             exportType: 'gstr1',
             voucherCount: sales.length,
@@ -293,15 +322,20 @@ export async function generateTallyExport(
             generatedAt: new Date().toISOString(),
           },
           gstr1Summary,
+          sovereignTax,
         }
       }
 
-      const csvContent = generateGstr1Csv(salesForTally)
+      const csvContent =
+        territoryCode === 'IN'
+          ? generateGstr1Csv(salesForTally)
+          : generateSovereignTaxCsv(sovereignTax, { startDate: query.startDate, endDate: query.endDate })
+
       return {
         xml: csvContent,
         content: csvContent,
         contentType: 'text/csv; charset=utf-8',
-        filename: `gstr1_report_${dateSuffix}.csv`,
+        filename: `${filePrefix}_return_${dateSuffix}.csv`,
         summary: {
           exportType: 'gstr1',
           voucherCount: sales.length,
@@ -310,6 +344,7 @@ export async function generateTallyExport(
           generatedAt: new Date().toISOString(),
         },
         gstr1Summary,
+        sovereignTax,
       }
     }
 
