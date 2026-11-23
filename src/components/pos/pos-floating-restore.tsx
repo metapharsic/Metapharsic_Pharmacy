@@ -2,12 +2,14 @@
 
 import { ShoppingCart } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 
 import { usePosCart } from '@/lib/stores/pos-cart-store'
 import { formatCurrency } from '@/lib/utils/currency'
 
 export function PosFloatingRestore() {
+  const { data: session } = useSession()
   const [mounted, setMounted] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
@@ -18,6 +20,11 @@ export function PosFloatingRestore() {
   }, [])
 
   if (!mounted) {
+    return null
+  }
+
+  // SuperAdmins never handle POS carts or chemist billing
+  if (session?.user?.isSuperAdmin || session?.user?.roles?.includes('super_admin')) {
     return null
   }
 

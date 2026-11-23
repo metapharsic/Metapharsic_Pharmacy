@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 import { can, getSession } from '@/lib/auth/auth-helpers'
 import { getTenantContext } from '@/lib/auth/tenant-context'
 import { PERMISSIONS } from '@/lib/constants/permissions'
@@ -244,6 +245,14 @@ async function getDashboardStats(permissions: {
 }
 
 export default async function DashboardPage() {
+  const session = await getSession()
+
+  // Platform SuperAdmin has zero chemist counter responsibilities:
+  // Redirect immediately to the sovereign governance & monitoring platform
+  if (session?.user?.isSuperAdmin || session?.user?.roles?.includes('super_admin')) {
+    redirect('/platform')
+  }
+
   const [
     canSales,
     canInventory,

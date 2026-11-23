@@ -7,14 +7,21 @@ export default withAuth(
     const token = req.nextauth.token
 
     // Strict platform super-admin route protection:
-    // Block non-super-admins from accessing /platform and any subroutes
+    // 1. Block non-super-admins from accessing /platform and any subroutes
+    const isSuperAdmin = Boolean(
+      token?.isSuperAdmin || token?.roles?.includes('super_admin')
+    )
+
     if (pathname.startsWith('/platform')) {
-      const isSuperAdmin = Boolean(
-        token?.isSuperAdmin || token?.roles?.includes('super_admin')
-      )
       if (!isSuperAdmin) {
         return NextResponse.redirect(new URL('/', req.url))
       }
+    }
+
+    // 2. Prevent SuperAdmin from being routed to retail chemist POS pages;
+    // SuperAdmin belongs strictly in the Platform Control Plane
+    if (isSuperAdmin && (pathname.startsWith('/pos') || pathname === '/')) {
+      return NextResponse.redirect(new URL('/platform', req.url))
     }
 
     // If accessing /pos route group, verify POS permission

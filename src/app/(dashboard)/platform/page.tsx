@@ -42,7 +42,6 @@ import {
   LayoutDashboard,
   Sparkles,
 } from 'lucide-react'
-import { CustomizableAdminDashboard } from '@/components/dashboard/customizable-admin-dashboard'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -142,15 +141,15 @@ export default function PlatformSuperAdminPage() {
     }
   }, [session, status, isSuperAdmin, router])
 
-  // Tab State: Monitoring, Dispensary, WhatsApp, IAM, GeoZones, Cloud, Sidebar Delegation, Users, Subscriptions, Financials, Shops, Catalog
+  // Tab State: Monitoring, Users, IAM, GeoZones, Cloud, Sidebar Delegation, Subscriptions, Financials, Shops, WhatsApp, Catalog
   const searchParams = useSearchParams()
   const tabFromUrl = searchParams?.get('tab') as any
-  const [activeTab, setActiveTab] = useState<'monitoring' | 'dispensary' | 'whatsapp' | 'iam' | 'geozones' | 'cloud' | 'sidebar' | 'users' | 'subscriptions' | 'financials' | 'shops' | 'catalog'>('monitoring')
+  const [activeTab, setActiveTab] = useState<'monitoring' | 'users' | 'iam' | 'sidebar' | 'geozones' | 'shops' | 'subscriptions' | 'financials' | 'whatsapp' | 'cloud' | 'catalog'>('monitoring')
 
   useEffect(() => {
     if (
       tabFromUrl &&
-      ['monitoring', 'dispensary', 'whatsapp', 'iam', 'geozones', 'cloud', 'sidebar', 'users', 'subscriptions', 'financials', 'shops', 'catalog'].includes(
+      ['monitoring', 'users', 'iam', 'sidebar', 'geozones', 'shops', 'subscriptions', 'financials', 'whatsapp', 'cloud', 'catalog'].includes(
         tabFromUrl
       )
     ) {
@@ -558,15 +557,14 @@ export default function PlatformSuperAdminPage() {
             <span>Export Formatted Excel (.xlsx)</span>
           </Button>
 
-          <Link href="/">
-            <Button
-              size="sm"
-              className="gap-2 bg-gradient-to-r from-teal-600 via-emerald-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white font-bold shadow-md h-9"
-            >
-              <LayoutDashboard className="h-4 w-4" />
-              <span>🏥 Dispensary Operations Hub &amp; Customizer</span>
-            </Button>
-          </Link>
+          <Button
+            size="sm"
+            onClick={() => setActiveTab('users')}
+            className="gap-2 bg-gradient-to-r from-teal-700 to-indigo-700 hover:from-teal-600 hover:to-indigo-600 text-white font-bold shadow-md h-9"
+          >
+            <Users className="h-4 w-4" />
+            <span>Staff Governance &amp; Deactivation</span>
+          </Button>
 
           <Button
             onClick={() => setOnboardOpen(true)}
@@ -681,40 +679,6 @@ export default function PlatformSuperAdminPage() {
       <div className="flex border-b border-border/60 gap-5 text-sm font-semibold overflow-x-auto">
         <button
           type="button"
-          onClick={() => setActiveTab('dispensary')}
-          className={cn(
-            'pb-2.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap',
-            activeTab === 'dispensary'
-              ? 'border-teal-500 text-teal-600 dark:text-teal-400 font-bold'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          )}
-        >
-          <span className="text-base">⚡</span>
-          <span>Dispensary Intelligence &amp; Customizer</span>
-          <Badge className="bg-teal-500/20 text-teal-700 dark:text-teal-300 border-teal-500/40 text-[10px] py-0 px-1.5 font-bold">
-            12 WIDGETS
-          </Badge>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('whatsapp')}
-          className={cn(
-            'pb-2.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap',
-            activeTab === 'whatsapp'
-              ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 font-bold'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          )}
-        >
-          <span className="text-base">📲</span>
-          <span>Sovereign WhatsApp &amp; Refill Hub</span>
-          <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 text-[10px] py-0 px-1.5 font-bold">
-            16 TENANTS
-          </Badge>
-        </button>
-
-        <button
-          type="button"
           onClick={() => setActiveTab('monitoring')}
           className={cn(
             'pb-2.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap',
@@ -725,6 +689,23 @@ export default function PlatformSuperAdminPage() {
         >
           <Cpu className="h-4 w-4" />
           <span>Live Telemetry &amp; Log Stream</span>
+          <Badge className="bg-teal-500/20 text-teal-700 dark:text-teal-300 border-teal-500/40 text-[10px] py-0 px-1.5 font-bold">
+            5 THREADS
+          </Badge>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('users')}
+          className={cn(
+            'pb-2.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap',
+            activeTab === 'users'
+              ? 'border-primary text-primary font-bold'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <Users className="h-4 w-4" />
+          <span>Staff Accounts, Assignment &amp; Deactivation</span>
         </button>
 
         <button
@@ -739,34 +720,9 @@ export default function PlatformSuperAdminPage() {
         >
           <ShieldCheck className="h-4 w-4 text-teal-600" />
           <span>IAM Security Rules</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('geozones')}
-          className={cn(
-            'pb-2.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap',
-            activeTab === 'geozones'
-              ? 'border-primary text-primary font-bold'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          )}
-        >
-          <Globe className="h-4 w-4 text-emerald-600" />
-          <span>Sovereign Geopolitical Zones &amp; Cross-Border Radar</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('cloud')}
-          className={cn(
-            'pb-2.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap',
-            activeTab === 'cloud'
-              ? 'border-primary text-primary font-bold'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          )}
-        >
-          <Cloud className="h-4 w-4 text-sky-600" />
-          <span>Sovereign Cloud &amp; ZATCA Sandbox Pilot (6 Nodes)</span>
+          <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/30">
+            POLICIES
+          </Badge>
         </button>
 
         <button
@@ -785,16 +741,30 @@ export default function PlatformSuperAdminPage() {
 
         <button
           type="button"
-          onClick={() => setActiveTab('users')}
+          onClick={() => setActiveTab('geozones')}
           className={cn(
             'pb-2.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap',
-            activeTab === 'users'
+            activeTab === 'geozones'
               ? 'border-primary text-primary font-bold'
               : 'border-transparent text-muted-foreground hover:text-foreground'
           )}
         >
-          <Users className="h-4 w-4" />
-          <span>Staff Accounts &amp; Security</span>
+          <Globe className="h-4 w-4 text-emerald-600" />
+          <span>Sovereign Geopolitical Zones &amp; Cross-Border Radar</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('shops')}
+          className={cn(
+            'pb-2.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap',
+            activeTab === 'shops'
+              ? 'border-primary text-primary font-bold'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <Store className="h-4 w-4" />
+          <span>Tenant Chemist Shops ({filteredOrgs.length})</span>
         </button>
 
         <button
@@ -827,16 +797,33 @@ export default function PlatformSuperAdminPage() {
 
         <button
           type="button"
-          onClick={() => setActiveTab('shops')}
+          onClick={() => setActiveTab('whatsapp')}
           className={cn(
             'pb-2.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap',
-            activeTab === 'shops'
+            activeTab === 'whatsapp'
+              ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 font-bold'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <span className="text-base">📲</span>
+          <span>Sovereign WhatsApp &amp; Refill Hub</span>
+          <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 text-[10px] py-0 px-1.5 font-bold">
+            16 TENANTS
+          </Badge>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('cloud')}
+          className={cn(
+            'pb-2.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap',
+            activeTab === 'cloud'
               ? 'border-primary text-primary font-bold'
               : 'border-transparent text-muted-foreground hover:text-foreground'
           )}
         >
-          <Store className="h-4 w-4" />
-          <span>Tenant Chemist Shops ({filteredOrgs.length})</span>
+          <Cloud className="h-4 w-4 text-sky-600" />
+          <span>Sovereign Cloud &amp; ZATCA Sandbox Pilot (6 Nodes)</span>
         </button>
 
         <button
@@ -854,33 +841,6 @@ export default function PlatformSuperAdminPage() {
         </button>
       </div>
 
-      {/* ─── TAB: DISPENSARY INTELLIGENCE & CUSTOMIZER ─── */}
-      {activeTab === 'dispensary' && (
-        <div className="space-y-4">
-          <CustomizableAdminDashboard
-            todayRevenue={analytics?.platformSummary?.totalRevenue ?? 1061}
-            todaySalesCount={analytics?.platformSummary?.totalShopsCount ?? 16}
-            totalProducts={orgs.length > 0 ? orgs.length * 15 : 240}
-            lowStockCount={4}
-            expiringCount={2}
-            pendingRxCount={3}
-            recentSales={[]}
-            permissions={{
-              sales: true,
-              inventory: true,
-              batches: true,
-              prescriptions: true,
-              purchases: true,
-              customers: true,
-              suppliers: true,
-            }}
-          />
-        </div>
-      )}
-
-      {/* ─── TAB: SOVEREIGN WHATSAPP & REFILL HUB ─── */}
-      {activeTab === 'whatsapp' && <WhatsAppProvisioningPanel />}
-
       {/* ─── TAB: SYSTEM & ACTIVITY MONITORING ─── */}
       {activeTab === 'monitoring' && <SystemMonitoringPanel />}
 
@@ -892,6 +852,9 @@ export default function PlatformSuperAdminPage() {
 
       {/* ─── TAB: SOVEREIGN CLOUD & ZATCA PILOT ─── */}
       {activeTab === 'cloud' && <SovereignCloudPilotPanel />}
+
+      {/* ─── TAB: SOVEREIGN WHATSAPP & REFILL HUB ─── */}
+      {activeTab === 'whatsapp' && <WhatsAppProvisioningPanel />}
 
       {/* ─── TAB: SIDEBAR & MODULE ACCESS DELEGATION ─── */}
       {activeTab === 'sidebar' && <SidebarAssignmentPanel />}
