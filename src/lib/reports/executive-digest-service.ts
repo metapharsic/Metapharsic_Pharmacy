@@ -329,11 +329,11 @@ export class ExecutiveDigestService {
     const topMedicinesFormatted =
       topMedicines.length > 0
         ? topMedicines
-            .map(
-              (m, idx) =>
-                `${idx + 1}. *${m.productName}* — ${m.quantity} units (₹${m.revenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })})`
-            )
-            .join('\n')
+          .map(
+            (m, idx) =>
+              `${idx + 1}. *${m.productName}* — ${m.quantity} units (₹${m.revenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })})`
+          )
+          .join('\n')
         : '• No medicines dispensed in this period.'
 
     const noteSuffix = isHistoricalFallback

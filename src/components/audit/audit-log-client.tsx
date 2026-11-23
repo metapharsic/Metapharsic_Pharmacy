@@ -100,7 +100,13 @@ export function AuditLogClient() {
 
   const handleExportCSV = async () => {
     try {
-      const res = await fetch('/api/audit?export=csv')
+      const params = new URLSearchParams()
+      params.set('export', 'csv')
+      if (actionFilter !== 'ALL') params.set('action', actionFilter)
+      if (entityFilter !== 'ALL') params.set('entity', entityFilter)
+      if (search.trim()) params.set('search', search.trim())
+
+      const res = await fetch(`/api/audit?${params.toString()}`)
       const json = await res.json()
       if (!json.success || !Array.isArray(json.data)) {
         toast.error('No audit records to export')

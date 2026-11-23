@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { requirePermission } from '@/lib/auth/auth-helpers'
+import { getTenantContext } from '@/lib/auth/tenant-context'
 import { PERMISSIONS } from '@/lib/constants/permissions'
 import prisma from '@/lib/db/prisma'
 
@@ -8,7 +9,14 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   try {
-    await requirePermission(PERMISSIONS.AUDIT_READ)
+    const authUser = await requirePermission(PERMISSIONS.AUDIT_READ)
+    const tenant = await getTenantContext(req)
+
+    const isSuperAdmin = Boolean(
+      authUser.isSuperAdmin ||
+      authUser.roles?.includes('super_admin') ||
+      tenant?.isSuperAdmin
+    )
 
     const { searchParams } = new URL(req.url)
     const action = searchParams.get('action') || ''
@@ -19,6 +27,43 @@ export async function GET(req: NextRequest) {
     const isExport = searchParams.get('export') === 'csv'
 
     const where: any = {}
+    const andConditions: any[] = []
+
+    if (!isSuperAdmin) {
+      if (!tenant || (!tenant.organizationId && !tenant.branchId)) {
+        return NextResponse.json({
+          success: true,
+          data: [],
+          pagination: { page: 1, limit, total: 0, pages: 0 },
+        })
+      }
+
+      const tenantOrgId = tenant.organizationId
+      const branchIds = tenant.orgBranchIds || []
+      const tenantConditions: any[] = []
+
+      if (tenantOrgId) {
+        tenantConditions.push({ user: { organizationId: tenantOrgId } })
+        tenantConditions.push({ entity: 'Organization', entityId: tenantOrgId })
+      }
+      if (branchIds.length > 0) {
+        tenantConditions.push({ entity: 'Branch', entityId: { in: branchIds } })
+      }
+
+      if (tenantConditions.length > 0) {
+        andConditions.push({ OR: tenantConditions })
+      }
+    } else {
+      const orgFilter = searchParams.get('organizationId') || searchParams.get('orgId')
+      if (orgFilter && orgFilter !== 'ALL') {
+        andConditions.push({
+          OR: [
+            { user: { organizationId: orgFilter } },
+            { entity: 'Organization', entityId: orgFilter },
+          ],
+        })
+      }
+    }
 
     if (action && action !== 'ALL') {
       where.action = action
@@ -29,11 +74,17 @@ export async function GET(req: NextRequest) {
     }
 
     if (search) {
-      where.OR = [
-        { entityId: { contains: search, mode: 'insensitive' } },
-        { user: { name: { contains: search, mode: 'insensitive' } } },
-        { user: { email: { contains: search, mode: 'insensitive' } } },
-      ]
+      andConditions.push({
+        OR: [
+          { entityId: { contains: search, mode: 'insensitive' } },
+          { user: { name: { contains: search, mode: 'insensitive' } } },
+          { user: { email: { contains: search, mode: 'insensitive' } } },
+        ],
+      })
+    }
+
+    if (andConditions.length > 0) {
+      where.AND = andConditions
     }
 
     if (isExport) {
