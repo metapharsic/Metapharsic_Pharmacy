@@ -135,7 +135,7 @@ export class ExecutiveDigestService {
       ? { branchId: resolvedBranchId }
       : effectiveOrgId
         ? { branch: { organizationId: effectiveOrgId } }
-        : {}
+        : { branchId: '__NO_ACCESS__' }
 
     // 3. Query sales in period
     const sales = await prisma.sale.findMany({

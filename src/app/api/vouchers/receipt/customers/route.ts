@@ -2,25 +2,33 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
 import { requirePermission } from '@/lib/auth/auth-helpers'
+import { getTenantContext } from '@/lib/auth/tenant-context'
 import { PERMISSIONS } from '@/lib/constants/permissions'
 import prisma from '@/lib/db/prisma'
 
 // GET /api/vouchers/receipt/customers?search=...
 export async function GET(req: NextRequest) {
   try {
-    await requirePermission(PERMISSIONS.FINANCE_READ)
+    const user = await requirePermission(PERMISSIONS.FINANCE_READ)
+    const tenant = await getTenantContext(req)
     const search = req.nextUrl.searchParams.get('search')?.trim() || ''
 
+    const orgFilter = user.isSuperAdmin ? undefined : (tenant?.organizationId || '__NO_ACCESS__')
+
+    const where: any = {}
+    if (orgFilter) {
+      where.organizationId = orgFilter
+    }
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ]
+    }
+
     const customers = await prisma.customer.findMany({
-      where: search
-        ? {
-            OR: [
-              { name: { contains: search, mode: 'insensitive' } },
-              { phone: { contains: search, mode: 'insensitive' } },
-              { email: { contains: search, mode: 'insensitive' } },
-            ],
-          }
-        : undefined,
+      where,
       take: 50,
       orderBy: [{ outstandingBalance: 'desc' }, { name: 'asc' }],
       select: {

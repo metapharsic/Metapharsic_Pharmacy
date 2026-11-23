@@ -1,21 +1,51 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
+
 import { requirePermission } from '@/lib/auth/auth-helpers'
+import { getTenantContext } from '@/lib/auth/tenant-context'
 import { PERMISSIONS } from '@/lib/constants/permissions'
 import prisma from '@/lib/db/prisma'
+import { resolveBranchScope } from '@/lib/inventory/branch-access'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   try {
-    await requirePermission(PERMISSIONS.PRESCRIPTIONS_READ)
+    const user = await requirePermission(PERMISSIONS.PRESCRIPTIONS_READ)
+    const tenant = await getTenantContext(req)
 
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status') || ''
     const search = searchParams.get('search') || ''
     const doctorId = searchParams.get('doctorId') || ''
+    const requestedBranchId = searchParams.get('branchId') || undefined
 
     const where: any = {}
+
+    // Strict Multi-Tenant Isolation:
+    if (!user.isSuperAdmin) {
+      if (!tenant || (!tenant.organizationId && !tenant.branchId)) {
+        return NextResponse.json({ success: true, data: [] })
+      }
+
+      if (requestedBranchId) {
+        const resolved = await resolveBranchScope(user, requestedBranchId)
+        if (!resolved) {
+          return NextResponse.json({ success: true, data: [] })
+        }
+        where.branchId = resolved
+      } else if (tenant.branchId) {
+        where.branchId = tenant.branchId
+      } else if (tenant.orgBranchIds && tenant.orgBranchIds.length > 0) {
+        where.branchId = { in: tenant.orgBranchIds }
+      } else if (tenant.organizationId) {
+        where.branch = { organizationId: tenant.organizationId }
+      } else {
+        return NextResponse.json({ success: true, data: [] })
+      }
+    } else if (requestedBranchId) {
+      where.branchId = requestedBranchId
+    }
 
     if (status && status !== 'ALL') {
       where.status = status

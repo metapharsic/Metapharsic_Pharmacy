@@ -141,7 +141,7 @@ export class DailyClosingDigestService {
       ? { branchId: resolvedBranchId }
       : effectiveOrgId
         ? { branch: { organizationId: effectiveOrgId } }
-        : {}
+        : { branchId: '__NO_ACCESS__' }
 
     // 2. Query today's sales
     const sales = await prisma.sale.findMany({

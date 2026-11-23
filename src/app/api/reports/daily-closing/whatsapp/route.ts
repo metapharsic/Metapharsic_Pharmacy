@@ -74,7 +74,11 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const requestedBranch = searchParams.get('branchId') || undefined
-    let branchId: string | undefined = session.user.branchId || undefined
+
+    const { getTenantContext } = await import('@/lib/auth/tenant-context')
+    const tenant = await getTenantContext(req)
+
+    let branchId: string | undefined = session.user.branchId || tenant?.branchId || undefined
     if (requestedBranch) {
       try {
         const resolved = await resolveBranchScope(session.user, requestedBranch)
@@ -87,7 +91,8 @@ export async function GET(req: NextRequest) {
     const targetDate = dateParam ? new Date(dateParam) : new Date()
 
     const periodParam = (searchParams.get('period') || 'daily').toLowerCase()
-    const organizationId = session.user.organizationId || undefined
+    const organizationId =
+      tenant?.organizationId || session.user.organizationId || undefined
 
     let digest
     if (periodParam === 'weekly' || periodParam === 'monthly') {
