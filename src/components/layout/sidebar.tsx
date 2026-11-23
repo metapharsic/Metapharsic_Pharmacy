@@ -112,46 +112,9 @@ interface SidebarStatsData {
 
 // ─────────────────────────────────────────────────────────────
 // AWS / CLOUD CONTROL PLANE NAVIGATION FOR PLATFORM SUPERADMIN
+// SuperAdmin sees ONLY governance/platform sections — no chemist POS/billing UI
 // ─────────────────────────────────────────────────────────────
 const SUPERADMIN_NAV_SECTIONS: NavSection[] = [
-  {
-    title: 'Dispensary Operations & Intelligence',
-    items: [
-      {
-        label: 'Dispensary Dashboard',
-        href: ROUTES.DASHBOARD,
-        icon: LayoutDashboard,
-        badge: 'NEW',
-        badgeVariant: 'teal',
-      },
-      {
-        label: 'POS / Billing',
-        href: ROUTES.POS,
-        icon: ShoppingCart,
-        badge: 'F2',
-        badgeVariant: 'teal',
-      },
-      {
-        label: 'POS 2 (Feature Lab)',
-        href: ROUTES.POS2,
-        icon: ShoppingCart,
-        badge: 'LAB',
-        badgeVariant: 'teal',
-      },
-      {
-        label: 'Refills & Retention Hub',
-        href: ROUTES.REFILLS,
-        icon: Sparkles,
-        badge: '⚡ RETENTION',
-        badgeVariant: 'teal',
-      },
-      {
-        label: 'Dispensary Settings',
-        href: ROUTES.SETTINGS,
-        icon: Settings,
-      },
-    ],
-  },
   {
     title: 'AWS-Style Control Plane',
     items: [
