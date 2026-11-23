@@ -52,6 +52,7 @@ import {
 } from '@/lib/products/barcode-qr-worker-bridge'
 import { playBarcodeScanSound, playSuccessCheckoutSound } from '@/lib/sound/sound-effects'
 import type { ProductRow } from '@/components/products/product-table'
+import { formatCurrency } from '@/lib/utils/currency'
 
 interface ProductLabelDialogProps {
   products: ProductRow[]
@@ -410,7 +411,7 @@ export function ProductLabelDialog({ products, open, onOpenChange }: ProductLabe
                     </div>
                     <div className="text-right">
                       <span className="font-mono text-xs font-bold text-foreground">
-                        MRP ₹{Number(p.mrp).toFixed(2)}
+                        MRP {formatCurrency(p.mrp)}
                       </span>
                       <span className="text-[8.5px] block text-muted-foreground">{expDate}</span>
                     </div>

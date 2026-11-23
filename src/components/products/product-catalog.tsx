@@ -54,6 +54,8 @@ import { ROUTES } from '@/lib/constants/routes'
 import { useToast } from '@/lib/hooks/use-toast'
 import type { CatalogSummaryMetrics } from '@/lib/products/product-analytics-service'
 import { useUiStore } from '@/lib/stores/ui-store'
+import { formatCurrency } from '@/lib/utils/currency'
+import { useI18n } from '@/lib/i18n/i18n-context'
 
 interface ProductCatalogProps {
   initialProducts: ProductRow[]
@@ -83,6 +85,7 @@ export function ProductCatalog({
   const router = useRouter()
   const toast = useToast()
   const { openConfirmDialog } = useUiStore()
+  const { territoryDef } = useI18n()
 
   const [products, setProducts] = useState<ProductRow[]>(initialProducts)
   const [totalPages, setTotalPages] = useState(initialPagination.pages)
@@ -288,9 +291,9 @@ export function ProductCatalog({
       'SKU',
       'Barcode',
       'Rack Location',
-      'MRP (INR)',
+      `MRP (${territoryDef.currency.code})`,
       'Tabs Per Strip',
-      'Loose Tab MRP (INR)',
+      `Loose Tab MRP (${territoryDef.currency.code})`,
       'Live Stock Units',
       'Active Batches',
       'Earliest Expiry',
@@ -359,10 +362,10 @@ export function ProductCatalog({
                 Dispensary Valuation
               </p>
               <h3 className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
-                ₹{(summaryMetrics?.totalValuationMrp ?? 0).toLocaleString('en-IN')}
+                {formatCurrency(summaryMetrics?.totalValuationMrp ?? 0)}
               </h3>
               <p className="text-[10px] text-muted-foreground mt-0.5">
-                Cost: ₹{(summaryMetrics?.totalValuationCost ?? 0).toLocaleString('en-IN')} ({summaryMetrics?.overallMarginPercent ?? 0}% Margin)
+                Cost: {formatCurrency(summaryMetrics?.totalValuationCost ?? 0)} ({summaryMetrics?.overallMarginPercent ?? 0}% Margin)
               </p>
             </div>
             <div className="h-9 w-9 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">

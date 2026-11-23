@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils/cn'
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { useToast } from '@/lib/hooks/use-toast'
+import { useI18n } from '@/lib/i18n/i18n-context'
+import { getTerritoryTaxProfile } from '@/lib/territory/sovereign-tax-service'
 
 interface HsnItem {
   id: string
@@ -42,6 +45,10 @@ interface HsnItem {
 }
 
 export function HsnCodesTable() {
+  const { territory, territoryDef, isAr } = useI18n()
+  const taxProfile = getTerritoryTaxProfile(territory)
+  const isIndia = territory === 'IN'
+
   const [items, setItems] = useState<HsnItem[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [search, setSearch] = useState<string>('')
@@ -204,7 +211,7 @@ export function HsnCodesTable() {
 
           <Button type="button" size="sm" onClick={handleOpenCreate} className="gap-1.5 text-xs">
             <Plus className="h-3.5 w-3.5" />
-            Add HSN Code
+            {isIndia ? 'Add HSN Code' : (isAr ? 'إضافة رمز تعريفة' : 'Add Tariff Code')}
           </Button>
         </div>
       </div>
@@ -215,10 +222,12 @@ export function HsnCodesTable() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Tag className="h-4 w-4 text-primary" />
-              Statutory GST Tariff &amp; HSN Classification
+              {isIndia
+                ? 'Statutory GST Tariff & HSN Classification'
+                : (isAr ? `الأكواد والتعريفة الجمركية (${taxProfile.authorityNameAr})` : `${taxProfile.authorityNameEn} — Tariff & Regulatory Classification`)}
             </CardTitle>
             <span className="text-xs text-muted-foreground font-mono">
-              {items.length} HSN Codes Configured
+              {items.length} {isIndia ? 'HSN Codes Configured' : 'Tariff Codes Configured'}
             </span>
           </div>
         </CardHeader>
@@ -228,13 +237,13 @@ export function HsnCodesTable() {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-border/60 bg-muted/40 text-muted-foreground font-medium">
-                  <th className="py-2.5 px-4 font-semibold">HSN / SAC</th>
-                  <th className="py-2.5 px-4 font-semibold">Description</th>
-                  <th className="py-2.5 px-4 font-semibold text-center">GST Rate</th>
-                  <th className="py-2.5 px-4 font-semibold text-center">Tax Split (CGST + SGST)</th>
-                  <th className="py-2.5 px-4 font-semibold text-center">Active Products</th>
-                  <th className="py-2.5 px-4 font-semibold text-center">Status</th>
-                  <th className="py-2.5 px-4 font-semibold text-right">Actions</th>
+                  <th className="py-2.5 px-4 font-semibold">{isIndia ? 'HSN / SAC' : (isAr ? 'رمز التعريفة / HS' : 'Tariff / HS Code')}</th>
+                  <th className="py-2.5 px-4 font-semibold">{isAr ? 'الوصف' : 'Description'}</th>
+                  <th className="py-2.5 px-4 font-semibold text-center">{isIndia ? 'GST Rate' : (isAr ? 'نسبة الضريبة' : 'VAT Rate')}</th>
+                  <th className="py-2.5 px-4 font-semibold text-center">{isIndia ? 'Tax Split (CGST + SGST)' : (isAr ? 'النظام الضريبي' : 'Tax Regime')}</th>
+                  <th className="py-2.5 px-4 font-semibold text-center">{isAr ? 'الأصناف المرتبطة' : 'Active Products'}</th>
+                  <th className="py-2.5 px-4 font-semibold text-center">{isAr ? 'الحالة' : 'Status'}</th>
+                  <th className="py-2.5 px-4 font-semibold text-right">{isAr ? 'الإجراءات' : 'Actions'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40">
@@ -256,8 +265,14 @@ export function HsnCodesTable() {
                         </Badge>
                       </td>
                       <td className="py-3 px-4 text-center font-mono text-[11px] text-muted-foreground">
-                        {item.cgstRate}% + {item.sgstRate}%
-                        {item.cessRate > 0 && ` (+${item.cessRate}% Cess)`}
+                        {isIndia ? (
+                          <>
+                            {item.cgstRate}% + {item.sgstRate}%
+                            {item.cessRate > 0 && ` (+${item.cessRate}% Cess)`}
+                          </>
+                        ) : (
+                          <span>{item.gstRate === 0 ? 'Zero-Rated (0%)' : `Standard (${taxProfile.standardRate}%)`}</span>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-center">
                         <Badge variant="outline" className="gap-1 font-mono text-[11px]">
@@ -322,23 +337,29 @@ export function HsnCodesTable() {
             <DialogHeader>
               <DialogTitle className="text-base flex items-center gap-2">
                 <Tag className="h-4 w-4 text-primary" />
-                {editingItem ? `Edit HSN Code ${editingItem.code}` : 'Add Statutory HSN Code'}
+                {editingItem
+                  ? (isIndia ? `Edit HSN Code ${editingItem.code}` : `Edit Tariff Code ${editingItem.code}`)
+                  : (isIndia ? 'Add Statutory HSN Code' : `Add Statutory Tariff Code (${taxProfile.regime})`)}
               </DialogTitle>
               <DialogDescription className="text-xs">
-                Configure GST tax rates and description according to Indian pharmaceutical tariff classifications.
+                {isIndia
+                  ? 'Configure GST tax rates and description according to Indian pharmaceutical tariff classifications.'
+                  : `Configure ${taxProfile.authorityNameEn} statutory VAT rates and tariff descriptions for ${territoryDef.nameEn}.`}
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-3">
               <div className="space-y-1.5">
                 <Label htmlFor="hsnCode" className="text-xs font-semibold">
-                  HSN / SAC Code (e.g. 3004, 3002)
+                  {isIndia
+                    ? 'HSN / SAC Code (e.g. 3004, 3002)'
+                    : (isAr ? 'رمز التعريفة الجمركية (مثال: 3004.90.00)' : 'Tariff / HS Code (e.g. 3004.90.00)')}
                 </Label>
                 <Input
                   id="hsnCode"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  placeholder="e.g. 3004"
+                  placeholder={isIndia ? 'e.g. 3004' : 'e.g. 3004.90.00'}
                   disabled={!!editingItem}
                   required
                   className="font-mono text-xs uppercase"
@@ -359,10 +380,12 @@ export function HsnCodesTable() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className={cn('grid gap-3', isIndia ? 'grid-cols-2' : 'grid-cols-1')}>
                 <div className="space-y-1.5">
                   <Label htmlFor="gstRate" className="text-xs font-semibold">
-                    GST Rate % (e.g. 0, 5, 12, 18)
+                    {isIndia
+                      ? 'GST Rate % (e.g. 0, 5, 12, 18)'
+                      : `VAT Rate % (${taxProfile.standardRate}% standard, 0% zero-rated)`}
                   </Label>
                   <Input
                     id="gstRate"
@@ -375,26 +398,36 @@ export function HsnCodesTable() {
                     required
                     className="font-mono text-xs"
                   />
-                  <p className="text-[10px] text-muted-foreground">
-                    Auto-splits into CGST {(parseFloat(gstRate) || 0) / 2}% + SGST {(parseFloat(gstRate) || 0) / 2}%
-                  </p>
+                  {isIndia ? (
+                    <p className="text-[10px] text-muted-foreground">
+                      Auto-splits into CGST {(parseFloat(gstRate) || 0) / 2}% + SGST {(parseFloat(gstRate) || 0) / 2}%
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-muted-foreground">
+                      {isAr
+                        ? `${taxProfile.authorityNameAr} - 0% للأدوية البشرية أو ${taxProfile.standardRate}% الأساسية`
+                        : `${taxProfile.authorityNameEn} statutory rate (0% for human medicines, ${taxProfile.standardRate}% standard)`}
+                    </p>
+                  )}
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="cessRate" className="text-xs font-semibold">
-                    Cess Rate % (if applicable)
-                  </Label>
-                  <Input
-                    id="cessRate"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    value={cessRate}
-                    onChange={(e) => setCessRate(e.target.value)}
-                    className="font-mono text-xs"
-                  />
-                </div>
+                {isIndia && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cessRate" className="text-xs font-semibold">
+                      Cess Rate % (if applicable)
+                    </Label>
+                    <Input
+                      id="cessRate"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={cessRate}
+                      onChange={(e) => setCessRate(e.target.value)}
+                      className="font-mono text-xs"
+                    />
+                  </div>
+                )}
               </div>
 
               {editingItem && (

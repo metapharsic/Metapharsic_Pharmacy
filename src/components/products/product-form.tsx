@@ -41,6 +41,9 @@ import { playBarcodeBeep } from '@/lib/scanner/barcode-sound'
 import { useBarcodeScanner } from '@/lib/scanner/use-barcode-scanner'
 import type { WorkerExtractedEntity } from '@/lib/scanner/workers/pharma-scanner.worker'
 import { useToast } from '@/lib/hooks/use-toast'
+import { cn } from '@/lib/utils/cn'
+import { useI18n } from '@/lib/i18n/i18n-context'
+import { getTerritoryTaxProfile } from '@/lib/territory/sovereign-tax-service'
 import { createProductSchema } from '@/lib/validations/product'
 
 type ProductFormValues = z.infer<typeof createProductSchema>
@@ -104,6 +107,22 @@ function toNumber(v: string | number | null | undefined): number {
 
 export function ProductForm({ initialData, onSuccess, onCancel, successHref }: ProductFormProps) {
   const router = useRouter()
+  const { territory, territoryDef, isAr, locale } = useI18n()
+  const taxProfile = getTerritoryTaxProfile(territory)
+  const isIndia = territory === 'IN'
+  const currencySymbol = isAr ? territoryDef.currency.symbolAr : territoryDef.currency.symbolEn
+  const currencyDecimals = territoryDef.currency.decimals
+  const priceStep = currencyDecimals === 3 ? '0.001' : '0.01'
+
+  const defaultTaxRate =
+    initialData?.gstRate !== undefined
+      ? toNumber(initialData.gstRate)
+      : isIndia
+        ? 12
+        : (taxProfile.zeroRatedMedicines ? 0 : taxProfile.standardRate)
+
+  const defaultIsExempt =
+    initialData?.isGstExempt ?? (isIndia ? false : taxProfile.zeroRatedMedicines)
   const toast = useToast()
   const isEditing = Boolean(initialData?.id)
 
@@ -273,11 +292,11 @@ export function ProductForm({ initialData, onSuccess, onCancel, successHref }: P
       tabsPerStrip: initialData?.tabsPerStrip ?? undefined,
       packSize: initialData?.packSize ?? '',
       hsnCode: initialData?.hsnCode ?? undefined,
-      gstRate: toNumber(initialData?.gstRate) || 12,
-      cgstRate: toNumber(initialData?.cgstRate) || 6,
-      sgstRate: toNumber(initialData?.sgstRate) || 6,
-      igstRate: toNumber(initialData?.igstRate) || 12,
-      isGstExempt: initialData?.isGstExempt ?? false,
+      gstRate: defaultTaxRate,
+      cgstRate: isIndia ? (toNumber(initialData?.cgstRate) || 6) : 0,
+      sgstRate: isIndia ? (toNumber(initialData?.sgstRate) || 6) : 0,
+      igstRate: isIndia ? (toNumber(initialData?.igstRate) || 12) : defaultTaxRate,
+      isGstExempt: defaultIsExempt,
       mrp: toNumber(initialData?.mrp),
       ptr: toNumber(initialData?.ptr),
       costPrice: toNumber(initialData?.costPrice),
@@ -391,6 +410,43 @@ export function ProductForm({ initialData, onSuccess, onCancel, successHref }: P
     onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'e' || e.key === 'E') e.preventDefault()
     },
+  }
+
+  const getScheduleLabel = (sched: string) => {
+    if (territory === 'OM') {
+      const labels: Record<string, { en: string; ar: string }> = {
+        NONE: { en: 'OTC (General Sale List)', ar: 'بيع عام (بدون وصفة - OTC)' },
+        H: { en: 'POM (Prescription Only Medicine)', ar: 'أدوية وصفية معتمدة (POM)' },
+        H1: { en: 'MoH Controlled Drugs (POM-R)', ar: 'أدوية مراقبة وزارة الصحة (POM-R)' },
+        X: { en: 'MoH Narcotic & Psychotropic Registry', ar: 'سجل الأدوية المخدرة والمؤثرات العقلية' },
+        G: { en: 'Hospital & Specialist Formulary', ar: 'استخدام مستشفيات وتخصصي' },
+        J: { en: 'Special Treatment Formulation', ar: 'تركيبات علاجية تخصصية' },
+      }
+      return labels[sched] ? (isAr ? labels[sched].ar : labels[sched].en) : sched
+    }
+    if (territory === 'SA') {
+      const labels: Record<string, { en: string; ar: string }> = {
+        NONE: { en: 'OTC (General Sale List)', ar: 'أدوية لا وصفية (OTC)' },
+        H: { en: 'Prescription Only (SFDA Rx)', ar: 'أدوية وصفية (SFDA Rx)' },
+        H1: { en: 'SFDA Controlled Substances', ar: 'أدوية مقيدة وخاضعة للرقابة' },
+        X: { en: 'SFDA Narcotic Register (RSD)', ar: 'أدوية مخدرة مسجلة (رصد RSD)' },
+        G: { en: 'Hospital Clinic Dispensing', ar: 'صرف سريري مستشفيات' },
+        J: { en: 'Compounding Formulations', ar: 'تركيبات صيدلانية خاصة' },
+      }
+      return labels[sched] ? (isAr ? labels[sched].ar : labels[sched].en) : sched
+    }
+    if (territory === 'BH') {
+      const labels: Record<string, string> = {
+        NONE: 'OTC (General Sale)',
+        H: 'NHRA Prescription Only',
+        H1: 'NHRA Controlled Drugs',
+        X: 'NHRA Narcotics Register',
+        G: 'Clinical Hospital Use',
+        J: 'Special Formulations',
+      }
+      return labels[sched] || sched
+    }
+    return sched === 'NONE' ? 'OTC (General Sale)' : `Schedule ${sched}`
   }
 
   return (
@@ -539,7 +595,7 @@ export function ProductForm({ initialData, onSuccess, onCancel, successHref }: P
               <SelectContent>
                 {DRUG_SCHEDULES.map((s) => (
                   <SelectItem key={s} value={s}>
-                    {s}
+                    {getScheduleLabel(s)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -631,89 +687,232 @@ export function ProductForm({ initialData, onSuccess, onCancel, successHref }: P
         </div>
       </section>
 
-      {/* ── HSN / GST ──────────────────────────────── */}
+      {/* ── Sovereign Tax / VAT & Pricing Section ──────────────────────── */}
       <section className="space-y-4">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          HSN Code &amp; GST
-        </h3>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1">
-            <Label>HSN Code</Label>
-            <Select
-              value={selectedHsn ?? 'none'}
-              onValueChange={(v) => applyHsn(v === 'none' ? '' : v)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select HSN code" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">— None —</SelectItem>
-                {hsnCodes.map((h) => (
-                  <SelectItem key={h.code} value={h.code}>
-                    {h.code} — {h.description}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {isIndia ? (
+          <>
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              HSN Code &amp; GST
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label>HSN Code</Label>
+                <Select
+                  value={selectedHsn ?? 'none'}
+                  onValueChange={(v) => applyHsn(v === 'none' ? '' : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select HSN code" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— None —</SelectItem>
+                    {hsnCodes.map((h) => (
+                      <SelectItem key={h.code} value={h.code}>
+                        {h.code} — {h.description}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="product-gst">GST Rate (%)</Label>
+                <Input
+                  id="product-gst"
+                  type="number"
+                  step="0.01"
+                  {...register('gstRate', { valueAsNumber: true })}
+                  {...numeric}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="product-cgst">CGST (%)</Label>
+                <Input
+                  id="product-cgst"
+                  type="number"
+                  step="0.01"
+                  {...register('cgstRate', { valueAsNumber: true })}
+                  {...numeric}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="product-sgst">SGST (%)</Label>
+                <Input
+                  id="product-sgst"
+                  type="number"
+                  step="0.01"
+                  {...register('sgstRate', { valueAsNumber: true })}
+                  {...numeric}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="product-igst">IGST (%)</Label>
+                <Input
+                  id="product-igst"
+                  type="number"
+                  step="0.01"
+                  {...register('igstRate', { valueAsNumber: true })}
+                  {...numeric}
+                />
+              </div>
+              <div className="flex items-end gap-4 pb-1">
+                <Checkbox
+                  id="product-gst-exempt"
+                  checked={watch('isGstExempt')}
+                  onCheckedChange={(checked) => setValue('isGstExempt', checked === true)}
+                />
+                <Label htmlFor="product-gst-exempt" className="font-normal">
+                  GST exempt
+                </Label>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="space-y-4 rounded-xl border border-border/80 bg-muted/20 p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-border/60 pb-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-foreground">
+                    {isAr
+                      ? `ضريبة القيمة المضافة والتصنيف (${taxProfile.authorityNameAr})`
+                      : `${taxProfile.authorityNameEn} — VAT & Regulatory Classification`}
+                  </h3>
+                  <Badge variant="outline" className="font-mono text-[10px] px-1.5 py-0 uppercase bg-primary/10 border-primary/30 text-primary">
+                    {taxProfile.regime} {taxProfile.standardRate > 0 ? `${taxProfile.standardRate}%` : ''} ({taxProfile.currency})
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {isAr
+                    ? `النسبة الأساسية ${taxProfile.standardRate}%، أو نسبة الصفر (0% معتمد للأدوية البشرية).`
+                    : `Standard ${taxProfile.standardRate.toFixed(1)}% statutory VAT, or 0.0% Zero-Rated for approved human medicines.`}
+                </p>
+              </div>
+
+              {/* Quick Zero-Rate / Standard Toggle Pills */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    'text-xs h-7.5 px-2.5 font-medium transition-colors',
+                    watch('gstRate') === 0 && watch('isGstExempt')
+                      ? 'bg-teal-600 text-white border-teal-600 hover:bg-teal-700'
+                      : 'hover:border-teal-500 hover:bg-teal-500/10'
+                  )}
+                  onClick={() => {
+                    setValue('gstRate', 0)
+                    setValue('cgstRate', 0)
+                    setValue('sgstRate', 0)
+                    setValue('igstRate', 0)
+                    setValue('isGstExempt', true)
+                  }}
+                >
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  {isAr ? '0% نسبة الصفر (أدوية)' : '0% Zero-Rated (Medicines)'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    'text-xs h-7.5 px-2.5 font-medium transition-colors',
+                    watch('gstRate') === taxProfile.standardRate && !watch('isGstExempt')
+                      ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90'
+                      : 'hover:border-primary hover:bg-primary/10'
+                  )}
+                  onClick={() => {
+                    setValue('gstRate', taxProfile.standardRate)
+                    setValue('cgstRate', 0)
+                    setValue('sgstRate', 0)
+                    setValue('igstRate', taxProfile.standardRate)
+                    setValue('isGstExempt', false)
+                  }}
+                >
+                  {isAr
+                    ? `${taxProfile.standardRate}% النسبة الأساسية`
+                    : `${taxProfile.standardRate.toFixed(1)}% Standard VAT`}
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label htmlFor="product-tariff">
+                  {isAr ? 'كود التعريفة الجمركية / رمز وزارة الصحة' : 'Tariff / HS / Regulatory Code'}
+                </Label>
+                <Input
+                  id="product-tariff"
+                  placeholder={isAr ? 'مثال: 3004.90.00' : 'e.g. 3004.90.00 (Medicaments)'}
+                  {...register('hsnCode')}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="product-vat-rate">
+                  {isAr ? 'نسبة ضريبة القيمة المضافة (%)' : `VAT Rate (%) — [${taxProfile.currency}]`}
+                </Label>
+                <Input
+                  id="product-vat-rate"
+                  type="number"
+                  step="0.1"
+                  min={0}
+                  max={100}
+                  {...register('gstRate', {
+                    valueAsNumber: true,
+                    onChange: (e) => {
+                      const val = parseFloat(e.target.value) || 0
+                      setValue('igstRate', val)
+                      if (val === 0) setValue('isGstExempt', true)
+                      else setValue('isGstExempt', false)
+                    },
+                  })}
+                  {...numeric}
+                />
+              </div>
+
+              <div className="sm:col-span-2 flex items-center gap-2 pt-1">
+                <Checkbox
+                  id="product-vat-exempt"
+                  checked={watch('isGstExempt')}
+                  onCheckedChange={(checked) => {
+                    const isChecked = checked === true
+                    setValue('isGstExempt', isChecked)
+                    if (isChecked) {
+                      setValue('gstRate', 0)
+                      setValue('igstRate', 0)
+                      setValue('cgstRate', 0)
+                      setValue('sgstRate', 0)
+                    } else if (watch('gstRate') === 0) {
+                      setValue('gstRate', taxProfile.standardRate)
+                      setValue('igstRate', taxProfile.standardRate)
+                    }
+                  }}
+                />
+                <Label htmlFor="product-vat-exempt" className="font-normal text-xs text-foreground cursor-pointer">
+                  {isAr
+                    ? `خاضع لنسبة الصفر / معفى من الضريبة (0% للأدوية والمستحضرات الطبية المعتمدة لـ ${taxProfile.authorityNameAr})`
+                    : `Statutory Zero-Rated / Exempt (0% VAT for approved human medicines under ${taxProfile.authorityNameEn})`}
+                </Label>
+              </div>
+            </div>
+
+            {/* Hidden synchronization fields for standard database compatibility */}
+            <input type="hidden" {...register('cgstRate', { valueAsNumber: true })} value={0} />
+            <input type="hidden" {...register('sgstRate', { valueAsNumber: true })} value={0} />
+            <input type="hidden" {...register('igstRate', { valueAsNumber: true })} value={watch('gstRate') || 0} />
           </div>
+        )}
+
+        {/* Pricing Sub-Section */}
+        <div className="grid gap-4 sm:grid-cols-3 pt-2">
           <div className="space-y-1">
-            <Label htmlFor="product-gst">GST Rate (%)</Label>
-            <Input
-              id="product-gst"
-              type="number"
-              step="0.01"
-              {...register('gstRate', { valueAsNumber: true })}
-              {...numeric}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="product-cgst">CGST (%)</Label>
-            <Input
-              id="product-cgst"
-              type="number"
-              step="0.01"
-              {...register('cgstRate', { valueAsNumber: true })}
-              {...numeric}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="product-sgst">SGST (%)</Label>
-            <Input
-              id="product-sgst"
-              type="number"
-              step="0.01"
-              {...register('sgstRate', { valueAsNumber: true })}
-              {...numeric}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="product-igst">IGST (%)</Label>
-            <Input
-              id="product-igst"
-              type="number"
-              step="0.01"
-              {...register('igstRate', { valueAsNumber: true })}
-              {...numeric}
-            />
-          </div>
-          <div className="flex items-end gap-4 pb-1">
-            <Checkbox
-              id="product-gst-exempt"
-              checked={watch('isGstExempt')}
-              onCheckedChange={(checked) => setValue('isGstExempt', checked === true)}
-            />
-            <Label htmlFor="product-gst-exempt" className="font-normal">
-              GST exempt
+            <Label htmlFor="product-mrp">
+              {isAr ? `سعر الجمهور (${currencySymbol}) *` : `MRP (${currencySymbol}) *`}
             </Label>
-          </div>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-1">
-            <Label htmlFor="product-mrp">MRP (₹) *</Label>
             <Input
               id="product-mrp"
               type="number"
-              step="0.01"
+              step={priceStep}
               min={0}
               {...register('mrp', { valueAsNumber: true })}
               {...numeric}
@@ -721,22 +920,26 @@ export function ProductForm({ initialData, onSuccess, onCancel, successHref }: P
             {errors.mrp && <p className="text-xs text-destructive">{errors.mrp.message}</p>}
           </div>
           <div className="space-y-1">
-            <Label htmlFor="product-ptr">PTR (₹)</Label>
+            <Label htmlFor="product-ptr">
+              {isAr ? `سعر الشراء للصيدلية (${currencySymbol})` : `PTR (${currencySymbol})`}
+            </Label>
             <Input
               id="product-ptr"
               type="number"
-              step="0.01"
+              step={priceStep}
               min={0}
               {...register('ptr', { valueAsNumber: true })}
               {...numeric}
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="product-cost">Cost Price (₹)</Label>
+            <Label htmlFor="product-cost">
+              {isAr ? `سعر التكلفة (${currencySymbol})` : `Cost Price (${currencySymbol})`}
+            </Label>
             <Input
               id="product-cost"
               type="number"
-              step="0.01"
+              step={priceStep}
               min={0}
               {...register('costPrice', { valueAsNumber: true })}
               {...numeric}

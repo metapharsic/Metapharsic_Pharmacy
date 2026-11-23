@@ -426,6 +426,9 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
     else if (territory === 'MV') effectiveLabel = 'GST Reports (MIRA 205)'
     else effectiveLabel = 'GST Reports (GSTR-1/3B)'
   }
+  if (item.href === ROUTES.HSN_CODES) {
+    if (territory !== 'IN') effectiveLabel = 'Tariff & Tax Codes'
+  }
 
   const translateLabel = (label: string): string => {
     if (locale !== 'ar') return label
@@ -441,6 +444,7 @@ function NavItemComponent({ item, depth = 0 }: { item: NavItem; depth?: number }
       'All Products': 'دليل الأدوية الشامل',
       'Categories': 'التصنيفات الدوائية',
       'HSN & Tax Codes': 'الأكواد الضريبية والتعريفة',
+      'Tariff & Tax Codes': 'رموز التعريفة والضرائب',
       'Inventory': 'المخزون الدوائي',
       'Stock Overview': 'نظرة عامة على الرصيد',
       'Adjustments': 'تسويات الجرد والمخزون',

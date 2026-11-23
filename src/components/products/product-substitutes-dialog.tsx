@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog'
 import type { ProductRow } from '@/components/products/product-table'
 import type { SubstituteProduct } from '@/lib/products/product-service'
+import { formatCurrency } from '@/lib/utils/currency'
 
 interface ProductSubstitutesDialogProps {
   product: ProductRow | null
@@ -70,7 +71,7 @@ export function ProductSubstitutesDialog({ product, open, onOpenChange }: Produc
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-xs font-mono font-bold text-foreground">₹{product.mrp}</p>
+                <p className="text-xs font-mono font-bold text-foreground">{formatCurrency(product.mrp)}</p>
                 <p className="text-[10px] text-muted-foreground">{product.totalStock ?? 0} in stock</p>
               </div>
             </div>
@@ -138,10 +139,10 @@ export function ProductSubstitutesDialog({ product, open, onOpenChange }: Produc
 
                     <div className="text-right shrink-0">
                       <div className="flex items-center justify-end gap-1 font-mono text-xs font-bold text-foreground">
-                        <span>₹{sub.mrp}</span>
+                        <span>{formatCurrency(sub.mrp)}</span>
                         {isCheaper && (
                           <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-normal">
-                            (-₹{Math.abs(priceDiff).toFixed(2)})
+                            (-{formatCurrency(Math.abs(priceDiff))})
                           </span>
                         )}
                       </div>

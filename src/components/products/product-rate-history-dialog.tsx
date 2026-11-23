@@ -17,6 +17,8 @@ import {
 } from '@/components/ui/dialog'
 import type { ProductRow } from '@/components/products/product-table'
 import type { ProductRateHistoryReport } from '@/lib/products/product-analytics-service'
+import { formatCurrency } from '@/lib/utils/currency'
+import { useI18n } from '@/lib/i18n/i18n-context'
 
 interface ProductRateHistoryDialogProps {
   product: ProductRow | null
@@ -25,6 +27,7 @@ interface ProductRateHistoryDialogProps {
 }
 
 export function ProductRateHistoryDialog({ product, open, onOpenChange }: ProductRateHistoryDialogProps) {
+  const { territoryDef } = useI18n()
   const [data, setData] = useState<ProductRateHistoryReport | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -83,7 +86,7 @@ export function ProductRateHistoryDialog({ product, open, onOpenChange }: Produc
               <div className="bg-card border rounded-lg p-2.5">
                 <span className="text-[11px] text-muted-foreground block">Retail MRP</span>
                 <span className="text-sm font-bold font-mono text-foreground">
-                  ₹{data.currentMrp.toFixed(2)}
+                  {formatCurrency(data.currentMrp)}
                 </span>
                 <span className="text-[10px] text-muted-foreground block mt-0.5">Catalog standard</span>
               </div>
@@ -91,7 +94,7 @@ export function ProductRateHistoryDialog({ product, open, onOpenChange }: Produc
               <div className="bg-card border rounded-lg p-2.5">
                 <span className="text-[11px] text-muted-foreground block">Avg Purchase Cost</span>
                 <span className="text-sm font-bold font-mono text-foreground">
-                  ₹{data.averageCostPrice.toFixed(2)}
+                  {formatCurrency(data.averageCostPrice)}
                 </span>
                 <span className="text-[10px] text-muted-foreground block mt-0.5">
                   Across {data.batches.length} batch(es)
@@ -128,8 +131,8 @@ export function ProductRateHistoryDialog({ product, open, onOpenChange }: Produc
                     <th className="p-2.5 font-medium">Batch / Lot</th>
                     <th className="p-2.5 font-medium">Receipt Date</th>
                     <th className="p-2.5 font-medium">Expiry</th>
-                    <th className="p-2.5 font-medium text-right">Cost Price (₹)</th>
-                    <th className="p-2.5 font-medium text-right">MRP (₹)</th>
+                    <th className="p-2.5 font-medium text-right">Cost Price ({territoryDef.currency.code})</th>
+                    <th className="p-2.5 font-medium text-right">MRP ({territoryDef.currency.code})</th>
                     <th className="p-2.5 font-medium text-right">Margin %</th>
                     <th className="p-2.5 font-medium text-right">Avail / Total</th>
                   </tr>
@@ -160,10 +163,10 @@ export function ProductRateHistoryDialog({ product, open, onOpenChange }: Produc
                         })}
                       </td>
                       <td className="p-2.5 font-mono text-right text-foreground">
-                        ₹{b.purchasePrice.toFixed(2)}
+                        {formatCurrency(b.purchasePrice)}
                       </td>
                       <td className="p-2.5 font-mono text-right text-foreground font-semibold">
-                        ₹{b.mrp.toFixed(2)}
+                        {formatCurrency(b.mrp)}
                       </td>
                       <td className="p-2.5 font-mono text-right">
                         <span

@@ -30,6 +30,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { checkDiscountExemption } from '@/lib/pricing/discount-exemption'
 import { formatDate } from '@/lib/utils/date'
+import { formatCurrency } from '@/lib/utils/currency'
 import { useI18n } from '@/lib/i18n/i18n-context'
 
 // ─── Types ───────────────────────────────────────────────────
@@ -330,7 +331,7 @@ function useColumns(
       header: isAr ? 'سعر الجمهور' : 'MRP',
       cell: ({ row }) => {
         const mrpNum = parseFloat(row.original.mrp)
-        const formattedPrice = i18n ? i18n.formatPrice(mrpNum) : `₹${row.original.mrp}`
+        const formattedPrice = i18n ? i18n.formatPrice(mrpNum) : formatCurrency(row.original.mrp)
         const tabs = row.original.tabsPerStrip
         const tabRate = tabs && tabs > 1 && !isNaN(mrpNum) ? (mrpNum / tabs) : null
 
@@ -339,7 +340,7 @@ function useColumns(
             <span className="font-mono font-medium">{formattedPrice}</span>
             {tabRate && (
               <span className="block text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-medium">
-                ⚡ {i18n ? i18n.formatPrice(tabRate) : `₹${tabRate.toFixed(2)}`}{isAr ? '/قرص' : '/tab'}
+                ⚡ {i18n ? i18n.formatPrice(tabRate) : formatCurrency(tabRate)}{isAr ? '/قرص' : '/tab'}
               </span>
             )}
           </div>

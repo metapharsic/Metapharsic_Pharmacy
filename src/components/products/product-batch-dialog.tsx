@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import type { ProductRow, ProductBatchSummary } from '@/components/products/product-table'
+import { formatCurrency } from '@/lib/utils/currency'
 
 interface ProductBatchDialogProps {
   product: ProductRow | null
@@ -129,7 +130,7 @@ export function ProductBatchDialog({ product, open, onOpenChange }: ProductBatch
                           </span>
                         </td>
                         <td className="py-2.5 px-3 text-right font-mono text-foreground font-medium">
-                          ₹{b.mrp}
+                          {formatCurrency(b.mrp)}
                         </td>
                         <td className="py-2.5 px-3 text-center">
                           {b.availableQuantity > 0 ? (

@@ -29,6 +29,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { ROUTES } from '@/lib/constants/routes'
 import { formatCurrency } from '@/lib/utils/currency'
+import { useI18n } from '@/lib/i18n/i18n-context'
 
 export interface ProductDetailBatch {
   id: string
@@ -82,6 +83,7 @@ export function ProductDetailModal({
   canEdit = true,
 }: ProductDetailModalProps) {
   const router = useRouter()
+  const { territory } = useI18n()
   const [product, setProduct] = useState<ProductDetailData | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -218,8 +220,8 @@ export function ProductDetailModal({
                   </div>
                 )}
                 <div className="rounded bg-muted/40 p-2">
-                  <div className="text-[11px] text-muted-foreground">GST Rate</div>
-                  <div className="text-sm font-bold">{product.gstRate ?? 12}%</div>
+                  <div className="text-[11px] text-muted-foreground">{territory === 'IN' ? 'GST Rate' : 'VAT Rate'}</div>
+                  <div className="text-sm font-bold">{product.gstRate ?? (territory === 'IN' ? 12 : 0)}%</div>
                 </div>
               </div>
             </div>

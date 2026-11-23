@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ProductDetailPricingCard } from '@/components/products/product-detail-pricing-card'
 import { can } from '@/lib/auth/auth-helpers'
 import { PERMISSIONS } from '@/lib/constants/permissions'
 import { ROUTES } from '@/lib/constants/routes'
@@ -99,42 +100,8 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
           </CardContent>
         </Card>
 
-        {/* Pricing & GST */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Pricing &amp; GST</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="divide-y">
-              <DetailRow label="MRP" value={`₹${product.mrp.toString()}`} />
-              <DetailRow
-                label="PTR"
-                value={product.ptr !== null ? `₹${product.ptr.toString()}` : undefined}
-              />
-              <DetailRow
-                label="Cost Price"
-                value={product.costPrice !== null ? `₹${product.costPrice.toString()}` : undefined}
-              />
-              <DetailRow label="HSN Code" value={product.hsnCode} />
-              <DetailRow
-                label="GST Rate"
-                value={product.isGstExempt ? 'Exempt' : `${product.gstRate.toString()}%`}
-              />
-              <DetailRow
-                label="CGST / SGST"
-                value={
-                  product.isGstExempt
-                    ? '—'
-                    : `${product.cgstRate.toString()}% / ${product.sgstRate.toString()}%`
-                }
-              />
-              <DetailRow
-                label="IGST"
-                value={product.isGstExempt ? '—' : `${product.igstRate.toString()}%`}
-              />
-            </dl>
-          </CardContent>
-        </Card>
+        {/* Pricing & Sovereign Tax / GST */}
+        <ProductDetailPricingCard product={product} />
 
         {/* Stock & Misc */}
         <Card>

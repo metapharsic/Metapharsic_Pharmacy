@@ -13,6 +13,7 @@ import {
   type ProductCodeData,
   type GeneratedCodeOutput,
 } from './barcode-qr-generator'
+import { formatCurrency } from '@/lib/utils/currency'
 
 export interface BatchItemCodeResult extends GeneratedCodeOutput {
   productId: string
@@ -109,7 +110,7 @@ export function buildPrintableStickerSheetHtml(
       <div class="sticker-card">
         <div class="sticker-header">
           <div class="product-name">${escapeHtml(item.productName)}</div>
-          <div class="product-mrp">₹${Number(item.mrp).toFixed(2)}</div>
+          <div class="product-mrp">${formatCurrency(item.mrp)}</div>
         </div>
         <div class="sticker-codes">
           ${
