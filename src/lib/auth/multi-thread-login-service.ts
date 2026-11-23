@@ -109,7 +109,7 @@ export async function executeMultiThreadLogin(credentials: {
   ]
 
   // Step 1: Query User Record for Thread Processing
-  const user = await prisma.user.findFirst({
+  let user = await prisma.user.findFirst({
     where: {
       email: {
         equals: cleanEmail,
@@ -136,6 +136,38 @@ export async function executeMultiThreadLogin(credentials: {
       },
     },
   })
+
+  if (!user) {
+    // Mobile convenience: allow logging in by username (e.g. 'amjad') or phone number
+    user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: { startsWith: `${cleanEmail}@`, mode: 'insensitive' } },
+          { phone: { contains: cleanEmail } },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        organization: true,
+        branch: {
+          include: {
+            organization: true,
+          },
+        },
+        userRoles: {
+          include: {
+            role: {
+              include: {
+                rolePermissions: {
+                  include: { permission: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+  }
 
   // ── THREAD 1: CRYPTOGRAPHIC AUTHENTICATION WORKER ──
   const runThread1Auth = async (): Promise<void> => {

@@ -305,9 +305,12 @@ export function LoginForm() {
                   <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="email"
-                    type="email"
-                    placeholder="name@pharmacy.com"
-                    autoComplete="email"
+                    type="text"
+                    placeholder="name@pharmacy.com or username"
+                    autoComplete="username email"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck="false"
                     disabled={isExecutingThreads || isSubmitting}
                     className="pl-9 text-sm"
                     {...register('email')}

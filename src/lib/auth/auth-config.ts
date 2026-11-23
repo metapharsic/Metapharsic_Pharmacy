@@ -30,11 +30,11 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Email and password are required')
         }
 
-        const cleanEmail = credentials.email.trim().toLowerCase()
-        const user = await prisma.user.findFirst({
+        const cleanIdentifier = credentials.email.trim().toLowerCase()
+        let user = await prisma.user.findFirst({
           where: {
             email: {
-              equals: cleanEmail,
+              equals: cleanIdentifier,
               mode: 'insensitive',
             },
           },
@@ -58,6 +58,38 @@ export const authOptions: NextAuthOptions = {
             },
           },
         })
+
+        if (!user) {
+          // Mobile convenience: allow logging in by username (e.g. 'amjad') or phone number
+          user = await prisma.user.findFirst({
+            where: {
+              OR: [
+                { email: { startsWith: `${cleanIdentifier}@`, mode: 'insensitive' } },
+                { phone: { contains: cleanIdentifier } },
+              ],
+            },
+            orderBy: { createdAt: 'desc' },
+            include: {
+              organization: true,
+              branch: {
+                include: {
+                  organization: true,
+                },
+              },
+              userRoles: {
+                include: {
+                  role: {
+                    include: {
+                      rolePermissions: {
+                        include: { permission: true },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          })
+        }
 
         if (!user) {
           throw new Error('Invalid email or password')
