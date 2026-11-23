@@ -24,6 +24,8 @@ export type UserRow = {
   email: string
   phone?: string | null
   isActive: boolean
+  mfaEnabled?: boolean
+  territory?: string | null
   lastLoginAt?: Date | null
   createdAt: Date
   branchId?: string | null
@@ -93,6 +95,39 @@ function useColumns(
         <span className="font-mono text-xs text-muted-foreground">
           {maskPhone(row.original.phone)}
         </span>
+      ),
+    },
+    {
+      id: 'territory',
+      accessorFn: (row) => row.territory || 'IN',
+      header: 'Assigned Territory',
+      cell: ({ row }) => {
+        const terr = (row.original.territory || 'IN').toUpperCase()
+        const flagMap: Record<string, string> = {
+          IN: '🇮🇳 India (CDSCO)',
+          SA: '🇸🇦 Saudi Arabia (ZATCA)',
+          OM: '🇴🇲 Oman (MoH)',
+          BH: '🇧🇭 Bahrain (NHRA)',
+          QA: '🇶🇦 Qatar (MoPH)',
+          MV: '🇲🇻 Maldives (MIRA)',
+        }
+        return (
+          <Badge variant="outline" className="font-mono text-xs">
+            {flagMap[terr] || `🌐 ${terr}`}
+          </Badge>
+        )
+      },
+    },
+    {
+      accessorKey: 'mfaEnabled',
+      header: 'MFA Security',
+      cell: ({ row }) => (
+        <Badge
+          variant={row.original.mfaEnabled ? 'default' : 'secondary'}
+          className={row.original.mfaEnabled ? 'bg-teal-700 text-white' : 'text-muted-foreground'}
+        >
+          {row.original.mfaEnabled ? 'MFA Active' : 'Disabled'}
+        </Badge>
       ),
     },
     {

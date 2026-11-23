@@ -63,10 +63,12 @@ export async function GET(req: NextRequest) {
           email: true,
           phone: true,
           isActive: true,
+          mfaEnabled: true,
           lastLoginAt: true,
           createdAt: true,
           branchId: true,
           branch: { select: { id: true, name: true, code: true } },
+          organization: { select: { id: true, name: true, country: true, currency: true } },
           userRoles: {
             include: { role: { select: { id: true, name: true, displayName: true } } },
           },
@@ -75,9 +77,42 @@ export async function GET(req: NextRequest) {
       prisma.user.count({ where }),
     ])
 
+    const userIds = users.map((u) => u.id)
+    const govSettings = await prisma.systemSetting.findMany({
+      where: {
+        category: 'USER_GOVERNANCE',
+        key: { in: userIds },
+      },
+    })
+    const govMap = new Map<string, string>()
+    for (const gs of govSettings) {
+      try {
+        const val = JSON.parse(gs.value)
+        if (Array.isArray(val.territories) && val.territories[0]) {
+          govMap.set(gs.key, val.territories[0])
+        } else if (val.assignedPrivateNode) {
+          govMap.set(gs.key, val.assignedPrivateNode)
+        }
+      } catch {}
+    }
+
+    const formattedUsers = users.map((u) => {
+      const terr =
+        govMap.get(u.id) ||
+        (u.organization?.currency === 'SAR' || u.organization?.country === 'Saudi Arabia'
+          ? 'SA'
+          : u.organization?.country === 'Oman'
+          ? 'OM'
+          : 'IN')
+      return {
+        ...u,
+        territory: terr,
+      }
+    })
+
     return NextResponse.json({
       success: true,
-      data: users,
+      data: formattedUsers,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     })
   } catch (err) {
@@ -160,6 +195,7 @@ export async function POST(req: NextRequest) {
         branchId: data.branchId || null,
         organizationId: targetOrgId,
         isActive: data.isActive,
+        mfaEnabled: Boolean(data.mfaEnabled),
         userRoles: {
           create: data.roleIds.map((roleId) => ({ roleId })),
         },
@@ -188,11 +224,13 @@ export async function POST(req: NextRequest) {
         ? 'MV'
         : 'IN'
 
+    const assignedTerritory = (data.territory || orgTerritory || 'IN').toUpperCase()
+
     const userGovPayload = {
-      territories: [orgTerritory],
-      assignedPrivateNode: orgTerritory,
+      territories: [assignedTerritory],
+      assignedPrivateNode: assignedTerritory,
       ipRestrictionEnabled: false,
-      mfaEnabled: false,
+      mfaEnabled: Boolean(data.mfaEnabled),
       assignedBy: actor.email,
       assignedAt: new Date().toISOString(),
     }

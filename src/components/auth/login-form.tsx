@@ -5,19 +5,17 @@ import {
   Cpu,
   Eye,
   EyeOff,
-  Fingerprint,
-  Layers,
-  LayoutGrid,
+  KeyRound,
   Loader2,
   Lock,
   Mail,
   ShieldCheck,
-  Smartphone,
-  Sparkles,
+  ArrowLeft,
+  CheckCircle2,
 } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
@@ -36,7 +34,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ROUTES } from '@/lib/constants/routes'
 import { loginSchema, type LoginInput } from '@/lib/validations/auth'
-import { TouchPad, DEFAULT_CHEMIST_PROFILES } from './touch-pad'
 import { ThreadStatusCard, type ThreadItem } from './thread-status-card'
 import { LanguageToggle } from '@/components/shared/language-toggle'
 import { useI18n } from '@/lib/i18n/i18n-context'
@@ -52,18 +49,19 @@ export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get('callbackUrl') ?? ROUTES.DASHBOARD
-  const { t, locale, dir } = useI18n()
+  const { t } = useI18n()
 
-  // View Mode: 'touchpad' (Mobile / POS Keypad) vs 'standard' (Desktop form)
-  const [viewMode, setViewMode] = useState<'touchpad' | 'standard'>('touchpad')
+  // Authentication Step: 'CREDENTIALS' (Standard login) vs 'MFA' (2FA Code verification)
+  const [authStep, setAuthStep] = useState<'CREDENTIALS' | 'MFA'>('CREDENTIALS')
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
+  const [mfaCode, setMfaCode] = useState('')
   const [isExecutingThreads, setIsExecutingThreads] = useState(false)
   const [threadResults, setThreadResults] = useState<ThreadItem[] | null>(null)
   const [totalDurationMs, setTotalDurationMs] = useState(0)
   const [showDiagnosticsDialog, setShowDiagnosticsDialog] = useState(false)
   const [diagnosticsData, setDiagnosticsData] = useState<any>(null)
 
-  // Default initial thread state for immediate UI feedback
   const getInitialThreads = (): ThreadItem[] => [
     {
       id: 1,
@@ -115,18 +113,19 @@ export function LoginForm() {
   const {
     register,
     handleSubmit,
-    setValue,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: DEFAULT_CHEMIST_PROFILES[0].email,
+      email: '',
       password: '',
+      mfaCode: '',
     },
   })
 
   // Core Multi-Thread Authentication Pipeline
-  const executeAuthenticationPipeline = async (email: string, pass: string) => {
+  const executeAuthenticationPipeline = async (email: string, pass: string, code?: string) => {
     setIsExecutingThreads(true)
     setThreadResults(getInitialThreads())
 
@@ -138,18 +137,28 @@ export function LoginForm() {
         body: JSON.stringify({
           email: email.trim(),
           password: pass,
-          deviceFingerprint: viewMode === 'touchpad' ? 'Mobile-Touch-Pad-POS' : 'Standard-Desktop-Browser',
+          mfaCode: code?.trim(),
+          deviceFingerprint: 'Standard-Dispensary-Browser',
         }),
       })
 
       const multiThreadData = await multiThreadRes.json()
+
+      // If server asks for MFA code
+      if (multiThreadData.requireMfa && !code) {
+        setIsExecutingThreads(false)
+        setThreadResults(null)
+        setAuthStep('MFA')
+        toast.info('Two-Factor Authentication (MFA) required. Please enter your 6-digit code.')
+        return
+      }
 
       if (!multiThreadRes.ok || !multiThreadData.success) {
         if (multiThreadData.threads) {
           setThreadResults(multiThreadData.threads)
         }
         setIsExecutingThreads(false)
-        toast.error(multiThreadData.error || 'Authentication failed. Please verify credentials.')
+        toast.error(multiThreadData.error || 'Authentication failed. Please verify your credentials.')
         return
       }
 
@@ -161,17 +170,18 @@ export function LoginForm() {
       const result = await signIn('credentials', {
         email: email.trim(),
         password: pass,
+        mfaCode: code?.trim(),
         redirect: false,
       })
 
       if (result?.error) {
         setIsExecutingThreads(false)
-        toast.error('Session establishment failed. Please try again.')
+        toast.error(result.error || 'Session establishment failed. Please try again.')
         return
       }
 
       toast.success(
-        `All 5 threads verified in ${multiThreadData.stats?.totalDurationMs || 0}ms. Backup enabled!`
+        `Authenticated in ${multiThreadData.stats?.totalDurationMs || 0}ms. Dispensary backup verified!`
       )
 
       // Step 3: Role-based destination redirect
@@ -200,15 +210,26 @@ export function LoginForm() {
         router.push(callbackUrl)
         router.refresh()
       }
-    } catch (err: any) {
+    } catch {
       setIsExecutingThreads(false)
-      toast.error('An unexpected connection error occurred during thread execution.')
+      toast.error('An unexpected connection error occurred during verification.')
     }
   }
 
-  // Handle standard form submit
-  const onStandardSubmit = async (data: LoginInput) => {
+  // Handle standard credential form submit
+  const onCredentialsSubmit = async (data: LoginInput) => {
     await executeAuthenticationPipeline(data.email, data.password)
+  }
+
+  // Handle MFA 6-digit verification code submit
+  const handleMfaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!mfaCode || mfaCode.trim().length !== 6) {
+      toast.error('Please enter a valid 6-digit verification code.')
+      return
+    }
+    const { email, password } = getValues()
+    await executeAuthenticationPipeline(email, password, mfaCode)
   }
 
   // Fetch thread diagnostics on demand
@@ -225,40 +246,12 @@ export function LoginForm() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Sovereign Geopolitical Zone & Language Controls */}
+      {/* Top Header Controls: Language Toggle */}
       <div className="flex items-center justify-between pb-1">
         <span className="text-xs font-semibold text-muted-foreground">
-          {t('territory.title', 'Sovereign Zone & Language')}
+          {t('territory.title', 'Dispensary Portal')}
         </span>
         <LanguageToggle />
-      </div>
-
-      {/* View Switcher Controls (Mobile Touch Pad View vs Desktop Standard View) */}
-      <div className="flex items-center justify-between rounded-xl bg-slate-200/70 p-1 dark:bg-slate-900 border border-border">
-        <button
-          type="button"
-          onClick={() => setViewMode('touchpad')}
-          className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-1.5 text-xs font-bold transition-all ${
-            viewMode === 'touchpad'
-              ? 'bg-teal-700 text-white shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Smartphone className="h-3.5 w-3.5" />
-          <span>{t('auth.touchPadView', 'Mobile Touch Pad View')}</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setViewMode('standard')}
-          className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-1.5 text-xs font-bold transition-all ${
-            viewMode === 'standard'
-              ? 'bg-teal-700 text-white shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <LayoutGrid className="h-3.5 w-3.5" />
-          <span>{t('auth.standardView', 'Standard Login View')}</span>
-        </button>
       </div>
 
       {/* Real-time Thread Status Card during or after execution */}
@@ -271,51 +264,49 @@ export function LoginForm() {
         />
       )}
 
-      {/* ── MODE 1: MOBILE TOUCH PAD VIEW ── */}
-      {viewMode === 'touchpad' ? (
-        <div className="animate-in fade-in duration-200">
-          <TouchPad
-            onMultiThreadSubmit={executeAuthenticationPipeline}
-            isSubmitting={isExecutingThreads || isSubmitting}
-            onSwitchToDesktop={() => setViewMode('standard')}
-            onOpenDiagnostics={handleOpenDiagnostics}
-          />
-        </div>
-      ) : (
-        /* ── MODE 2: STANDARD FORM VIEW ── */
-        <Card className="w-full max-w-md border-border/80 shadow-card animate-in fade-in duration-200">
-          <CardHeader className="space-y-3 pb-4 text-center sm:text-left">
-            <div className="flex items-center justify-between">
-              <Logo size="md" />
-              <Badge
-                variant="outline"
-                className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
-              >
-                Dispensary Security
-              </Badge>
-            </div>
-            <div>
-              <CardTitle className="text-xl font-bold tracking-tight">
-                {t('auth.signIn', 'Chemist Dispensary Sign In')}
-              </CardTitle>
-              <CardDescription className="text-xs text-muted-foreground">
-                {t('auth.welcomeBack', 'Enter authorized chemist credentials • Multi-threaded backup enabled')}
-              </CardDescription>
-            </div>
-          </CardHeader>
+      {/* ── STANDARD ENTERPRISE LOGIN VIEW ── */}
+      <Card className="w-full max-w-md border-border/80 shadow-card animate-in fade-in duration-200">
+        <CardHeader className="space-y-3 pb-4 text-center sm:text-left">
+          <div className="flex items-center justify-between">
+            <Logo size="md" />
+            <Badge
+              variant="outline"
+              className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1"
+            >
+              <ShieldCheck className="h-3 w-3 text-teal-600 dark:text-teal-400" />
+              <span>Secure Gateway</span>
+            </Badge>
+          </div>
 
-          <form onSubmit={handleSubmit(onStandardSubmit)}>
+          <div>
+            <CardTitle className="text-xl font-bold tracking-tight">
+              {authStep === 'CREDENTIALS'
+                ? t('auth.signIn', 'Sign In')
+                : t('auth.mfaTitle', 'Two-Factor Authentication')}
+            </CardTitle>
+            <CardDescription className="text-xs text-muted-foreground">
+              {authStep === 'CREDENTIALS'
+                ? t('auth.welcomeBack', 'Enter your registered credentials to access your dispensary terminal.')
+                : t('auth.mfaSubtitle', 'Enter the 6-digit verification code from your authenticator application.')}
+            </CardDescription>
+          </div>
+        </CardHeader>
+
+        {authStep === 'CREDENTIALS' ? (
+          /* STEP 1: CREDENTIALS FORM */
+          <form onSubmit={handleSubmit(onCredentialsSubmit)}>
             <CardContent className="space-y-4 pt-2">
+              {/* Email / Username Field */}
               <div className="space-y-1.5">
                 <Label htmlFor="email" className="text-xs font-semibold text-foreground/80">
-                  {t('auth.selectProfile', 'Staff Email Address')}
+                  {t('auth.email', 'Email Address or Username')}
                 </Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
-                    placeholder="staff@pharmacare.local"
+                    placeholder="name@pharmacy.com"
                     autoComplete="email"
                     disabled={isExecutingThreads || isSubmitting}
                     className="pl-9 text-sm"
@@ -327,6 +318,7 @@ export function LoginForm() {
                 )}
               </div>
 
+              {/* Password Field */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password" className="text-xs font-semibold text-foreground/80">
@@ -336,7 +328,7 @@ export function LoginForm() {
                     href={ROUTES.RESET_PASSWORD}
                     className="text-xs font-medium text-teal-600 hover:text-teal-700 hover:underline dark:text-teal-400"
                   >
-                    {t('auth.forgotPassword', 'Forgot key?')}
+                    {t('auth.forgotPassword', 'Forgot password?')}
                   </a>
                 </div>
                 <div className="relative">
@@ -344,10 +336,10 @@ export function LoginForm() {
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Enter authorized password"
+                    placeholder="••••••••••••"
                     autoComplete="current-password"
                     disabled={isExecutingThreads || isSubmitting}
-                    className="pl-9 pr-10 text-sm"
+                    className="pl-9 pr-10 text-sm font-sans"
                     {...register('password')}
                   />
                   <button
@@ -365,31 +357,25 @@ export function LoginForm() {
                 )}
               </div>
 
-              {/* Quick Fill Demo Badges */}
-              <div className="pt-1">
-                <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block mb-1.5">
-                  Chemist Counter Accounts:
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {DEFAULT_CHEMIST_PROFILES.map((p) => (
-                    <button
-                      key={p.name}
-                      type="button"
-                      onClick={() => {
-                        setValue('email', p.email)
-                        if (p.defaultPin) setValue('password', p.defaultPin)
-                      }}
-                      className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-800 px-2 py-1 text-[11px] font-medium text-slate-700 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-teal-950/40 hover:border-teal-300 transition-colors"
-                    >
-                      <span>{p.avatarIcon || '💊'}</span>
-                      <span>{p.name}</span>
-                    </button>
-                  ))}
-                </div>
+              {/* Remember Me Checkbox */}
+              <div className="flex items-center space-x-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="rememberMe"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500 dark:border-slate-700 dark:bg-slate-900"
+                />
+                <label
+                  htmlFor="rememberMe"
+                  className="text-xs text-muted-foreground cursor-pointer select-none"
+                >
+                  Keep me signed in on this terminal
+                </label>
               </div>
             </CardContent>
 
-            <CardFooter className="flex flex-col gap-3 pt-2">
+            <CardFooter className="flex flex-col gap-3 pt-3">
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-teal-800 to-teal-700 hover:from-teal-900 hover:to-teal-800 text-white font-medium shadow-teal-glow transition-all"
@@ -398,17 +384,17 @@ export function LoginForm() {
                 {isExecutingThreads || isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Executing 5 Security & Backup Threads...
+                    Authenticating Credentials...
                   </>
                 ) : (
-                  'Access Dispensary System (Multi-Thread)'
+                  'Sign In to Dispensary Terminal'
                 )}
               </Button>
 
-              <div className="flex items-center justify-between w-full text-[11px] text-muted-foreground">
+              <div className="flex items-center justify-between w-full text-[11px] text-muted-foreground pt-1">
                 <div className="flex items-center gap-1">
-                  <ShieldCheck className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400" />
-                  <span>Backup Enabled on Login</span>
+                  <CheckCircle2 className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400" />
+                  <span>Automated Database Backup Active</span>
                 </div>
                 <button
                   type="button"
@@ -416,74 +402,108 @@ export function LoginForm() {
                   className="text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1 font-mono text-[10.5px]"
                 >
                   <Cpu className="h-3 w-3" />
-                  <span>Thread Status</span>
+                  <span>Telemetry</span>
                 </button>
               </div>
             </CardFooter>
           </form>
-        </Card>
-      )}
+        ) : (
+          /* STEP 2: TWO-FACTOR AUTHENTICATION (MFA) */
+          <form onSubmit={handleMfaSubmit}>
+            <CardContent className="space-y-4 pt-2">
+              <div className="rounded-xl border border-teal-500/20 bg-teal-500/10 p-3.5 text-xs text-teal-900 dark:text-teal-200 flex items-start gap-3">
+                <KeyRound className="h-5 w-5 text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-semibold">Security Verification Required</p>
+                  <p className="text-[11px] leading-relaxed opacity-90">
+                    Enter the 6-digit verification code from your authenticator app (Google Authenticator, Microsoft Authenticator, or 1Password).
+                  </p>
+                </div>
+              </div>
 
-      {/* Thread Diagnostics Dialog */}
+              <div className="space-y-2">
+                <Label htmlFor="mfaCode" className="text-xs font-semibold text-foreground/80">
+                  6-Digit Verification Code
+                </Label>
+                <Input
+                  id="mfaCode"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  autoFocus
+                  placeholder="000000"
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  disabled={isExecutingThreads || isSubmitting}
+                  className="text-center font-mono text-2xl tracking-[0.4em] font-bold h-12"
+                />
+              </div>
+            </CardContent>
+
+            <CardFooter className="flex flex-col gap-2.5 pt-2">
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-teal-800 to-teal-700 hover:from-teal-900 hover:to-teal-800 text-white font-medium shadow-teal-glow transition-all"
+                disabled={isExecutingThreads || isSubmitting || mfaCode.length !== 6}
+              >
+                {isExecutingThreads || isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verifying Two-Factor Code...
+                  </>
+                ) : (
+                  'Verify & Access Terminal'
+                )}
+              </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setAuthStep('CREDENTIALS')
+                  setMfaCode('')
+                }}
+                disabled={isExecutingThreads || isSubmitting}
+                className="w-full text-xs text-muted-foreground hover:text-foreground"
+              >
+                <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+                Back to Credentials
+              </Button>
+            </CardFooter>
+          </form>
+        )}
+      </Card>
+
+      {/* Diagnostics Dialog */}
       <Dialog open={showDiagnosticsDialog} onOpenChange={setShowDiagnosticsDialog}>
         <DialogContent className="max-w-md bg-slate-950 text-white border-slate-800">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-sm font-bold text-teal-300">
-              <Cpu className="h-4 w-4" />
-              <span>Multi-Thread Topology & Pre-Flight Status</span>
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <Cpu className="h-4 w-4 text-teal-400" />
+              Dispensary Security & Worker Telemetry
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-400">
-              Live status of the 5 concurrent worker threads wired into user login.
+              Active background worker threads ensuring real-time integrity and compliance.
             </DialogDescription>
           </DialogHeader>
 
-          {diagnosticsData ? (
-            <div className="space-y-3 py-2 text-xs">
-              <div className="rounded-lg bg-slate-900 p-3 border border-slate-800 space-y-1">
-                <div className="flex justify-between text-slate-300">
-                  <span>Engine:</span>
-                  <span className="font-mono text-teal-300">{diagnosticsData.engine}</span>
+          <div className="space-y-2.5 pt-2 font-mono text-xs">
+            {diagnosticsData?.configuredThreads?.map((thread: any) => (
+              <div
+                key={thread.id}
+                className="flex items-center justify-between p-2 rounded bg-slate-900 border border-slate-800"
+              >
+                <div>
+                  <p className="font-semibold text-slate-200">{thread.name}</p>
+                  <p className="text-[10px] text-slate-400">{thread.target}</p>
                 </div>
-                <div className="flex justify-between text-slate-300">
-                  <span>Dispensary Status:</span>
-                  <span className="font-mono text-emerald-400">{diagnosticsData.status}</span>
-                </div>
-                <div className="flex justify-between text-slate-300">
-                  <span>Formulations Pre-Cached:</span>
-                  <span className="font-mono text-teal-300">
-                    {diagnosticsData.systemMetrics?.activeFormulations ?? 0}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Wired Worker Threads:
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">
+                  {thread.state}
                 </span>
-                {diagnosticsData.configuredThreads?.map((th: any) => (
-                  <div
-                    key={th.id}
-                    className="flex items-center justify-between rounded-md border border-slate-800 bg-slate-900/60 p-2"
-                  >
-                    <div>
-                      <p className="font-semibold text-slate-200 text-[11px]">{th.name}</p>
-                      <p className="text-[10px] text-slate-400">{th.target}</p>
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className="border-emerald-500/40 bg-emerald-500/10 text-emerald-300 text-[9px] font-mono"
-                    >
-                      {th.state}
-                    </Badge>
-                  </div>
-                ))}
               </div>
-            </div>
-          ) : (
-            <div className="py-6 flex items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-teal-400" />
-            </div>
-          )}
+            ))}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

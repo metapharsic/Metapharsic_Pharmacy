@@ -12,6 +12,7 @@
 import prisma from '@/lib/db/prisma'
 import bcrypt from 'bcryptjs'
 import { getPlatformIAMPolicy, evaluateGeopoliticalIAMGate } from '@/lib/platform/iam-service'
+import { verifyTotp } from '@/lib/auth/totp-service'
 
 export interface LoginThreadStatus {
   id: number
@@ -27,6 +28,7 @@ export interface LoginThreadStatus {
 export interface MultiThreadLoginResult {
   success: boolean
   error?: string
+  requireMfa?: boolean
   user?: {
     id: string
     email: string
@@ -48,6 +50,7 @@ export interface MultiThreadLoginResult {
 export async function executeMultiThreadLogin(credentials: {
   email: string
   password: string
+  mfaCode?: string
   deviceFingerprint?: string
   userAgent?: string
   ipAddress?: string
@@ -177,6 +180,28 @@ export async function executeMultiThreadLogin(credentials: {
       throw new Error('Invalid email or password')
     }
 
+    // ── MFA VERIFICATION ──
+    if (user.mfaEnabled) {
+      if (!credentials.mfaCode) {
+        threads[0].status = 'PENDING'
+        threads[0].details = 'Two-Factor Authentication (MFA) code required'
+        const mfaErr: any = new Error('Two-factor authentication code required')
+        mfaErr.requireMfa = true
+        throw mfaErr
+      }
+
+      const mfaCodeClean = credentials.mfaCode.trim()
+      const isMfaValid = user.totpSecret ? verifyTotp(mfaCodeClean, user.totpSecret) : false
+
+      if (!isMfaValid) {
+        threads[0].status = 'ERROR'
+        threads[0].details = 'Invalid 6-digit MFA authentication code'
+        const mfaErr: any = new Error('Invalid 6-digit authentication code. Please check your authenticator app.')
+        mfaErr.requireMfa = true
+        throw mfaErr
+      }
+    }
+
     threads[0].status = 'COMPLETED'
     threads[0].details = `BCrypt hash verified • 0 failed attempts • User: ${user.name || user.email}`
     threads[0].metrics = {
@@ -210,9 +235,11 @@ export async function executeMultiThreadLogin(credentials: {
     const canDispenseNarcotics = isSuperAdmin || roles.includes('owner') || roles.includes('manager') || permissions.includes('sales:narcotics')
 
     // Geopolitical IAM Security Gate Handshake
-    let clientTz = 'Asia/Riyadh'
+    let clientTz = user.organization?.timezone || 'Asia/Kolkata'
     try {
-      clientTz = Intl.DateTimeFormat().resolvedOptions().timeZone
+      if (typeof Intl !== 'undefined') {
+        clientTz = Intl.DateTimeFormat().resolvedOptions().timeZone || clientTz
+      }
     } catch {
       // ignore
     }
@@ -381,6 +408,7 @@ export async function executeMultiThreadLogin(credentials: {
     return {
       success: false,
       error: err.message || 'Authentication failed',
+      requireMfa: Boolean(err?.requireMfa),
       stats: {
         totalThreads: 5,
         completedThreads: threads.filter((t) => t.status === 'COMPLETED').length,

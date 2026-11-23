@@ -32,6 +32,8 @@ const formSchema = z
     phone: z.string().optional(),
     roleIds: z.array(z.string()).min(1, 'At least one role is required'),
     branchId: z.string().optional(),
+    territory: z.string().optional(),
+    mfaEnabled: z.boolean().optional(),
     isActive: z.boolean(),
   })
 
@@ -47,6 +49,8 @@ type UserInit = {
   email: string
   phone?: string | null
   branchId?: string | null
+  territory?: string | null
+  mfaEnabled?: boolean
   isActive: boolean
   userRoles: { role: RoleOption }[]
 }
@@ -80,6 +84,8 @@ export function UserForm({ initialData, onSuccess, onCancel }: UserFormProps) {
       password: '',
       phone: initialData?.phone ?? '',
       branchId: initialData?.branchId ?? '',
+      territory: initialData?.territory ?? 'IN',
+      mfaEnabled: initialData?.mfaEnabled ?? false,
       roleIds: initialData?.userRoles?.filter((ur) => ur && ur.role)?.map((ur) => ur.role.id) ?? [],
       isActive: initialData?.isActive ?? true,
     },
@@ -217,6 +223,44 @@ export function UserForm({ initialData, onSuccess, onCancel }: UserFormProps) {
         {errors.roleIds && (
           <p className="text-xs text-destructive">{errors.roleIds.message}</p>
         )}
+      </div>
+
+      {/* Assigned Sovereign Zone / Territory */}
+      <div className="space-y-1">
+        <Label htmlFor="territory">Assigned Sovereign Zone / Territory *</Label>
+        <select
+          id="territory"
+          {...register('territory')}
+          className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground"
+        >
+          <option value="IN">🇮🇳 India (CDSCO / GST / DPCO)</option>
+          <option value="SA">🇸🇦 Saudi Arabia (ZATCA / SFDA)</option>
+          <option value="OM">🇴🇲 Sultanate of Oman (MoH / 5% OTA)</option>
+          <option value="BH">🇧🇭 Kingdom of Bahrain (NHRA / NBR)</option>
+          <option value="QA">🇶🇦 State of Qatar (MoPH)</option>
+          <option value="MV">🇲🇻 Republic of Maldives (MIRA / Aasandha)</option>
+        </select>
+        <p className="text-[11px] text-muted-foreground">
+          Segregates drug catalog, tax slabs, currency, and regulatory compliance strictly to this territory.
+        </p>
+      </div>
+
+      {/* Two-Factor Authentication (MFA) Toggle */}
+      <div className="flex items-center justify-between rounded-lg border border-border p-3 bg-muted/30">
+        <div className="space-y-0.5">
+          <Label htmlFor="mfaEnabled" className="text-xs font-semibold cursor-pointer">
+            Two-Factor Authentication (MFA)
+          </Label>
+          <p className="text-[11px] text-muted-foreground">
+            Enforce 6-digit TOTP code verification for this user upon login.
+          </p>
+        </div>
+        <input
+          id="mfaEnabled"
+          type="checkbox"
+          {...register('mfaEnabled')}
+          className="h-4 w-4 rounded border-input"
+        />
       </div>
 
       {/* Active toggle */}

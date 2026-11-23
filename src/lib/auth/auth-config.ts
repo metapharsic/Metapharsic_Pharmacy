@@ -5,6 +5,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 
 import prisma from '@/lib/db/prisma'
 import { getPlatformIAMPolicy } from '@/lib/platform/iam-service'
+import { verifyTotp } from '@/lib/auth/totp-service'
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as NextAuthOptions['adapter'],
@@ -22,6 +23,7 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
+        mfaCode: { label: 'MFA Code', type: 'text' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -126,6 +128,20 @@ export const authOptions: NextAuthOptions = {
           throw new Error(`Account temporarily locked by IAM security rules. Try again in ${remMinutes} minute(s).`)
         }
 
+        // Two-Factor Authentication (MFA) Check if enabled for this user
+        if (user.mfaEnabled) {
+          const mfaCode = (credentials as any)?.mfaCode ? String((credentials as any).mfaCode).trim() : ''
+          if (!mfaCode) {
+            throw new Error('Two-factor authentication code required')
+          }
+          if (user.totpSecret) {
+            const isMfaValid = verifyTotp(mfaCode, user.totpSecret)
+            if (!isMfaValid) {
+              throw new Error('Invalid two-factor authentication code')
+            }
+          }
+        }
+
         // Reset failed login count and update last login
         await prisma.user.update({
           where: { id: user.id },
@@ -143,7 +159,7 @@ export const authOptions: NextAuthOptions = {
         const roles = user.userRoles.map((ur) => ur.role.name)
 
         const resolveTerritoryCode = (country?: string | null): string => {
-          if (!country) return 'SA'
+          if (!country) return 'IN'
           const c = country.toLowerCase()
           if (c.includes('saudi') || c === 'sa') return 'SA'
           if (c.includes('oman') || c === 'om') return 'OM'
@@ -151,7 +167,34 @@ export const authOptions: NextAuthOptions = {
           if (c.includes('qatar') || c === 'qa') return 'QA'
           if (c.includes('maldives') || c === 'mv') return 'MV'
           if (c.includes('india') || c === 'in') return 'IN'
-          return 'SA'
+          return 'IN'
+        }
+
+        // Resolve Assigned Sovereign Territory from User Governance or Organization
+        let userTerritory = 'IN'
+        try {
+          const govSetting = await prisma.systemSetting.findUnique({
+            where: {
+              category_key: {
+                category: 'USER_GOVERNANCE',
+                key: user.id,
+              },
+            },
+          })
+          if (govSetting?.value) {
+            const parsedGov = JSON.parse(govSetting.value)
+            if (Array.isArray(parsedGov.territories) && parsedGov.territories[0]) {
+              userTerritory = parsedGov.territories[0]
+            } else if (parsedGov.assignedPrivateNode) {
+              userTerritory = parsedGov.assignedPrivateNode
+            }
+          }
+        } catch {
+          // Fallback to org country
+        }
+
+        if (userTerritory === 'IN' && org?.country) {
+          userTerritory = resolveTerritoryCode(org.country)
         }
 
         const orgPayload = org
@@ -171,7 +214,7 @@ export const authOptions: NextAuthOptions = {
               country: org.country,
               currency: org.currency,
               timezone: org.timezone,
-              territoryCode: resolveTerritoryCode(org.country),
+              territoryCode: userTerritory,
               status: org.status,
               subscriptionPlan: org.subscriptionPlan,
               subscriptionExpiresAt: org.subscriptionExpiresAt ? org.subscriptionExpiresAt.toISOString() : null,
@@ -197,7 +240,7 @@ export const authOptions: NextAuthOptions = {
           roles,
           branchId: user.branchId,
           branch: branchPayload,
-          territoryCode: resolveTerritoryCode(org?.country),
+          territoryCode: userTerritory,
           organizationId: user.organizationId || org?.id || null,
           organization: orgPayload,
           isSuperAdmin: Boolean(user.isSuperAdmin),

@@ -113,18 +113,18 @@ export function UserGovernancePanel() {
     name: '',
     email: '',
     phone: '',
-    password: 'Sovereign@2026',
+    password: '',
     organizationId: 'NEW_ENTITY',
     storeName: '',
     storeCode: '',
-    territoryCode: 'SA' as TerritoryCode,
-    assignedPrivateNode: 'SA',
+    territoryCode: 'IN' as TerritoryCode,
+    assignedPrivateNode: 'IN',
     roleNames: ['pharmacist'],
     isSuperAdmin: false,
     mfaEnabled: false,
     ipRestrictionEnabled: false,
     autoProvision5Phases: true,
-    privateCloudVpcId: 'vpc-sa-sovereign-pod-999-prod',
+    privateCloudVpcId: 'vpc-in-mumbai-pri-108',
   })
 
   // Provision Main Dispensary Dialog State
@@ -388,6 +388,31 @@ export function UserGovernancePanel() {
       }
     } catch {
       toast.error('Error resetting password')
+    } finally {
+      setActionInProgress(null)
+    }
+  }
+
+  // Direct 1-click Toggle for MFA (Multi-Factor Authentication)
+  const handleToggleMfa = async (userId: string, enabled: boolean) => {
+    try {
+      setActionInProgress(`mfa-${userId}`)
+      const res = await fetch('/api/platform/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'toggle-mfa', userId, enabled }),
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        toast.success(data.message)
+        setUsers((prev) =>
+          prev.map((u) => (u.id === userId ? { ...u, mfaEnabled: enabled } : u))
+        )
+      } else {
+        toast.error(data.error || 'Failed to toggle MFA')
+      }
+    } catch {
+      toast.error('Network error toggling MFA')
     } finally {
       setActionInProgress(null)
     }
@@ -698,13 +723,22 @@ export function UserGovernancePanel() {
                               </Badge>
                             </div>
                           )}
-                          {u.mfaEnabled && (
-                            <div className="mt-0.5">
-                              <span className="text-[9px] font-mono text-purple-600 dark:text-purple-400 flex items-center gap-0.5">
-                                <Lock className="h-2.5 w-2.5" /> MFA
-                              </span>
-                            </div>
-                          )}
+                          <div className="mt-1">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleMfa(u.id, !u.mfaEnabled)}
+                              disabled={actionInProgress === `mfa-${u.id}`}
+                              className={`text-[9px] font-mono flex items-center gap-1 px-1.5 py-0.5 rounded border transition-colors ${
+                                u.mfaEnabled
+                                  ? 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30 hover:bg-purple-500/20'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:text-foreground hover:border-slate-400'
+                              }`}
+                              title={u.mfaEnabled ? 'Click to Disable MFA for this user' : 'Click to Enable MFA for this user'}
+                            >
+                              <ShieldCheck className="h-2.5 w-2.5" />
+                              <span>{u.mfaEnabled ? 'MFA ACTIVE' : 'MFA OFF'}</span>
+                            </button>
+                          </div>
                         </td>
 
                         {/* Staff Name & Contact */}

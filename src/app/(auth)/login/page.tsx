@@ -28,38 +28,32 @@ export default function LoginPage() {
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 rounded-full border border-teal-400/30 bg-teal-500/10 px-3 py-1 text-xs font-medium text-teal-200">
               <Sparkles className="h-3.5 w-3.5 text-teal-300" />
-              <span>Sovereign Healthcare &amp; Dual-Script Dispensing Suite</span>
+              <span>Next-Gen Dispensary Operating Infrastructure</span>
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-white leading-tight">
               Enterprise Pharmacy Management, Engineered for Safety.
               <span className="block text-xl font-normal text-teal-200 mt-1 font-arabic">
-                منظومة إدارة الصيدليات الإكلينيكية السيادية
+                منظومة إدارة الصيدليات الإكلينيكية المتقدمة
               </span>
             </h1>
             <p className="text-sm text-slate-300 leading-relaxed">
-              Multi-country sovereign compliance across 🇸🇦 Saudi Arabia (ZATCA/SFDA), 🇴🇲 Oman (OTA 3-dec/MoH), 🇧🇭 Bahrain (NBR/NHRA), 🇶🇦 Qatar (MoPH), 🇲🇻 Maldives (MIRA/Aasandha), and 🇮🇳 India (CDSCO/GST). Real-time POS, GS1 DataMatrix serialization, and dual Arabic/English interface.
+              Standardized clinical pharmacy operations featuring sub-second POS barcode billing, automated FEFO batch expiration safeguards, strict narcotic registers, and zero-bleed multi-tenant data isolation.
             </p>
           </div>
 
-          {/* Sovereign Country Compliance Chips */}
-          <div className="flex flex-wrap gap-1.5 pt-1">
-            <span className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-[11px] font-medium text-emerald-300 flex items-center gap-1">
-              <span>🇸🇦</span> KSA ZATCA 15% / 0%
+          {/* Core Security & Compliance Pillars */}
+          <div className="flex flex-wrap gap-2 pt-1">
+            <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/15 text-[11px] font-medium text-teal-300 flex items-center gap-1.5">
+              <ShieldAlert className="h-3 w-3" /> Dual-Factor Security
             </span>
-            <span className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-[11px] font-medium text-red-300 flex items-center gap-1">
-              <span>🇴🇲</span> Oman OTA 5% (3 Dec)
+            <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/15 text-[11px] font-medium text-emerald-300 flex items-center gap-1.5">
+              <CheckCircle2 className="h-3 w-3" /> FEFO Expiry Safeguard
             </span>
-            <span className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-[11px] font-medium text-rose-300 flex items-center gap-1">
-              <span>🇧🇭</span> Bahrain NBR 10% (3 Dec)
+            <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/15 text-[11px] font-medium text-cyan-300 flex items-center gap-1.5">
+              <Activity className="h-3 w-3" /> Sub-Second POS
             </span>
-            <span className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-[11px] font-medium text-purple-300 flex items-center gap-1">
-              <span>🇶🇦</span> Qatar MoPH 0%
-            </span>
-            <span className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-[11px] font-medium text-teal-300 flex items-center gap-1">
-              <span>🇲🇻</span> Maldives Aasandha
-            </span>
-            <span className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-[11px] font-medium text-amber-300 flex items-center gap-1">
-              <span>🇮🇳</span> India GST / DPCO
+            <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/15 text-[11px] font-medium text-amber-300 flex items-center gap-1.5">
+              <Database className="h-3 w-3" /> Auto Ledger & CSV Sync
             </span>
           </div>
 
@@ -70,7 +64,7 @@ export default function LoginPage() {
                 <ShieldAlert className="h-4 w-4" />
               </div>
               <div className="text-xs">
-                <p className="font-semibold text-white">Schedule H1 & Narcotic Audit Registry</p>
+                <p className="font-semibold text-white">Schedule & Controlled Drug Registry</p>
                 <p className="text-slate-300/80 mt-0.5">
                   Strict regulatory logging with prescribing doctor credentials and customer identity verification.
                 </p>
@@ -94,9 +88,9 @@ export default function LoginPage() {
                 <Database className="h-4 w-4" />
               </div>
               <div className="text-xs">
-                <p className="font-semibold text-white">Automated Tally ERP & GST Sync</p>
+                <p className="font-semibold text-white">Automated Accounting & Tax Sync</p>
                 <p className="text-slate-300/80 mt-0.5">
-                  Bi-directional XML voucher synchronization with automatic bill allocations and tax returns.
+                  Universal CSV accounting export with automatic bill allocations and real-time ledger balancing.
                 </p>
               </div>
             </div>
@@ -107,8 +101,8 @@ export default function LoginPage() {
         <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-4 text-xs text-slate-400">
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-slate-300 font-medium">Dispensary Node Online</span>
-            <span className="text-slate-300">• v2.4 Enterprise</span>
+            <span className="text-slate-300 font-medium">Dispensary Terminal Secured</span>
+            <span className="text-slate-300">• Multi-Tenant Protected</span>
           </div>
           <div className="flex items-center gap-1 text-[11px] text-slate-300">
             <CheckCircle2 className="h-3.5 w-3.5 text-teal-400" />

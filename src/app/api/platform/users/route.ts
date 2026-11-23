@@ -22,18 +22,6 @@ const SOVEREIGN_SYSTEM_ROLES = [
   { name: 'cashier', displayName: 'Cashier', description: 'Point of sale clearance & customer payments' },
 ]
 
-function getDefaultPasswordForUser(email: string): string {
-  const em = email.toLowerCase()
-  if (em.includes('superadmin')) return 'SuperAdmin@123'
-  if (em.includes('amjad')) return 'Admin@123'
-  if (em.includes('apollo')) return 'Apollo@123'
-  if (em.includes('krishna') || em.includes('ramesh')) return 'Krishna@123'
-  if (em.includes('admin')) return 'Admin@123'
-  if (em.includes('cashier')) return 'Cashier@123'
-  if (em.includes('sovereign')) return 'Sovereign@2026'
-  return 'Staff@123'
-}
-
 export async function GET() {
   try {
     await requireSuperAdmin()
@@ -98,7 +86,7 @@ export async function GET() {
         ? ['SA', 'OM', 'BH', 'QA', 'MV', 'IN']
         : [u.organization?.currency === 'SAR' ? 'SA' : u.organization?.country === 'Saudi Arabia' ? 'SA' : 'IN']
 
-      const assignedPassword = credentialMap.get(u.id) || getDefaultPasswordForUser(u.email)
+      const assignedPassword = credentialMap.get(u.id) || 'Stored securely in database'
 
       return {
         id: u.id,
@@ -121,7 +109,7 @@ export async function GET() {
           displayName: ur.role.displayName || ur.role.name,
         })),
         territories: gov?.territories || defaultTerritories,
-        assignedPrivateNode: gov?.assignedPrivateNode || 'SA',
+        assignedPrivateNode: gov?.assignedPrivateNode || 'IN',
         ipRestrictionEnabled: Boolean(gov?.ipRestrictionEnabled),
         assignedPassword, // Visible ONLY to SuperAdmin
       }
@@ -295,7 +283,10 @@ export async function POST(req: Request) {
         }
       }
 
-      const rawPassword = password || 'Sovereign@2026'
+      if (!password || password.trim().length < 8) {
+        return NextResponse.json({ error: 'Password must be at least 8 characters long' }, { status: 400 })
+      }
+      const rawPassword = password.trim()
       const hashedPassword = await bcrypt.hash(rawPassword, 12)
 
       // Ensure system roles exist
@@ -613,7 +604,7 @@ export async function POST(req: Request) {
           },
         },
       })
-      const activePassword = vaultEntry?.value || getDefaultPasswordForUser(targetUser.email)
+      const activePassword = vaultEntry?.value || 'Password stored securely in database'
 
       await prisma.auditLog.create({
         data: {
@@ -629,6 +620,56 @@ export async function POST(req: Request) {
         success: true,
         message: `Account for ${targetUser.email} has been unlocked successfully with the same password preserved.`,
         activePassword,
+      })
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // ACTION: TOGGLE MFA (MULTI-FACTOR AUTHENTICATION)
+    // ─────────────────────────────────────────────────────────────
+    if (action === 'toggle-mfa') {
+      const { enabled } = body
+      const newMfaState = Boolean(enabled)
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { mfaEnabled: newMfaState },
+      })
+
+      try {
+        const gov = await prisma.systemSetting.findUnique({
+          where: { category_key: { category: 'USER_GOVERNANCE', key: userId } },
+        })
+        const parsed = gov?.value ? JSON.parse(gov.value) : {}
+        parsed.mfaEnabled = newMfaState
+        await prisma.systemSetting.upsert({
+          where: { category_key: { category: 'USER_GOVERNANCE', key: userId } },
+          create: {
+            category: 'USER_GOVERNANCE',
+            key: userId,
+            value: JSON.stringify(parsed),
+            dataType: 'json',
+            label: `Sovereign Matrix for ${targetUser.email}`,
+          },
+          update: {
+            value: JSON.stringify(parsed),
+            updatedAt: new Date(),
+          },
+        })
+      } catch {}
+
+      await prisma.auditLog.create({
+        data: {
+          userId: adminUser.id,
+          action: newMfaState ? 'MFA_ENABLED_BY_SUPERADMIN' : 'MFA_DISABLED_BY_SUPERADMIN',
+          entity: 'User',
+          entityId: userId,
+          newData: { targetUser: targetUser.email, mfaEnabled: newMfaState },
+        },
+      })
+
+      return NextResponse.json({
+        success: true,
+        message: `Multi-Factor Authentication (MFA) has been ${newMfaState ? 'enabled' : 'disabled'} for ${targetUser.email}.`,
       })
     }
 

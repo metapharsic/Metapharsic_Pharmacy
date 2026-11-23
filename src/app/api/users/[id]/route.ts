@@ -108,6 +108,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
           ...(data.phone !== undefined && { phone: data.phone }),
           ...(data.isActive !== undefined && { isActive: data.isActive }),
           ...(data.branchId !== undefined && { branchId: data.branchId || null }),
+          ...(data.mfaEnabled !== undefined && { mfaEnabled: Boolean(data.mfaEnabled) }),
           ...(password && { password }),
           ...(data.roleIds && {
             userRoles: { create: data.roleIds.map((roleId) => ({ roleId })) },
@@ -118,6 +119,37 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
           userRoles: { include: { role: true } },
         },
       })
+
+      if (data.territory) {
+        const terr = data.territory.toUpperCase()
+        const govPayload = {
+          territories: [terr],
+          assignedPrivateNode: terr,
+          ipRestrictionEnabled: false,
+          mfaEnabled: data.mfaEnabled !== undefined ? Boolean(data.mfaEnabled) : result.mfaEnabled,
+          updatedBy: actor.email,
+          updatedAt: new Date().toISOString(),
+        }
+        await tx.systemSetting.upsert({
+          where: {
+            category_key: {
+              category: 'USER_GOVERNANCE',
+              key: params.id,
+            },
+          },
+          create: {
+            category: 'USER_GOVERNANCE',
+            key: params.id,
+            value: JSON.stringify(govPayload),
+            dataType: 'json',
+            label: `Sovereign Matrix for ${result.email}`,
+          },
+          update: {
+            value: JSON.stringify(govPayload),
+            updatedAt: new Date(),
+          },
+        })
+      }
 
       return result
     })

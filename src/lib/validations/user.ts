@@ -13,6 +13,8 @@ export const createUserSchema = z.object({
   organizationId: z.string().optional(),
   roleIds: z.array(z.string()).min(1, 'At least one role is required'),
   branchId: z.string().optional(),
+  territory: z.string().optional(),
+  mfaEnabled: z.boolean().optional(),
   isActive: z.boolean().default(true),
 })
 
@@ -21,6 +23,8 @@ export const updateUserSchema = z.object({
   phone: z.string().optional(),
   roleIds: z.array(z.string()).optional(),
   branchId: z.string().optional(),
+  territory: z.string().optional(),
+  mfaEnabled: z.boolean().optional(),
   isActive: z.boolean().optional(),
 })
 
