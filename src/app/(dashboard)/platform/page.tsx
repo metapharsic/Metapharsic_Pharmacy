@@ -2284,7 +2284,7 @@ export default function PlatformSuperAdminPage() {
         open={editChemistOpen}
         onOpenChange={setEditChemistOpen}
         data={targetChemistData}
-        onSuccess={fetchOrganizations}
+        onSuccess={loadOrganizations}
       />
 
       {/* ─── SUPERADMIN DIRECT CHEMIST PASSWORD RESET DIALOG ─── */}
@@ -2296,7 +2296,7 @@ export default function PlatformSuperAdminPage() {
           userName={targetResetUser.userName}
           userEmail={targetResetUser.userEmail}
           shopName={targetResetUser.shopName}
-          onSuccess={fetchOrganizations}
+          onSuccess={loadOrganizations}
         />
       )}
     </div>
