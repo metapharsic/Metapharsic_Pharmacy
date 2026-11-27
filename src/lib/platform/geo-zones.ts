@@ -40,11 +40,34 @@ export interface GeoPoliticalZoneData {
     id: string
     name: string
     shopName: string
+    organizationId?: string
+    organizationCode?: string | null
     city: string
     state: string
     country?: string
+    address?: string | null
+    phone?: string | null
+    email?: string | null
+    dlNumber?: string | null
+    gstin?: string | null
+    status?: string
+    zone: GeoZoneName
     activeStaffCount: number
     lastLoginAt: string | null
+    adminUser?: {
+      id: string
+      name: string
+      email: string
+      phone?: string | null
+    } | null
+    allUsers?: {
+      id: string
+      name: string
+      email: string
+      phone?: string | null
+      isActive: boolean
+      role?: string
+    }[]
   }[]
 }
 
@@ -198,9 +221,36 @@ export async function getGeoPoliticalZoneMetrics() {
   const [branches, loginAuditLogs, activeUsers, orgSettings] = await Promise.all([
     prisma.branch.findMany({
       include: {
-        organization: { select: { id: true, name: true, city: true, state: true, country: true } },
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            city: true,
+            state: true,
+            country: true,
+            address: true,
+            phone: true,
+            email: true,
+            status: true,
+            dlNumber: true,
+            gstin: true,
+            users: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                isActive: true,
+                userRoles: {
+                  include: { role: { select: { name: true, displayName: true } } },
+                },
+              },
+            },
+          },
+        },
         users: {
-          select: { id: true, name: true, email: true, lastLoginAt: true, isActive: true },
+          select: { id: true, name: true, email: true, phone: true, lastLoginAt: true, isActive: true },
         },
       },
     }),
@@ -552,15 +602,45 @@ export async function getGeoPoliticalZoneMetrics() {
       return cur.lastLoginAt > acc ? cur.lastLoginAt : acc
     }, null)
 
+    const org = b.organization
+    const allOrgUsers = org?.users || []
+    const adminUser = allOrgUsers.find((u) => u.isActive) || allOrgUsers[0] || null
+    const mappedUsers = allOrgUsers.map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      phone: u.phone,
+      isActive: u.isActive,
+      role: u.userRoles[0]?.role?.displayName || u.userRoles[0]?.role?.name || 'Staff',
+    }))
+
     zoneConfigs[zoneName].branches.push({
       id: b.id,
       name: b.name,
-      shopName: b.organization?.name || 'Metapharsic Core Dispensary',
+      shopName: org?.name || 'Metapharsic Core Dispensary',
+      organizationId: org?.id,
+      organizationCode: org?.code || null,
       city,
       state,
       country,
+      address: b.address || org?.address || null,
+      phone: b.phone || org?.phone || null,
+      email: org?.email || null,
+      dlNumber: b.dlNumber || org?.dlNumber || null,
+      gstin: b.gstin || org?.gstin || null,
+      status: org?.status || 'ACTIVE',
+      zone: zoneName,
       activeStaffCount: activeStaffInBranch,
       lastLoginAt: mostRecentLogin ? mostRecentLogin.toISOString() : null,
+      adminUser: adminUser
+        ? {
+            id: adminUser.id,
+            name: adminUser.name,
+            email: adminUser.email,
+            phone: adminUser.phone,
+          }
+        : null,
+      allUsers: mappedUsers,
     })
 
     zoneConfigs[zoneName].activeSessions += activeStaffInBranch

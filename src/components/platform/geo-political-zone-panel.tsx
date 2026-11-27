@@ -8,9 +8,11 @@ import {
   ChevronDown,
   ChevronRight,
   Compass,
+  Edit3,
   Eye,
   Globe,
   HardDrive,
+  KeyRound,
   Layers,
   LogIn,
   MapPin,
@@ -18,6 +20,7 @@ import {
   RefreshCw,
   Search,
   Server,
+  Settings2,
   Shield,
   ShieldCheck,
   Store,
@@ -32,6 +35,11 @@ import { Progress } from '@/components/ui/progress'
 import type { GeoPoliticalZoneData, GeoZoneName } from '@/lib/platform/geo-zones'
 import { useI18n } from '@/lib/i18n/i18n-context'
 import { TerritoryCode, getAllTerritories } from '@/lib/territory/territory-config'
+import {
+  EditChemistZoneDialog,
+  ResetChemistPasswordDialog,
+  ChemistEditData,
+} from '@/components/platform/edit-chemist-zone-dialog'
 
 export function GeoPoliticalZonePanel() {
   const { t, locale, setTerritory, territory: activeTerritory } = useI18n()
@@ -43,6 +51,55 @@ export function GeoPoliticalZonePanel() {
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedZone, setExpandedZone] = useState<string | null>(null)
   const [impersonatingTerritory, setImpersonatingTerritory] = useState<TerritoryCode | null>(null)
+
+  // Edit Chemist & Zone Modal State
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [selectedChemist, setSelectedChemist] = useState<ChemistEditData | null>(null)
+
+  // Direct Password Reset Modal State
+  const [resetDialogOpen, setResetDialogOpen] = useState(false)
+  const [resetChemistUser, setResetChemistUser] = useState<{
+    userId: string
+    userName: string
+    userEmail: string
+    shopName?: string
+  } | null>(null)
+
+  const handleOpenEditChemist = (b: any, zoneItem: GeoPoliticalZoneData) => {
+    setSelectedChemist({
+      organizationId: b.organizationId || b.id,
+      organizationCode: b.organizationCode,
+      shopName: b.shopName,
+      zone: b.zone || zoneItem.zone,
+      countryCode: b.country || zoneItem.countryCode,
+      city: b.city,
+      state: b.state,
+      address: b.address,
+      phone: b.phone,
+      email: b.email,
+      dlNumber: b.dlNumber,
+      gstin: b.gstin,
+      status: (b.status as any) || 'ACTIVE',
+      adminUser: b.adminUser,
+      allUsers: b.allUsers,
+    })
+    setEditDialogOpen(true)
+  }
+
+  const handleOpenResetPassword = (b: any) => {
+    const targetUser = b.adminUser || (b.allUsers && b.allUsers[0])
+    if (!targetUser) {
+      toast.error('No personnel found for this chemist counter. Use Edit Chemist to register or assign staff.')
+      return
+    }
+    setResetChemistUser({
+      userId: targetUser.id,
+      userName: targetUser.name,
+      userEmail: targetUser.email,
+      shopName: b.shopName,
+    })
+    setResetDialogOpen(true)
+  }
 
   const territories = getAllTerritories()
 
@@ -384,41 +441,117 @@ export function GeoPoliticalZonePanel() {
                           </div>
                         ) : (
                           z.branches.map((b) => (
-                            <div key={b.id} className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                              <div className="flex items-center gap-2.5">
-                                <Store className="h-4 w-4 text-teal-600 shrink-0" />
-                                <div>
-                                  <div className="font-semibold text-xs text-foreground">
-                                    {b.shopName} — <span className="font-normal text-muted-foreground">{b.name}</span>
+                            <div key={b.id} className="py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-card/60 hover:bg-card px-2 rounded-lg transition-colors">
+                              <div className="flex items-start gap-2.5">
+                                <div className="h-8 w-8 rounded-lg bg-teal-500/10 text-teal-600 flex items-center justify-center shrink-0 mt-0.5">
+                                  <Store className="h-4 w-4" />
+                                </div>
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-bold text-xs text-foreground">
+                                      {b.shopName}
+                                    </span>
+                                    {b.organizationCode && (
+                                      <Badge variant="outline" className="font-mono text-[9px] uppercase px-1 py-0">
+                                        {b.organizationCode}
+                                      </Badge>
+                                    )}
+                                    <Badge
+                                      className={`text-[9px] font-mono px-1 py-0 ${
+                                        b.status === 'SUSPENDED'
+                                          ? 'bg-rose-500/10 text-rose-600 border-rose-500/30'
+                                          : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
+                                      }`}
+                                    >
+                                      {b.status || 'ACTIVE'}
+                                    </Badge>
                                   </div>
-                                  <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                                    <MapPin className="h-3 w-3 text-rose-500" />
-                                    <span>
+
+                                  <div className="text-[11px] text-muted-foreground flex items-center gap-2 flex-wrap">
+                                    <span className="flex items-center gap-1">
+                                      <MapPin className="h-3 w-3 text-rose-500" />
                                       {b.city}, {b.state} ({b.country || z.countryCode})
                                     </span>
+                                    {b.dlNumber && (
+                                      <span className="font-mono text-[10px]">
+                                        &bull; DL: {b.dlNumber}
+                                      </span>
+                                    )}
+                                    {b.gstin && (
+                                      <span className="font-mono text-[10px]">
+                                        &bull; Tax ID: {b.gstin}
+                                      </span>
+                                    )}
                                   </div>
+
+                                  {b.adminUser && (
+                                    <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1 mt-0.5">
+                                      <span>Admin:</span>
+                                      <span className="text-foreground font-semibold">{b.adminUser.name}</span>
+                                      <span>({b.adminUser.email})</span>
+                                      {b.adminUser.phone && <span>&bull; {b.adminUser.phone}</span>}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
 
-                              <div className="flex items-center gap-3 text-xs self-end sm:self-auto">
-                                <div className="text-right">
+                              <div className="flex flex-wrap items-center gap-2 self-start md:self-center">
+                                <div className="text-right hidden sm:block mr-2">
                                   <div className="font-mono text-[11px] font-semibold text-foreground">
                                     {b.activeStaffCount > 0 ? (
-                                      <span className="text-emerald-600 font-bold">{b.activeStaffCount} staff active</span>
+                                      <span className="text-emerald-600 font-bold">{b.activeStaffCount} online</span>
                                     ) : (
-                                      <span className="text-muted-foreground">0 active now</span>
+                                      <span className="text-muted-foreground">0 online</span>
                                     )}
                                   </div>
                                   <div className="text-[10px] text-slate-400">
-                                    Last Active:{' '}
                                     {b.lastLoginAt
                                       ? new Date(b.lastLoginAt).toLocaleTimeString('en-US', {
                                           hour: '2-digit',
                                           minute: '2-digit',
                                         })
-                                      : 'Never'}
+                                      : 'Never logged in'}
                                   </div>
                                 </div>
+
+                                {/* SuperAdmin Action Buttons */}
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleOpenEditChemist(b, z)}
+                                  className="h-7 text-[11px] gap-1 text-teal-700 dark:text-teal-300 border-teal-500/30 hover:bg-teal-500/10 font-medium"
+                                  title="Modify Chemist details, assigned sovereign zone, and counter properties"
+                                >
+                                  <Settings2 className="h-3 w-3" />
+                                  <span>Edit Chemist &amp; Zone</span>
+                                </Button>
+
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleOpenResetPassword(b)}
+                                  className="h-7 text-[11px] gap-1 text-amber-700 dark:text-amber-300 border-amber-500/30 hover:bg-amber-500/10 font-medium"
+                                  title="Reset password for this chemist shop administrator"
+                                >
+                                  <KeyRound className="h-3 w-3" />
+                                  <span>Reset Password</span>
+                                </Button>
+
+                                {b.country && (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleImpersonateTerritory(b.country as TerritoryCode)}
+                                    className="h-7 text-[11px] gap-1 text-muted-foreground hover:text-foreground"
+                                    title={`Switch Command Lens to ${b.country}`}
+                                  >
+                                    <Eye className="h-3 w-3" />
+                                    <span>View Lens</span>
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           ))
@@ -432,6 +565,27 @@ export function GeoPoliticalZonePanel() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Chemist & Zone Modification Dialog */}
+      <EditChemistZoneDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        data={selectedChemist}
+        onSuccess={fetchGeoMetrics}
+      />
+
+      {/* Direct Password Reset Dialog */}
+      {resetChemistUser && (
+        <ResetChemistPasswordDialog
+          open={resetDialogOpen}
+          onOpenChange={setResetDialogOpen}
+          userId={resetChemistUser.userId}
+          userName={resetChemistUser.userName}
+          userEmail={resetChemistUser.userEmail}
+          shopName={resetChemistUser.shopName}
+          onSuccess={fetchGeoMetrics}
+        />
+      )}
     </div>
   )
 }

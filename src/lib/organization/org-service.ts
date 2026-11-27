@@ -69,12 +69,24 @@ export async function listAllOrganizations() {
         },
       },
       branches: {
-        where: { isHeadOffice: true },
         select: {
           id: true,
           name: true,
+          code: true,
           phone: true,
           city: true,
+          state: true,
+          address: true,
+          pincode: true,
+          isHeadOffice: true,
+          isActive: true,
+        },
+        orderBy: { isHeadOffice: 'desc' },
+      },
+      settings: {
+        select: {
+          key: true,
+          value: true,
         },
       },
       users: {

@@ -41,6 +41,8 @@ import {
   Camera,
   LayoutDashboard,
   Sparkles,
+  Edit3,
+  Settings2,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -78,6 +80,11 @@ import { GeoPoliticalZonePanel } from '@/components/platform/geo-political-zone-
 import { IAMPolicyPanel } from '@/components/platform/iam-policy-panel'
 import { SovereignCloudPilotPanel } from '@/components/platform/sovereign-cloud-pilot-panel'
 import { WhatsAppProvisioningPanel } from '@/components/platform/whatsapp-provisioning-panel'
+import {
+  EditChemistZoneDialog,
+  ResetChemistPasswordDialog,
+  ChemistEditData,
+} from '@/components/platform/edit-chemist-zone-dialog'
 import { cn } from '@/lib/utils/cn'
 import { maskEmail, maskPhone } from '@/lib/utils/masking'
 
@@ -91,13 +98,29 @@ interface OrganizationItem {
   phone?: string | null
   gstin?: string | null
   dlNumber?: string | null
+  address?: string | null
+  city?: string | null
+  state?: string | null
+  country?: string | null
+  currency?: string | null
+  pincode?: string | null
   status: 'ACTIVE' | 'SUSPENDED' | 'EXPIRED'
   subscriptionPlan: 'TRIAL' | 'STARTER' | 'GROWTH' | 'ENTERPRISE'
   subscriptionExpiresAt?: string | null
   maxBranches: number
   maxUsers: number
   createdAt: string
-  branches: { id: string; name: string; code?: string | null; isHeadOffice: boolean }[]
+  branches: {
+    id: string
+    name: string
+    code?: string | null
+    isHeadOffice: boolean
+    city?: string | null
+    state?: string | null
+    address?: string | null
+    phone?: string | null
+  }[]
+  settings?: { key: string; value: string }[]
   ownerUser?: { id: string; name: string; email: string; phone?: string | null } | null
   users?: {
     id: string
@@ -177,6 +200,76 @@ export default function PlatformSuperAdminPage() {
   // Camera & Cash Drawer Advanced Privilege State
   const [cameraPrivileges, setCameraPrivileges] = useState<Record<string, boolean>>({})
   const [togglingCamera, setTogglingCamera] = useState<string | null>(null)
+
+  // SuperAdmin Chemist & Zone Modification State
+  const [editChemistOpen, setEditChemistOpen] = useState(false)
+  const [targetChemistData, setTargetChemistData] = useState<ChemistEditData | null>(null)
+
+  // Direct Password Reset State
+  const [resetChemistPassOpen, setResetChemistPassOpen] = useState(false)
+  const [targetResetUser, setTargetResetUser] = useState<{
+    userId: string
+    userName: string
+    userEmail: string
+    shopName?: string
+  } | null>(null)
+
+  const handleOpenEditChemistShop = (org: OrganizationItem) => {
+    const geoZoneSetting = org.settings?.find((s) => s.key === 'GEO_ZONE')?.value || 'KSA - Central Region (Riyadh)'
+    const headOffice = org.branches.find((b) => b.isHeadOffice) || org.branches[0]
+    const primaryAdmin = org.ownerUser || (org.users && org.users[0]) || null
+
+    setTargetChemistData({
+      organizationId: org.id,
+      organizationCode: org.code,
+      shopName: org.name,
+      legalName: org.legalName,
+      zone: geoZoneSetting,
+      countryCode: org.country || 'SA',
+      city: org.city || headOffice?.city,
+      state: org.state || headOffice?.state,
+      address: org.address || headOffice?.address,
+      pincode: org.pincode,
+      phone: org.phone || headOffice?.phone || primaryAdmin?.phone,
+      email: org.email || primaryAdmin?.email,
+      dlNumber: org.dlNumber,
+      gstin: org.gstin,
+      status: org.status,
+      subscriptionPlan: org.subscriptionPlan,
+      adminUser: primaryAdmin
+        ? {
+            id: primaryAdmin.id,
+            name: primaryAdmin.name,
+            email: primaryAdmin.email,
+            phone: primaryAdmin.phone,
+          }
+        : null,
+      allUsers: org.users?.map((u) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        phone: u.phone,
+        isActive: u.isActive,
+        role: u.userRoles[0]?.role?.displayName || u.userRoles[0]?.role?.name || 'Staff',
+      })),
+    })
+    setEditChemistOpen(true)
+  }
+
+  const handleOpenResetChemistPassword = (org: OrganizationItem) => {
+    const primaryAdmin = org.ownerUser || (org.users && org.users[0]) || null
+    if (!primaryAdmin) {
+      toast.error({ title: 'No Personnel Found', description: 'No admin user is registered for this chemist shop yet.' })
+      return
+    }
+    setTargetResetUser({
+      userId: primaryAdmin.id,
+      userName: primaryAdmin.name,
+      userEmail: primaryAdmin.email,
+      shopName: org.name,
+    })
+    setResetChemistPassOpen(true)
+  }
 
   // Onboard modal state
   const [onboardOpen, setOnboardOpen] = useState<boolean>(false)
@@ -1129,6 +1222,17 @@ export default function PlatformSuperAdminPage() {
                           <CardTitle className="text-base font-bold leading-tight">
                             {org.name}
                           </CardTitle>
+                          <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                            {org.settings?.find((s) => s.key === 'GEO_ZONE')?.value ? (
+                              <Badge variant="outline" className="text-[9px] font-mono border-teal-500/40 text-teal-700 dark:text-teal-300 bg-teal-500/10">
+                                🌐 {org.settings.find((s) => s.key === 'GEO_ZONE')?.value}
+                              </Badge>
+                            ) : org.country ? (
+                              <Badge variant="outline" className="text-[9px] font-mono border-teal-500/40 text-teal-700 bg-teal-500/10">
+                                🌐 {org.country}
+                              </Badge>
+                            ) : null}
+                          </div>
                           {org.dlNumber && (
                             <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
                               DL: {org.dlNumber}
@@ -1228,7 +1332,29 @@ export default function PlatformSuperAdminPage() {
                       )}
 
                       {/* Control Actions */}
-                      <div className="pt-2 border-t flex items-center justify-between gap-1.5">
+                      <div className="pt-2 border-t flex flex-wrap items-center justify-between gap-1.5">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenEditChemistShop(org)}
+                          className="h-7 text-[11px] gap-1 text-teal-700 dark:text-teal-300 border-teal-500/30 hover:bg-teal-500/10 font-semibold"
+                          title="Modify chemist shop details and geopolitical zone"
+                        >
+                          <Settings2 className="h-3 w-3" />
+                          Edit Chemist &amp; Zone
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenResetChemistPassword(org)}
+                          className="h-7 text-[11px] gap-1 text-amber-700 dark:text-amber-300 border-amber-500/30 hover:bg-amber-500/10 font-semibold"
+                          title="Reset password for this chemist shop"
+                        >
+                          <KeyRound className="h-3 w-3" />
+                          Reset Password
+                        </Button>
+
                         {org.status === 'ACTIVE' ? (
                           <Button
                             variant="outline"
@@ -1258,7 +1384,7 @@ export default function PlatformSuperAdminPage() {
                           className="h-7 text-[11px] gap-1 text-primary"
                         >
                           <Calendar className="h-3 w-3" />
-                          +1 Year License
+                          +1 Year
                         </Button>
 
                         <Button
@@ -1274,7 +1400,7 @@ export default function PlatformSuperAdminPage() {
                           className="h-7 text-[11px] gap-1 text-teal-600 hover:text-teal-700"
                         >
                           <Camera className="h-3 w-3" />
-                          {cameraPrivileges[org.id] ? 'Camera: ON' : 'Camera: OFF'}
+                          {cameraPrivileges[org.id] ? 'Cam: ON' : 'Cam: OFF'}
                         </Button>
                       </div>
                     </CardContent>
@@ -2152,6 +2278,27 @@ export default function PlatformSuperAdminPage() {
         analyticsData={analytics}
         initialSelectedChemistId={exportSingleShopId}
       />
+
+      {/* ─── SUPERADMIN CHEMIST SHOP & ZONE MODIFICATION DIALOG ─── */}
+      <EditChemistZoneDialog
+        open={editChemistOpen}
+        onOpenChange={setEditChemistOpen}
+        data={targetChemistData}
+        onSuccess={fetchOrganizations}
+      />
+
+      {/* ─── SUPERADMIN DIRECT CHEMIST PASSWORD RESET DIALOG ─── */}
+      {targetResetUser && (
+        <ResetChemistPasswordDialog
+          open={resetChemistPassOpen}
+          onOpenChange={setResetChemistPassOpen}
+          userId={targetResetUser.userId}
+          userName={targetResetUser.userName}
+          userEmail={targetResetUser.userEmail}
+          shopName={targetResetUser.shopName}
+          onSuccess={fetchOrganizations}
+        />
+      )}
     </div>
   )
 }
