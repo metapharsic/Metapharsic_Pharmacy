@@ -194,21 +194,19 @@ export function LoginForm() {
 
         setTimeout(() => {
           if (sessionJson?.user?.isSuperAdmin) {
-            router.push('/platform')
+            window.location.href = '/platform'
           } else if (
             roles.includes('cashier') &&
             !roles.includes('owner') &&
             !roles.includes('manager')
           ) {
-            router.push(ROUTES.POS)
+            window.location.href = ROUTES.POS
           } else {
-            router.push(callbackUrl)
+            window.location.href = callbackUrl || '/dashboard'
           }
-          router.refresh()
         }, 350)
       } catch {
-        router.push(callbackUrl)
-        router.refresh()
+        window.location.href = callbackUrl || '/platform'
       }
     } catch {
       setIsExecutingThreads(false)
